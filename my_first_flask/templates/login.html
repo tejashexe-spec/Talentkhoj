@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Login | Talent Khoj{% endblock %}
+
+{% block content %}
+<h2>Login check</h2>
+<p>
+    This verifies the email and password against the stored user,
+    but it does not create a signed-in session yet.
+</p>
+
+{% if message %}
+    <p>{{ message }}</p>
+{% endif %}
+
+<form method="post" action="{{ url_for('login') }}">
+    <p>
+        <label for="email">Email</label><br>
+        <input id="email" name="email" type="email" value="{{ form_data.email }}" required>
+    </p>
+
+    <p>
+        <label for="password">Password</label><br>
+        <input id="password" name="password" type="password" required>
+    </p>
+
+    <button type="submit">Check login</button>
+</form>
+
+<p>
+    <a href="{{ url_for('register') }}">Need an account? Register here.</a>
+</p>
+{% endblock %}

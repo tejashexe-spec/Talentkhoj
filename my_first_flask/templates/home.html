@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Home | Talent Khoj{% endblock %}
+
+{% block content %}
+<h2>Talent Khoj</h2>
+<p>
+    <a href="{{ url_for('register') }}">Register</a>
+    |
+    <a href="{{ url_for('login') }}">Login</a>
+</p>
+{% endblock %}

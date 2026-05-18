@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Register | Talent Khoj{% endblock %}
+
+{% block content %}
+<h2>Register</h2>
+<p>This is a plain registration form with basic validation.</p>
+
+{% if errors %}
+    <ul>
+        {% for field, error in errors.items() %}
+            <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+<form method="post" action="{{ url_for('register') }}">
+    <p>
+        <label for="full_name">Full name</label><br>
+        <input id="full_name" name="full_name" type="text" value="{{ form_data.full_name }}" required>
+    </p>
+
+    <p>
+        <label for="email">Email</label><br>
+        <input id="email" name="email" type="email" value="{{ form_data.email }}" required>
+    </p>
+
+    <p>
+        <label for="password">Password</label><br>
+        <input id="password" name="password" type="password" required>
+    </p>
+
+    <p>
+        <label for="confirm_password">Confirm password</label><br>
+        <input id="confirm_password" name="confirm_password" type="password" required>
+    </p>
+
+    <button type="submit">Create account</button>
+</form>
+
+<p>
+    <a href="{{ url_for('login') }}">Already have an account? Go to login.</a>
+</p>
+{% endblock %}

@@ -13,7 +13,7 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-sprint-secret")
 app.config["MYSQL_HOST"] = os.environ.get("MYSQL_HOST", "localhost")
 app.config["MYSQL_PORT"] = int(os.environ.get("MYSQL_PORT", "3306"))
 app.config["MYSQL_USER"] = os.environ.get("MYSQL_USER", "root")
-app.config["MYSQL_PASSWORD"] = os.environ.get("MYSQL_PASSWORD", "")
+app.config["MYSQL_PASSWORD"] = os.environ.get("MYSQL_PASSWORD", "Prish_123")
 app.config["MYSQL_DATABASE"] = os.environ.get("MYSQL_DATABASE", "talent_khoj")
 
 
@@ -31,9 +31,23 @@ def get_db_connection():
 
 
 def init_db():
-    connection = get_db_connection()
+    # Connect without specifying the database so we can create it if it is missing
+    connection = pymysql.connect(
+        host=app.config["MYSQL_HOST"],
+        port=app.config["MYSQL_PORT"],
+        user=app.config["MYSQL_USER"],
+        password=app.config["MYSQL_PASSWORD"],
+        charset="utf8mb4",
+        autocommit=True,
+        cursorclass=pymysql.cursors.DictCursor,
+    )
     try:
         with connection.cursor() as cursor:
+            cursor.execute(
+                f"CREATE DATABASE IF NOT EXISTS `{app.config['MYSQL_DATABASE']}` "
+                "DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
+            cursor.execute(f"USE `{app.config['MYSQL_DATABASE']}`")
             cursor.execute(
                 """
                 CREATE TABLE IF NOT EXISTS users (

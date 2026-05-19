@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, redirect, render_template, request, session, url_for
 import pymysql
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -31,7 +31,7 @@ def get_db_connection():
 
 
 def init_db():
-    # Connect without specifying the database so we can create it if it is missing
+    # Connect without specifying the database so we can create it if missing
     connection = pymysql.connect(
         host=app.config["MYSQL_HOST"],
         port=app.config["MYSQL_PORT"],
@@ -122,16 +122,19 @@ def register():
             finally:
                 connection.close()
 
-            flash("Registration saved.", "success")
-            return redirect(url_for("home"))
+            flash("Registration successful. Please log in.", "success")
+            return redirect(url_for("login"))
 
     return render_template("register.html", form_data=form_data, errors=errors)
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if session.get("user_id"):
+        return redirect(url_for("home"))
+
     form_data = {"email": ""}
-    message = None
+    error = None
 
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
@@ -140,11 +143,22 @@ def login():
 
         user = find_user_by_email(email) if email else None
         if user is not None and check_password_hash(user["password_hash"], password):
-            message = f"Login check passed for {user['full_name']}."
+            session["user_id"] = user["id"]
+            session["user_name"] = user["full_name"]
+            flash(f"Welcome, {user['full_name']}!", "success")
+            return redirect(url_for("home"))
         else:
-            message = "Invalid email or password."
+            error = "Invalid email or password."
 
-    return render_template("login.html", form_data=form_data, message=message)
+    return render_template("login.html", form_data=form_data, error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out.", "info")
+    return redirect(url_for("login"))
+
 
 if os.environ.get("INITIALIZE_MYSQL_SCHEMA", "1") == "1":
     try:

@@ -3,10 +3,10 @@
 {% block title %}Login | Talent Khoj{% endblock %}
 
 {% block content %}
-<h2>Login check</h2>
+<h2>Login</h2>
 
-{% if message %}
-    <p>{{ message }}</p>
+{% if error %}
+    <p>{{ error }}</p>
 {% endif %}
 
 <form method="post" action="{{ url_for('login') }}">
@@ -20,10 +20,8 @@
         <input id="password" name="password" type="password" required>
     </p>
 
-    <button type="submit">Check login</button>
+    <button type="submit">Login</button>
 </form>
 
-<p>
-    <a href="{{ url_for('register') }}">Need an account? Register here.</a>
-</p>
+<p><a href="{{ url_for('register') }}">Need an account? Register here.</a></p>
 {% endblock %}

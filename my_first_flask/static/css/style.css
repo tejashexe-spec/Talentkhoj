@@ -1,0 +1,397 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Poppins", sans-serif;
+    background: #f8f6f3;
+    color: #1b1b1b;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* NAVBAR */
+
+.navbar {
+    width: 90%;
+    margin: 20px auto;
+    padding: 16px 32px;
+    background: white;
+    border-radius: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 5px 30px rgba(0,0,0,0.05);
+}
+
+.logo {
+    color: #2456ff;
+    font-weight: 700;
+    font-size: 24px;
+    text-decoration: none;
+}
+
+.nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+    align-items: center;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: #666;
+    font-size: 15px;
+    position: relative;
+    transition: 0.3s;
+}
+
+.nav-links a:hover {
+    color: #2463ff;
+}
+
+.nav-links .active {
+    color: #2456ff;
+    border-bottom: 2px solid #2456ff;
+    padding-bottom: 4px;
+}
+
+.nav-links .user-name {
+    color: #1b1b1b;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.signin-btn {
+    width: 120px;
+    height: 44px;
+    border-radius: 24px;
+    border: 2px solid #2463ff;
+    background: white;
+    color: #2463ff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+}
+
+.signin-btn:hover {
+    background: #2463ff;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(36,99,255,0.25);
+}
+
+.logout-btn {
+    width: 120px;
+    height: 44px;
+    border-radius: 24px;
+    border: 2px solid #e53e3e;
+    background: white;
+    color: #e53e3e;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logout-btn:hover {
+    background: #e53e3e;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(229,62,62,0.25);
+}
+
+/* HERO */
+
+.hero {
+    width: 85%;
+    margin: 100px auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 50px;
+}
+
+.hero-left {
+    flex: 1;
+}
+
+.badge {
+    background: #ffe8d5;
+    color: #ff8c3b;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.hero-left h1 {
+    margin: 25px 0;
+    font-size: 42px;
+    line-height: 1.4;
+    max-width: 650px;
+}
+
+/* SEARCH */
+
+.search-box {
+    display: flex;
+    background: white;
+    padding: 10px;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    margin-top: 30px;
+}
+
+.search-box input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 16px;
+    font-size: 16px;
+    font-family: "Poppins", sans-serif;
+}
+
+.search-box button {
+    background: #2456ff;
+    color: white;
+    border: none;
+    padding: 16px 28px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-family: "Poppins", sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.search-box button:hover {
+    background: #1848d8;
+    transform: scale(1.03);
+    box-shadow: 0 10px 24px rgba(36,99,255,0.35);
+}
+
+/* USERS */
+
+.users {
+    margin-top: 30px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.avatars {
+    display: flex;
+}
+
+.avatars img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+    margin-left: -10px;
+}
+
+/* RIGHT CARDS */
+
+.hero-right {
+    width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.feature-card {
+    background: white;
+    padding: 25px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.05);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.08);
+}
+
+.icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #eef2ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.feature-card h3 {
+    margin-bottom: 8px;
+}
+
+.feature-card p {
+    color: #666;
+    font-size: 14px;
+}
+
+.tag {
+    position: absolute;
+    right: 20px;
+    top: 20px;
+    background: #eaf8ef;
+    color: #35a853;
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+/* FLASH MESSAGES */
+
+.flash-messages {
+    width: 85%;
+    margin: 20px auto 0;
+}
+
+.flash-messages li {
+    list-style: none;
+    padding: 12px 20px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    background: #eaf8ef;
+    color: #35a853;
+    font-size: 14px;
+}
+
+/* AUTH FORMS (login / register) */
+
+.auth-wrapper {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+}
+
+.auth-card {
+    background: white;
+    padding: 48px 40px;
+    border-radius: 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    width: 100%;
+    max-width: 440px;
+}
+
+.auth-card h2 {
+    font-size: 26px;
+    margin-bottom: 8px;
+}
+
+.auth-card .subtitle {
+    color: #888;
+    font-size: 14px;
+    margin-bottom: 32px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: "Poppins", sans-serif;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.form-group input:focus {
+    border-color: #2463ff;
+}
+
+.error-text {
+    color: #e53e3e;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
+.submit-btn {
+    width: 100%;
+    height: 50px;
+    background: #2463ff;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    font-family: "Poppins", sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 8px;
+}
+
+.submit-btn:hover {
+    background: #1848d8;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(36,99,255,0.3);
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 24px;
+    font-size: 14px;
+    color: #888;
+}
+
+.auth-footer a {
+    color: #2463ff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* FOOTER */
+
+.footer {
+    background: #05154b;
+    color: white;
+    padding: 40px 10%;
+}
+
+.footer h3 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.footer p {
+    color: #d3d3d3;
+    font-size: 14px;
+    margin-top: 8px;
+}

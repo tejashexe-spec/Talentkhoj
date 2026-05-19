@@ -4,25 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Talent Khoj{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <header>
-        <h1>Talent Khoj</h1>
-        <nav>
-            <a href="{{ url_for('home') }}">Home</a> |
+
+    <nav class="navbar">
+        <a class="logo" href="{{ url_for('home') }}">Talent Khoj</a>
+
+        <ul class="nav-links">
+            <li><a href="{{ url_for('home') }}">Home</a></li>
             {% if session.get('user_id') %}
-                Logged in as {{ session['user_name'] }} |
-                <a href="{{ url_for('logout') }}">Logout</a>
+                <li><span class="user-name">{{ session['user_name'] }}</span></li>
+                <li><a class="logout-btn" href="{{ url_for('logout') }}">Logout</a></li>
             {% else %}
-                <a href="{{ url_for('register') }}">Register</a> |
-                <a href="{{ url_for('login') }}">Login</a>
+                <li><a href="{{ url_for('register') }}">Register</a></li>
+                <li><a href="{{ url_for('login') }}"><button class="signin-btn">Sign In</button></a></li>
             {% endif %}
-        </nav>
-    </header>
+        </ul>
+    </nav>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            <ul>
+            <ul class="flash-messages">
                 {% for category, message in messages %}
                     <li>{{ message }}</li>
                 {% endfor %}
@@ -33,5 +37,13 @@
     <main>
         {% block content %}{% endblock %}
     </main>
+
+    <footer class="footer">
+        <div>
+            <h3>Talent Khoj</h3>
+            <p>Empowering the next generation of professionals in Nepal with modern tools and community.</p>
+        </div>
+    </footer>
+
 </body>
 </html>

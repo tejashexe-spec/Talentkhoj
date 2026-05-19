@@ -3,11 +3,16 @@
 {% block title %}Home | Talent Khoj{% endblock %}
 
 {% block content %}
-<h2>Welcome to Talent Khoj</h2>
-{% if session.get('user_id') %}
-    <p>Hello, {{ session['user_name'] }}!</p>
-    <p><a href="{{ url_for('logout') }}">Logout</a></p>
-{% else %}
-    <p><a href="{{ url_for('register') }}">Register</a> | <a href="{{ url_for('login') }}">Login</a></p>
-{% endif %}
+<section class="hero">
+
+    <div class="hero-left">
+
+        <h1>
+            Find internships, jobs, events,
+            and a professional community...
+        </h1>
+
+    </div>
+
+</section>
 {% endblock %}

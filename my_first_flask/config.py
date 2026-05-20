@@ -1,0 +1,5 @@
+SECRET_KEY = "dev-sprint-secret"
+MYSQL_HOST = "localhost"
+MYSQL_USER = "root"
+MYSQL_PASSWORD = "Prish_123"
+MYSQL_DATABASE = "talent_khoj"

@@ -382,7 +382,9 @@ main {
 .footer {
     background: #05154b;
     color: white;
-    padding: 40px 10%;
+    padding: 80px 10%;
+    display: flex;
+    justify-content: space-between;
 }
 
 .footer h3 {
@@ -390,8 +392,10 @@ main {
     margin-bottom: 10px;
 }
 
-.footer p {
+.footer p,
+.footer li {
     color: #d3d3d3;
+    margin-top: 15px;
+    list-style: none;
     font-size: 14px;
-    margin-top: 8px;
 }

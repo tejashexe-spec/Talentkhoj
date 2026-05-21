@@ -3,7 +3,7 @@
 {% block title %}Login | Talent Khoj{% endblock %}
 
 {% block content %}
-<h1>Login</h1>
+<h2>Login</h2>
 
 {% if error %}
     <p>{{ error }}</p>
@@ -12,14 +12,14 @@
 <form method="post" action="/login">
     <p>
         <label for="email">Email</label><br>
-        <input id="email" name="email" type="email" value="{{ form_data.email }}" required>
+        <input id="email" name="email" type="email" value="{{ form_data.email }}" placeholder="you@example.com" required>
     </p>
     <p>
         <label for="password">Password</label><br>
-        <input id="password" name="password" type="password" required>
+        <input id="password" name="password" type="password" placeholder="Password" required>
     </p>
     <button type="submit">Login</button>
 </form>
 
-<p><a href="/register">Need an account? Register here.</a></p>
+<p><a href="/register">Don't have an account? Register here</a></p>
 {% endblock %}

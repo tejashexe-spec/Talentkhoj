@@ -1,35 +1,44 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Profile | Talent Khoj</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-<nav>
-    <a href="/">Home</a> |
-    <a href="/logout">Logout</a>
-</nav>
+{% block title %}Profile | Talent Khoj{% endblock %}
+
+{% block content %}
 
 <h1>My Profile</h1>
 
-<p><strong>Name:</strong> {{ session['user_name'] }}</p>
-<p><strong>Email:</strong> {{ session.get('user_email', '') }}</p>
+<!-- Profile Picture -->
+<div>
+    <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=100&rounded=true&background=2463ff&color=fff" alt="Profile Picture">
+    <h2>{{ session['user_name'] }}</h2>
+    <p>{{ session.get('user_email', '') }}</p>
+</div>
 
 <hr>
 
+<!-- Upload Profile Image (frontend only) -->
+<h3>Profile Picture</h3>
+<form enctype="multipart/form-data">
+    <p>
+        <label for="avatar">Choose a new profile picture:</label><br>
+        <input id="avatar" name="avatar" type="file" accept="image/*">
+    </p>
+    <button type="submit">Upload Picture</button>
+</form>
+
+<hr>
+
+<!-- Change Name -->
 <h3>Change Name</h3>
-<form method="post" action="/profile">
-    <input type="hidden" name="action" value="change_name">
+<form>
     <label>New Name: <input type="text" name="full_name" value="{{ session['user_name'] }}" required></label>
     <button type="submit">Save</button>
 </form>
 
 <hr>
 
+<!-- Change Password -->
 <h3>Change Password</h3>
-<form method="post" action="/profile">
-    <input type="hidden" name="action" value="change_password">
+<form>
     <p><label>Current Password: <input type="password" name="current_password" required></label></p>
     <p><label>New Password: <input type="password" name="new_password" required></label></p>
     <p><label>Confirm Password: <input type="password" name="confirm_password" required></label></p>
@@ -38,9 +47,9 @@
 
 <hr>
 
+<!-- Reset Password -->
 <h3>Reset Password</h3>
-<form method="post" action="/profile">
-    <input type="hidden" name="action" value="reset_password">
+<form>
     <label>Email: <input type="email" name="reset_email" value="{{ session.get('user_email', '') }}" required></label>
     <button type="submit">Send Reset Link</button>
 </form>
@@ -48,5 +57,4 @@
 <hr>
 <a href="/logout">Logout</a>
 
-</body>
-</html>
+{% endblock %}

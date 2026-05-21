@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile | Talent Khoj</title>
+</head>
+<body>
+
+<nav>
+    <a href="/">Home</a> |
+    <a href="/logout">Logout</a>
+</nav>
+
+<h1>My Profile</h1>
+
+<p><strong>Name:</strong> {{ session['user_name'] }}</p>
+<p><strong>Email:</strong> {{ session.get('user_email', '') }}</p>
+
+<hr>
+
+<h3>Change Name</h3>
+<form method="post" action="/profile">
+    <input type="hidden" name="action" value="change_name">
+    <label>New Name: <input type="text" name="full_name" value="{{ session['user_name'] }}" required></label>
+    <button type="submit">Save</button>
+</form>
+
+<hr>
+
+<h3>Change Password</h3>
+<form method="post" action="/profile">
+    <input type="hidden" name="action" value="change_password">
+    <p><label>Current Password: <input type="password" name="current_password" required></label></p>
+    <p><label>New Password: <input type="password" name="new_password" required></label></p>
+    <p><label>Confirm Password: <input type="password" name="confirm_password" required></label></p>
+    <button type="submit">Update Password</button>
+</form>
+
+<hr>
+
+<h3>Reset Password</h3>
+<form method="post" action="/profile">
+    <input type="hidden" name="action" value="reset_password">
+    <label>Email: <input type="email" name="reset_email" value="{{ session.get('user_email', '') }}" required></label>
+    <button type="submit">Send Reset Link</button>
+</form>
+
+<hr>
+<a href="/logout">Logout</a>
+
+</body>
+</html>

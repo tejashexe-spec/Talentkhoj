@@ -14,8 +14,16 @@ class AuthController:
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
             form_data = {"email": email}
+
             # TODO: validate against database
-            error = "Invalid email or password."
+            # Temporary: accept any non-empty credentials for frontend testing
+            if email and password:
+                session["user_id"] = 1
+                session["user_name"] = email.split("@")[0].capitalize()
+                session["user_email"] = email
+                return redirect(url_for("home"))
+            else:
+                error = "Please enter your email and password."
 
         return render_template("login.html", form_data=form_data, error=error)
 

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Profile | Talent Khoj{% endblock %}
+
+{% block content %}
+<h1>Edit Profile</h1>
+
+{% if message %}
+    <p>{{ message }}</p>
+{% endif %}
+
+<form method="post" action="/profile/edit" enctype="multipart/form-data">
+
+    <p>
+        <label for="full_name">Full Name</label><br>
+        <input id="full_name" name="full_name" type="text" value="{{ session['user_name'] }}" required>
+    </p>
+
+    <p>
+        <label for="avatar">Profile Picture</label><br>
+        {% if session.get('user_avatar') %}
+            <img src="{{ session['user_avatar'] }}" alt="Current Picture" width="60" height="60" style="border-radius:50%; display:block; margin-bottom:8px;">
+        {% else %}
+            <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=60&rounded=true" alt="Current Picture" style="display:block; margin-bottom:8px;">
+        {% endif %}
+        <input id="avatar" name="avatar" type="file" accept="image/*">
+    </p>
+
+    <button type="submit">Save Changes</button>
+    <a href="/profile">Cancel</a>
+
+</form>
+{% endblock %}

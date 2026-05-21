@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Talent Khoj{% endblock %}
+
+{% block content %}
+
+<!-- Hero Section -->
+<section class="hero">
+
+    <div class="hero-left">
+
+        <h1>
+            Find internships, jobs, events,
+            and a professional community...
+        </h1>
+
+        <!-- Search -->
+        <div class="search-box">
+
+            <input type="text"
+                placeholder="Search roles, companies, or keywords"
+            />
+
+            <button>Search</button>
+
+        </div>
+
+
+    </div>
+
+    <!-- Right Cards -->
+    <div class="hero-right">
+
+        {% for item in features %}
+
+        <div class="feature-card">
+
+            <div class="icon">{{ item.icon }}</div>
+
+            <div>
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.description }}</p>
+            </div>
+
+            {% if item.tag %}
+                <span class="tag">{{ item.tag }}</span>
+            {% endif %}
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</section>
+
+{% endblock %}

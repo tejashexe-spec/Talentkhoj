@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import Flask, render_template
+from flask import Flask, render_template, session, redirect, url_for
 from my_first_flask.routes.auth import AuthRoutes
 
 
@@ -13,6 +13,12 @@ def create_app():
     @app.route("/")
     def home():
         return render_template("home.html")
+
+    @app.route("/profile")
+    def profile():
+        if not session.get("user_id"):
+            return redirect(url_for("auth.login"))
+        return render_template("profile.html")
 
     auth_routes = AuthRoutes()
     app.register_blueprint(auth_routes.register())

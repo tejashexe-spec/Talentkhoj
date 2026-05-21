@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Register | Talent Khoj{% endblock %}
+
+{% block content %}
+<h1>Register</h1>
+
+<form method="post" action="/register">
+    <p>
+        <label for="full_name">Full Name</label><br>
+        <input id="full_name" name="full_name" type="text" value="{{ form_data.full_name }}" required>
+        {% if errors.full_name %}<br><small>{{ errors.full_name }}</small>{% endif %}
+    </p>
+    <p>
+        <label for="email">Email</label><br>
+        <input id="email" name="email" type="email" value="{{ form_data.email }}" required>
+        {% if errors.email %}<br><small>{{ errors.email }}</small>{% endif %}
+    </p>
+    <p>
+        <label for="password">Password</label><br>
+        <input id="password" name="password" type="password" required>
+        {% if errors.password %}<br><small>{{ errors.password }}</small>{% endif %}
+    </p>
+    <p>
+        <label for="confirm_password">Confirm Password</label><br>
+        <input id="confirm_password" name="confirm_password" type="password" required>
+        {% if errors.confirm_password %}<br><small>{{ errors.confirm_password }}</small>{% endif %}
+    </p>
+    <button type="submit">Create Account</button>
+</form>
+
+<p><a href="/login">Already have an account? Login here.</a></p>
+{% endblock %}

@@ -5,3 +5,5 @@ __pycache__/
 *.pyd
 *.db
 .vscode/
+.env
+my_first_flask/static/uploads/

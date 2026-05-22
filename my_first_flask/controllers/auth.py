@@ -1,5 +1,6 @@
 from flask import render_template, request, redirect, url_for, flash, session
-
+from my_first_flask.model.database import Database
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class AuthController:
 
@@ -14,8 +15,21 @@ class AuthController:
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
             form_data = {"email": email}
-            # TODO: validate against database
-            error = "Invalid email or password."
+
+            db = Database()
+            user = db.fetch_one(
+                "SELECT id, full_name, email, password_hash, avatar FROM users WHERE email = %s",
+                (email,)
+            )
+
+            if user and check_password_hash(user["password_hash"], password):
+                session["user_id"] = user["id"]
+                session["user_name"] = user["full_name"]
+                session["user_email"] = user["email"]
+                session["user_avatar"] = user["avatar"]
+                return redirect(url_for("home"))
+            else:
+                error = "Invalid email or password."
 
         return render_template("login.html", form_data=form_data, error=error)
 
@@ -41,9 +55,17 @@ class AuthController:
                 errors["confirm_password"] = "Passwords do not match."
 
             if not errors:
-                # TODO: save user to database
-                flash("Registration successful. Please log in.", "success")
-                return redirect(url_for("auth.login"))
+                db = Database()
+                existing_user = db.fetch_one("SELECT id FROM users WHERE email = %s", (email,))
+                if existing_user:
+                    errors["email"] = "Email is already registered."
+                else:
+                    hashed_password = generate_password_hash(password)
+                    query = "INSERT INTO users (full_name, email, password_hash) VALUES (%s, %s, %s)"
+                    db.execute(query, (full_name, email, hashed_password))
+
+                    flash("Registration successful. Please log in.", "success")
+                    return redirect(url_for("auth.login"))
 
         return render_template("register.html", form_data=form_data, errors=errors)
 

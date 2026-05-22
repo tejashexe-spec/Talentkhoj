@@ -3,23 +3,28 @@
 {% block title %}Login | Talent Khoj{% endblock %}
 
 {% block content %}
-<h2>Login</h2>
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <h2>Welcome back</h2>
+        <p class="auth-subtitle">Sign in to your Talent Khoj account</p>
 
-{% if error %}
-    <p>{{ error }}</p>
-{% endif %}
+        {% if error %}
+            <p class="form-error">{{ error }}</p>
+        {% endif %}
 
-<form method="post" action="/login">
-    <p>
-        <label for="email">Email</label><br>
-        <input id="email" name="email" type="email" value="{{ form_data.email }}" placeholder="you@example.com" required>
-    </p>
-    <p>
-        <label for="password">Password</label><br>
-        <input id="password" name="password" type="password" placeholder="Password" required>
-    </p>
-    <button type="submit">Sign In</button>
-</form>
+        <form method="post" action="/login">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" value="{{ form_data.email }}" placeholder="you@example.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" placeholder="Password" required>
+            </div>
+            <button type="submit" class="submit-btn">Sign In</button>
+        </form>
 
-<p><a href="/register">Don't have an account? Register here</a></p>
+        <p class="auth-footer">Don't have an account? <a href="/register">Register here</a></p>
+    </div>
+</div>
 {% endblock %}

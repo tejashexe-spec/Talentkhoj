@@ -3,6 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, render_template, session, redirect, url_for, request, flash
+from my_first_flask import config
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -10,7 +11,7 @@ app = Flask(__name__,
             template_folder=os.path.join(BASE_DIR, "templates"),
             static_folder=os.path.join(BASE_DIR, "static"))
 
-app.secret_key = "talent-khoj-secret-2025-sprint"
+app.secret_key = config.SECRET_KEY
 
 
 @app.context_processor
@@ -85,13 +86,44 @@ def logout():
     return redirect(url_for("login"))
 
 
-@app.route("/profile")
+@app.route("/profile", methods=["GET", "POST"])
 def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
-    
-    # Pure frontend - no form processing
-    return render_template("profile.html")
+
+    name_message = None
+    password_message = None
+    password_errors = []
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "change_name":
+            full_name = request.form.get("full_name", "").strip()
+            if not full_name:
+                name_message = "Name cannot be empty."
+            else:
+                session["user_name"] = full_name
+                session.modified = True
+                # TODO: update full_name in users table WHERE id = session['user_id']
+                name_message = "Name updated successfully."
+
+        elif action == "change_password":
+            new_password = request.form.get("new_password", "")
+            confirm_password = request.form.get("confirm_password", "")
+            if len(new_password) < 8:
+                password_errors.append("New password must be at least 8 characters.")
+            if new_password != confirm_password:
+                password_errors.append("Passwords do not match.")
+            if not password_errors:
+                # TODO: hash new_password and update password_hash in users table WHERE id = session['user_id']
+                password_message = "Password updated successfully."
+
+    return render_template("profile.html",
+        name_message=name_message,
+        password_message=password_message,
+        password_errors=password_errors
+    )
 
 
 if __name__ == "__main__":

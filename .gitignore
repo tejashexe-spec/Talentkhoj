@@ -6,3 +6,4 @@ __pycache__/
 *.db
 .vscode/
 .env
+my_first_flask/static/uploads/

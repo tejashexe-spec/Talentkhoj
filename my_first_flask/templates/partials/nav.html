@@ -1,10 +1,12 @@
 <nav>
-    <a href="/">Home</a> |
+    <a href="{{ url_for('home') }}">Home</a> |
     {% if session.get('user_id') %}
-        {{ session['user_name'] }} |
-        <a href="/logout">Logout</a>
+        <a href="{{ url_for('profile') }}">
+            <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=30&rounded=true" alt="profile" width="30" height="30" style="border-radius:50%; vertical-align:middle;">
+            {{ session['user_name'] }}
+        </a>
     {% else %}
-        <a href="/register">Register</a> |
-        <a href="/login">Login</a>
+        <a href="{{ url_for('register') }}">Register</a> |
+        <a href="{{ url_for('login') }}">Login</a>
     {% endif %}
 </nav>

@@ -4,24 +4,65 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Talent Khoj{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    {% include "partials/nav.html" %}
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <ul>
-                {% for category, message in messages %}
-                    <li>{{ message }}</li>
-                {% endfor %}
-            </ul>
+<nav class="navbar">
+    <a class="nav-logo" href="/">Talent Khoj</a>
+
+    <a href="/" class="nav-links">Home</a>
+
+    <div>
+        {% if session.get('user_id') %}
+            <div class="profile-menu">
+                <button class="profile-trigger" onclick="toggleDropdown(event)">
+                    {% if session.get('user_avatar') %}
+                        <img src="{{ session['user_avatar'] }}" alt="profile">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=34&rounded=true&background=2456ff&color=fff" alt="profile">
+                    {% endif %}
+                    {{ session['user_name'] }}
+                </button>
+                <div class="dropdown" id="profileDropdown">
+                    <a href="/profile">My Profile</a>
+                    <a href="/logout">Logout</a>
+                </div>
+            </div>
+        {% else %}
+            <a class="nav-btn" href="/login">Sign In</a>
         {% endif %}
-    {% endwith %}
+    </div>
+</nav>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <ul class="flash-list">
+            {% for category, message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endwith %}
+
+<main>
     {% block content %}{% endblock %}
+</main>
 
-    <footer>
-        <p>&copy; 2026 Talent Khoj. All rights reserved.</p>
-    </footer>
+<footer class="footer-bottom">
+    <p>&copy; 2026 Talent Khoj. All rights reserved.</p>
+</footer>
+
+
+<script>
+    function toggleDropdown(e) {
+        e.stopPropagation();
+        document.getElementById('profileDropdown').classList.toggle('open');
+    }
+    document.addEventListener('click', function() {
+        var d = document.getElementById('profileDropdown');
+        if (d) d.classList.remove('open');
+    });
+</script>
 </body>
 </html>

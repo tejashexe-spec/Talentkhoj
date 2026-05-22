@@ -15,14 +15,18 @@ class AuthController:
             email = request.form.get("email", "").strip().lower()
             password = request.form.get("password", "")
             form_data = {"email": email}
-            
+
             db = Database()
-            query = "SELECT * FROM users WHERE email = %s"
-            user = db.fetch_one(query, (email,))
-            
-            if user and check_password_hash(user['password'], password):
+            user = db.fetch_one(
+                "SELECT id, full_name, email, password_hash, avatar FROM users WHERE email = %s",
+                (email,)
+            )
+
+            if user and check_password_hash(user["password_hash"], password):
                 session["user_id"] = user["id"]
                 session["user_name"] = user["full_name"]
+                session["user_email"] = user["email"]
+                session["user_avatar"] = user["avatar"]
                 return redirect(url_for("home"))
             else:
                 error = "Invalid email or password."
@@ -52,17 +56,14 @@ class AuthController:
 
             if not errors:
                 db = Database()
-                
-                
                 existing_user = db.fetch_one("SELECT id FROM users WHERE email = %s", (email,))
                 if existing_user:
                     errors["email"] = "Email is already registered."
                 else:
-                    
                     hashed_password = generate_password_hash(password)
-                    query = "INSERT INTO users (full_name, email, password) VALUES (%s, %s, %s)"
+                    query = "INSERT INTO users (full_name, email, password_hash) VALUES (%s, %s, %s)"
                     db.execute(query, (full_name, email, hashed_password))
-                    
+
                     flash("Registration successful. Please log in.", "success")
                     return redirect(url_for("auth.login"))
 

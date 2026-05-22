@@ -119,6 +119,21 @@ def profile():
                 # TODO: hash new_password and update password_hash in users table WHERE id = session['user_id']
                 password_message = "Password updated successfully."
 
+        elif action == "upload_avatar":
+            avatar = request.files.get("avatar")
+            allowed = {"png", "jpg", "jpeg", "gif", "webp"}
+            if avatar and avatar.filename:
+                ext = avatar.filename.rsplit(".", 1)[-1].lower()
+                if ext in allowed:
+                    import time
+                    filename = f"user_{session['user_id']}_{int(time.time())}.{ext}"
+                    upload_path = os.path.join(BASE_DIR, "static", "uploads", filename)
+                    avatar.save(upload_path)
+                    session["user_avatar"] = f"/static/uploads/{filename}"
+                    session.modified = True
+                else:
+                    name_message = "Invalid file type. Use PNG, JPG, GIF or WEBP."
+
     return render_template("profile.html",
         name_message=name_message,
         password_message=password_message,

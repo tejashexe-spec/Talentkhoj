@@ -4,33 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Talent Khoj{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
-<nav>
-    <a href="/">Talent Khoj</a> |
-    <a href="/">Home</a> |
-    {% if session.get('user_id') %}
-        <a href="/profile">
-            {% if session.get('user_avatar') %}
-                <img src="{{ session['user_avatar'] }}" alt="profile" style="width:32px; height:32px; object-fit:cover; border-radius:50%; vertical-align:middle;">
-            {% else %}
-                <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=32&rounded=true" alt="profile" style="width:32px; height:32px; vertical-align:middle;">
-            {% endif %}
-            {{ session['user_name'] }}
-        </a> |
-        <a href="/logout">Logout</a>
-    {% else %}
-        <a href="/register">Register</a> |
-        <a href="/login">Login</a>
-    {% endif %}
-</nav>
+<!-- NAVBAR -->
+<nav class="navbar">
+    <a class="nav-logo" href="/">Talent Khoj</a>
 
-<hr>
+    <a href="/" class="nav-links">Home</a>
+
+    <div>
+        {% if session.get('user_id') %}
+            <div class="profile-menu">
+                <button class="profile-trigger" onclick="toggleDropdown(event)">
+                    {% if session.get('user_avatar') %}
+                        <img src="{{ session['user_avatar'] }}" alt="profile">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=34&rounded=true&background=2456ff&color=fff" alt="profile">
+                    {% endif %}
+                    {{ session['user_name'] }}
+                </button>
+                <div class="dropdown" id="profileDropdown">
+                    <a href="/profile">My Profile</a>
+                    <a href="/logout">Logout</a>
+                </div>
+            </div>
+        {% else %}
+            <a class="nav-btn" href="/login">Sign In</a>
+        {% endif %}
+    </div>
+</nav>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-        <ul>
+        <ul class="flash-list">
             {% for category, message in messages %}
                 <li>{{ message }}</li>
             {% endfor %}
@@ -42,16 +50,16 @@
     {% block content %}{% endblock %}
 </main>
 
-<hr>
-<footer>
+<!-- FOOTER -->
+<footer class="footer-bottom">
     <p>&copy; 2026 Talent Khoj. All rights reserved.</p>
 </footer>
+
 
 <script>
     function toggleDropdown(e) {
         e.stopPropagation();
-        var d = document.getElementById('profileDropdown');
-        if (d) d.classList.toggle('open');
+        document.getElementById('profileDropdown').classList.toggle('open');
     }
     document.addEventListener('click', function() {
         var d = document.getElementById('profileDropdown');

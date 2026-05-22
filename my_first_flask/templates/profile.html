@@ -5,17 +5,19 @@
 {% block content %}
 <h1>My Profile</h1>
 
-<p><strong>Name:</strong> {{ session['user_name'] }}</p>
-<p><strong>Email:</strong> {{ session.get('user_email', '') }}</p>
+<div>
+    {% if session.get('user_avatar') %}
+        <img src="{{ session['user_avatar'] }}" alt="Profile Picture" width="90" height="90" style="border-radius:50%; object-fit:cover;">
+    {% else %}
+        <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=90&rounded=true" alt="Profile Picture">
+    {% endif %}
+    <p><strong>{{ session['user_name'] }}</strong></p>
+    <p>{{ session.get('user_email', '') }}</p>
+</div>
 
 <hr>
 
 <h3>Profile Picture</h3>
-{% if session.get('user_avatar') %}
-    <p><img src="{{ session['user_avatar'] }}" alt="Profile Picture" style="width:100px; height:100px; object-fit:cover; border-radius:50%;"></p>
-{% else %}
-    <p><img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=100&rounded=true" alt="Profile Picture" style="width:100px; height:100px;"></p>
-{% endif %}
 <form method="post" action="/profile" enctype="multipart/form-data">
     <input type="hidden" name="action" value="upload_avatar">
     <p>
@@ -28,9 +30,7 @@
 <hr>
 
 <h3>Change Name</h3>
-{% if name_message %}
-    <p>{{ name_message }}</p>
-{% endif %}
+{% if name_message %}<p>{{ name_message }}</p>{% endif %}
 <form method="post" action="/profile">
     <input type="hidden" name="action" value="change_name">
     <p>
@@ -43,13 +43,9 @@
 <hr>
 
 <h3>Change Password</h3>
-{% if password_message %}
-    <p>{{ password_message }}</p>
-{% endif %}
+{% if password_message %}<p>{{ password_message }}</p>{% endif %}
 {% if password_errors %}
-    <ul>
-        {% for e in password_errors %}<li>{{ e }}</li>{% endfor %}
-    </ul>
+    {% for e in password_errors %}<p>{{ e }}</p>{% endfor %}
 {% endif %}
 <form method="post" action="/profile">
     <input type="hidden" name="action" value="change_password">

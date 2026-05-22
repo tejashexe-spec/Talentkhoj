@@ -23,8 +23,6 @@ db = Database()
 @app.context_processor
 def inject_session():
     return dict(session=session)
-
-
 def get_db():
     return db.get_connection()
 

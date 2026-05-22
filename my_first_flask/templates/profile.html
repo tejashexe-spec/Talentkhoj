@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Profile | Talent Khoj{% endblock %}
+
+{% block content %}
+<h1>My Profile</h1>
+
+<p><strong>Name:</strong> {{ session['user_name'] }}</p>
+<p><strong>Email:</strong> {{ session.get('user_email', '') }}</p>
+
+<hr>
+
+<h3>Profile Picture</h3>
+<form enctype="multipart/form-data">
+    <p>
+        <label for="avatar">Choose a new profile picture</label><br>
+        <input id="avatar" name="avatar" type="file" accept="image/*">
+    </p>
+    <button type="submit">Upload Picture</button>
+</form>
+
+<hr>
+
+<h3>Change Name</h3>
+<form>
+    <p>
+        <label for="full_name">New Full Name</label><br>
+        <input id="full_name" type="text" name="full_name" value="{{ session['user_name'] }}" required>
+    </p>
+    <button type="submit">Save</button>
+</form>
+
+<hr>
+
+<h3>Change Password</h3>
+<form>
+    <p>
+        <label for="current_password">Current Password</label><br>
+        <input id="current_password" type="password" name="current_password" required>
+    </p>
+    <p>
+        <label for="new_password">New Password</label><br>
+        <input id="new_password" type="password" name="new_password" required>
+    </p>
+    <p>
+        <label for="confirm_password">Confirm New Password</label><br>
+        <input id="confirm_password" type="password" name="confirm_password" required>
+    </p>
+    <button type="submit">Update Password</button>
+</form>
+
+<hr>
+
+<h3>Reset Password</h3>
+<form>
+    <p>
+        <label for="reset_email">Email Address</label><br>
+        <input id="reset_email" type="email" name="reset_email" value="{{ session.get('user_email', '') }}" required>
+    </p>
+    <button type="submit">Send Reset Link</button>
+</form>
+
+<hr>
+<a href="/logout">Logout</a>
+
+{% endblock %}

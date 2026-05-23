@@ -66,14 +66,10 @@
         </form>
     </div>
 
-    <!-- Reset Password -->
     <div class="profile-section">
-        <h3>Reset Password</h3>
-        <form>
-            <label for="reset_email">Email Address</label>
-            <input id="reset_email" type="email" name="reset_email" value="{{ session.get('user_email', '') }}" required>
-            <button type="submit" class="profile-btn">Send Reset Link</button>
-        </form>
+        <h3>Verify Email</h3>
+        <p class="auth-subtitle">Current email: {{ session.get('user_email', '') }}</p>
+        <a class="profile-btn" href="/verify-email">Send Verification Link</a>
     </div>
 
     <a class="logout-link" href="/logout">Logout</a>

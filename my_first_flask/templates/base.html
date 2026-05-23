@@ -8,10 +8,13 @@
 </head>
 <body>
 
+<!-- NAVBAR -->
 <nav class="navbar">
     <a class="nav-logo" href="/">Talent Khoj</a>
 
-    <a href="/" class="nav-links">Home</a>
+    <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+    </ul>
 
     <div>
         {% if session.get('user_id') %}
@@ -49,10 +52,24 @@
     {% block content %}{% endblock %}
 </main>
 
-<footer class="footer-bottom">
-    <p>&copy; 2026 Talent Khoj. All rights reserved.</p>
+<!-- FOOTER -->
+<footer class="footer">
+    <div>
+        <h3>Talent Khoj</h3>
+        <p>Empowering the next generation of professionals in Nepal.</p>
+    </div>
+    <div>
+        <h3>Platform</h3>
+        <ul>
+            <li>About Us</li>
+            <li>Contact Support</li>
+            <li>Privacy Policy</li>
+        </ul>
+    </div>
 </footer>
-
+<div class="footer-bottom">
+    <p>&copy; 2026 Talent Khoj Nepal. Empowering the next generation.</p>
+</div>
 
 <script>
     function toggleDropdown(e) {
@@ -64,5 +81,6 @@
         if (d) d.classList.remove('open');
     });
 </script>
+
 </body>
 </html>

@@ -15,10 +15,10 @@ main { flex: 1; }
 /* ── NAVBAR ── */
 .navbar {
     background: white;
-    width: 100%;
-    margin: 0;
-    padding: 14px 40px;
-    border-radius: 0;
+    width: 88%;
+    margin: 18px auto;
+    padding: 14px 32px;
+    border-radius: 40px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -462,11 +462,11 @@ main { flex: 1; }
 .footer {
     background: #05154b;
     color: white;
-    padding: 60px 10%;
+    padding: 30px 10%;
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 40px;
+    gap: 20px;
 }
 
 .footer h3 { font-size: 16px; margin-bottom: 14px; }
@@ -476,6 +476,15 @@ main { flex: 1; }
     font-size: 13px;
     line-height: 1.8;
     list-style: none;
+}
+
+.footer ul li a {
+    color: #b0b8d0;
+    text-decoration: none;
+}
+
+.footer ul li a:hover {
+    color: white;
 }
 
 .footer-bottom {

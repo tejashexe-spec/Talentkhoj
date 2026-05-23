@@ -1,6 +1,8 @@
 import sys
 import os
 import time
+import secrets
+from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, render_template, session, redirect, url_for, request, flash
@@ -8,6 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
 from my_first_flask import config
 from my_first_flask.model.database import Database
+from my_first_flask.services.email_service import EmailService
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -128,14 +131,152 @@ def login():
     return render_template("login.html", form_data=form_data, error=error)
 
 
-@app.route("/reset-password")
+@app.route("/verify-email", methods=["GET", "POST"])
+def verify_email():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        
+        conn = get_db()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id, full_name, email_verified FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+        
+        if user and not user["email_verified"]:
+            verification_token = secrets.token_urlsafe(32)
+            expires_at = datetime.utcnow() + timedelta(hours=24)
+            
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET verification_token = %s, verification_token_expires_at = %s WHERE id = %s",
+                    (verification_token, expires_at, user["id"])
+                )
+            
+            verification_link = url_for("verify_email_callback", token=verification_token, _external=True)
+            email_html = f"""
+            <p>Hi {user['full_name']},</p>
+            <p>Please click the link below to verify your email address:</p>
+            <p><a href="{verification_link}">{verification_link}</a></p>
+            <p>This link will expire in 24 hours.</p>
+            """
+            
+            EmailService.send_email(
+                to=email,
+                subject="Verify Your Email - Talent Khoj",
+                html=email_html
+            )
+            
+            flash("Verification link sent to your email!", "success")
+            return redirect(url_for("login"))
+        elif user and user["email_verified"]:
+            flash("Your email is already verified!", "info")
+            return redirect(url_for("login"))
+        else:
+            flash("No account found with that email.", "error")
+    
+    return render_template("verify_email.html")
+
+
+@app.route("/verify-email/<token>")
+def verify_email_callback(token):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, verification_token_expires_at FROM users WHERE verification_token = %s",
+            (token,)
+        )
+        user = cursor.fetchone()
+    
+    if user:
+        if user["verification_token_expires_at"] > datetime.utcnow():
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET email_verified = TRUE, verification_token = NULL, verification_token_expires_at = NULL WHERE id = %s",
+                    (user["id"],)
+                )
+            flash("Email verified successfully! Please log in.", "success")
+        else:
+            flash("Verification link has expired. Please request a new one.", "error")
+    else:
+        flash("Invalid verification link.", "error")
+    
+    return redirect(url_for("login"))
+
+
+@app.route("/reset-password", methods=["GET", "POST"])
 def reset_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        
+        conn = get_db()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id, full_name FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+        
+        if user:
+            reset_token = secrets.token_urlsafe(32)
+            expires_at = datetime.utcnow() + timedelta(hours=1)
+            
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET reset_password_token = %s, reset_password_token_expires_at = %s WHERE id = %s",
+                    (reset_token, expires_at, user["id"])
+                )
+            
+            reset_link = url_for("reset_password_callback", token=reset_token, _external=True)
+            email_html = f"""
+            <p>Hi {user['full_name']},</p>
+            <p>Please click the link below to reset your password:</p>
+            <p><a href="{reset_link}">{reset_link}</a></p>
+            <p>This link will expire in 1 hour.</p>
+            """
+            
+            EmailService.send_email(
+                to=email,
+                subject="Reset Your Password - Talent Khoj",
+                html=email_html
+            )
+            
+            flash("Password reset link sent to your email!", "success")
+            return redirect(url_for("login"))
+        else:
+            flash("No account found with that email.", "error")
+    
     return render_template("reset_password.html")
 
 
-@app.route("/verify-email")
-def verify_email():
-    return render_template("verify_email.html")
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password_callback(token):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, reset_password_token_expires_at FROM users WHERE reset_password_token = %s",
+            (token,)
+        )
+        user = cursor.fetchone()
+    
+    if not user or user["reset_password_token_expires_at"] < datetime.utcnow():
+        flash("Password reset link is invalid or has expired.", "error")
+        return redirect(url_for("reset_password"))
+    
+    if request.method == "POST":
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+        
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters.", "error")
+        elif new_password != confirm_password:
+            flash("Passwords do not match.", "error")
+        else:
+            password_hash = generate_password_hash(new_password)
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET password_hash = %s, reset_password_token = NULL, reset_password_token_expires_at = NULL WHERE id = %s",
+                    (password_hash, user["id"])
+                )
+            flash("Password reset successfully! Please log in.", "success")
+            return redirect(url_for("login"))
+    
+    return render_template("reset_password_confirm.html", token=token)
 
 
 # ─── LOGOUT ──────────────────────────────────────────────────────────────────

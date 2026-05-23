@@ -5,3 +5,4 @@ flask-wtf==1.2.2
 python-dotenv==1.0.1
 authlib==1.7.2
 joserfc==1.6.7
+resend==2.30.1

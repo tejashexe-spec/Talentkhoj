@@ -343,6 +343,28 @@ main { flex: 1; }
 .auth-footer { text-align: center; margin-top: 20px; font-size: 13px; color: #888; }
 .auth-footer a { color: #2456ff; text-decoration: none; font-weight: 600; }
 
+.auth-helper {
+    margin-top: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: #666;
+}
+
+.auth-helper a {
+    color: #2456ff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-message {
+    background: #eaf8ef;
+    color: #2d7a4f;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
 /* ── PROFILE PAGE ── */
 .profile-wrapper {
     width: 90%;

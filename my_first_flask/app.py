@@ -137,6 +137,16 @@ def login():
     return render_template("login.html", form_data=form_data, error=error)
 
 
+@app.route("/reset-password")
+def reset_password():
+    return render_template("reset_password.html")
+
+
+@app.route("/verify-email")
+def verify_email():
+    return render_template("verify_email.html")
+
+
 # ─── LOGOUT ──────────────────────────────────────────────────────────────────
 
 @app.route("/logout")

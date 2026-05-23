@@ -8,12 +8,12 @@
         <h2>Verify Email</h2>
         <p class="auth-subtitle">Enter your email to receive a fresh verification link.</p>
 
-        <form onsubmit="return false;">
+        <form method="POST">
             <div class="form-group">
                 <label for="email">Email</label>
                 <input id="email" name="email" type="email" placeholder="you@example.com" required>
             </div>
-            <button type="button" class="submit-btn">Send Verification Link</button>
+            <button type="submit" class="submit-btn">Send Verification Link</button>
         </form>
 
         <p class="auth-footer">Already verified? <a href="/login">Sign In</a></p>

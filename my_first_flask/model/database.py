@@ -49,9 +49,35 @@ class Database:
                     email VARCHAR(255) NOT NULL UNIQUE,
                     password_hash VARCHAR(255) NOT NULL,
                     avatar VARCHAR(255) DEFAULT NULL,
+                    email_verified BOOLEAN DEFAULT FALSE,
+                    verification_token VARCHAR(255) DEFAULT NULL,
+                    verification_token_expires_at DATETIME DEFAULT NULL,
+                    reset_password_token VARCHAR(255) DEFAULT NULL,
+                    reset_password_token_expires_at DATETIME DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            
+            # Add missing columns if they don't exist
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'email_verified'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE")
+            
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'verification_token'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN verification_token VARCHAR(255) DEFAULT NULL")
+            
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'verification_token_expires_at'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN verification_token_expires_at DATETIME DEFAULT NULL")
+            
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'reset_password_token'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(255) DEFAULT NULL")
+            
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'reset_password_token_expires_at'")
+            if not cursor.fetchone():
+                cursor.execute("ALTER TABLE users ADD COLUMN reset_password_token_expires_at DATETIME DEFAULT NULL")
 
     def fetch_one(self, query, params=()):
         if not self.__connection:

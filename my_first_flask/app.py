@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, render_template, session, redirect, url_for, request, flash
 from werkzeug.security import generate_password_hash, check_password_hash
+from authlib.integrations.flask_client import OAuth
 from my_first_flask import config
 from my_first_flask.model.database import Database
 
@@ -15,6 +16,16 @@ app = Flask(__name__,
             static_folder=os.path.join(BASE_DIR, "static"))
 
 app.secret_key = config.SECRET_KEY
+
+# ── Google OAuth ──────────────────────────────────────────────────────────────
+oauth = OAuth(app)
+google = oauth.register(
+    name="google",
+    client_id=config.GOOGLE_CLIENT_ID,
+    client_secret=config.GOOGLE_CLIENT_SECRET,
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
 
 # Initialize database once
 db = Database()
@@ -245,6 +256,69 @@ def profile():
         password_message=password_message,
         password_errors=password_errors
     )
+
+
+# ── Static Pages ──────────────────────────────────────────────────────────────
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
+# ── Google OAuth ──────────────────────────────────────────────────────────────
+
+@app.route("/login/google")
+def google_login():
+    redirect_uri = url_for("google_callback", _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.route("/login/google/callback")
+def google_callback():
+    token = google.authorize_access_token()
+    user_info = token.get("userinfo")
+
+    if not user_info:
+        flash("Google login failed. Please try again.", "error")
+        return redirect(url_for("login"))
+
+    email = user_info["email"]
+    full_name = user_info.get("name", email.split("@")[0].capitalize())
+    avatar = user_info.get("picture")
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, full_name, avatar FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+    if not user:
+        import secrets
+        password_hash = generate_password_hash(secrets.token_hex(32))
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT INTO users (full_name, email, password_hash, avatar) VALUES (%s, %s, %s, %s)",
+                (full_name, email, password_hash, avatar)
+            )
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+
+    session["user_id"] = user["id"]
+    session["user_name"] = user["full_name"]
+    session["user_email"] = email
+    session["user_avatar"] = user.get("avatar") or avatar
+
+    return redirect(url_for("home"))
 
 
 if __name__ == "__main__":

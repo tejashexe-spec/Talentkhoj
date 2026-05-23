@@ -456,6 +456,15 @@ main { flex: 1; }
     list-style: none;
 }
 
+.footer ul li a {
+    color: #b0b8d0;
+    text-decoration: none;
+}
+
+.footer ul li a:hover {
+    color: white;
+}
+
 .footer-bottom {
     background: #05154b;
     text-align: center;

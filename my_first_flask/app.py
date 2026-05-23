@@ -42,27 +42,7 @@ def get_db():
 
 @app.route("/")
 def home():
-    features = [
-        {
-            "icon": "📈",
-            "title": "Candidate Pulse",
-            "description": "AI-driven insights matching your skills to the perfect role instantly.",
-            "tag": None
-        },
-        {
-            "icon": "👥",
-            "title": "Community Layer",
-            "description": "Connect with mentors, peers, and industry leaders in Nepal.",
-            "tag": None
-        },
-        {
-            "icon": "</>",
-            "title": "Frontend Developer Intern",
-            "description": "TechFlow Nepal",
-            "tag": "NEW"
-        },
-    ]
-    return render_template("home.html", features=features)
+    return render_template("home.html")
 
 
 # ─── REGISTER ────────────────────────────────────────────────────────────────

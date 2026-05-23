@@ -30,10 +30,10 @@ class Database:
                 autocommit=True,
             )
             self._init_tables()
-            print("✅ Database connected successfully!")
+            print("Database connected successfully!")
 
         except pymysql.MySQLError as e:
-            print("❌ Database connection failed!")
+            print("Database connection failed!")
             print("Error:", e)
             self.__connection = None
 

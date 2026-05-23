@@ -14,20 +14,6 @@
             <button>Search</button>
         </div>
     </div>
-    <div class="hero-right">
-        {% for item in features %}
-        <div class="feature-card">
-            <div class="icon">{{ item.icon }}</div>
-            <div>
-                <h3>{{ item.title }}</h3>
-                <p>{{ item.description }}</p>
-            </div>
-            {% if item.tag %}
-                <span class="tag">{{ item.tag }}</span>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
 </section>
 
 {% endblock %}

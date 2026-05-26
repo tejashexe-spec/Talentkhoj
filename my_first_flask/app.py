@@ -3,6 +3,7 @@ import os
 import time
 import secrets
 from datetime import datetime, timedelta
+from functools import wraps
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, render_template, session, redirect, url_for, request, flash
@@ -39,6 +40,15 @@ def inject_session():
     return dict(session=session)
 def get_db():
     return db.get_connection()
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
 
 
 # ─── HOME ────────────────────────────────────────────────────────────────────
@@ -379,7 +389,7 @@ def profile():
     )
 
 
-# ── Static Pages ──────────────────────────────────────────────────────────────
+# ─── STATIC PAGES ────────────────────────────────────────────────────────────
 
 @app.route("/about")
 def about():
@@ -394,6 +404,44 @@ def contact():
 @app.route("/privacy")
 def privacy():
     return render_template("privacy.html")
+
+
+# ─── DASHBOARD ───────────────────────────────────────────────────────────────
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template("dashboard.html")
+
+
+@app.route("/dashboard/search")
+@login_required
+def dashboard_search():
+    return render_template("dashboard_search.html")
+
+
+@app.route("/dashboard/applications")
+@login_required
+def dashboard_applications():
+    return render_template("dashboard_applications.html")
+
+
+@app.route("/dashboard/saved")
+@login_required
+def dashboard_saved():
+    return render_template("dashboard_saved.html")
+
+
+@app.route("/dashboard/inbox")
+@login_required
+def dashboard_inbox():
+    return render_template("dashboard_inbox.html")
+
+
+@app.route("/dashboard/settings")
+@login_required
+def dashboard_settings():
+    return render_template("dashboard_settings.html")
 
 
 # ── Google OAuth ──────────────────────────────────────────────────────────────

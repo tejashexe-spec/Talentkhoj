@@ -1,0 +1,12 @@
+{% extends "dashboard_base.html" %}
+{% set active = "dashboard" %}
+
+{% block title %}Dashboard | Talent Khoj{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Welcome back, {{ session['user_name'] }} </h1>
+    <p>Here's what's happening with your job search.</p>
+</div>
+
+{% endblock %}

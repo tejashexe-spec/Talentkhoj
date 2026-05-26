@@ -1,0 +1,206 @@
+/* ── DASHBOARD LAYOUT ── */
+.dashboard-body {
+    background: #f0ede8;
+    display: block;
+}
+
+.dashboard-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+    width: 240px;
+    min-width: 240px;
+    background: #05154b;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 50;
+}
+
+.sidebar-logo {
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    text-decoration: none;
+    padding: 0 24px 28px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: block;
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+
+.sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    color: #b0b8d0;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+}
+
+.sidebar-item:hover {
+    background: rgba(255,255,255,0.07);
+    color: white;
+}
+
+.sidebar-item.active {
+    background: rgba(36,86,255,0.15);
+    color: white;
+    border-left: 3px solid #2456ff;
+}
+
+.sidebar-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* ── SIDEBAR PROFILE ── */
+.sidebar-profile {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+}
+
+.sidebar-profile-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+    color: white;
+    font-size: 14px;
+    font-family: inherit;
+    padding: 0;
+}
+
+.sidebar-profile-btn img {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #2456ff;
+    flex-shrink: 0;
+}
+
+.sidebar-profile-btn span:nth-child(2) {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    color: #b0b8d0;
+}
+
+.sidebar-dropdown {
+    display: none;
+    position: absolute;
+    bottom: 70px;
+    left: 16px;
+    right: 16px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    overflow: hidden;
+    z-index: 100;
+}
+
+.sidebar-dropdown.open { display: block; }
+
+.sidebar-dropdown a {
+    display: block;
+    padding: 11px 18px;
+    text-decoration: none;
+    color: #333;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.sidebar-dropdown a:hover {
+    background: #f5f7ff;
+    color: #2456ff;
+}
+
+/* ── DASHBOARD CONTENT ── */
+.dashboard-content {
+    margin-left: 240px;
+    flex: 1;
+    padding: 36px 40px;
+    min-height: 100vh;
+}
+
+.dashboard-header {
+    margin-bottom: 32px;
+}
+
+.dashboard-header h1 {
+    font-size: 26px;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+
+.dashboard-header p {
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* ── DASHBOARD STAT CARDS ── */
+.dashboard-cards {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.dash-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px 28px;
+    min-width: 180px;
+    flex: 1;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+.dash-card h3 {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dash-number {
+    font-size: 36px;
+    font-weight: 700;
+    color: #2456ff;
+    margin-bottom: 4px;
+}
+
+.dash-label {
+    font-size: 12px;
+    color: #94a3b8;
+}

@@ -239,5 +239,70 @@ def profile():
     )
 
 
+# ─── STATIC PAGES ────────────────────────────────────────────────────────────
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
+# ─── DASHBOARD ───────────────────────────────────────────────────────────────
+
+def login_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template("dashboard.html")
+
+
+@app.route("/dashboard/search")
+@login_required
+def dashboard_search():
+    return render_template("dashboard_search.html")
+
+
+@app.route("/dashboard/applications")
+@login_required
+def dashboard_applications():
+    return render_template("dashboard_applications.html")
+
+
+@app.route("/dashboard/saved")
+@login_required
+def dashboard_saved():
+    return render_template("dashboard_saved.html")
+
+
+@app.route("/dashboard/inbox")
+@login_required
+def dashboard_inbox():
+    return render_template("dashboard_inbox.html")
+
+
+@app.route("/dashboard/settings")
+@login_required
+def dashboard_settings():
+    return render_template("dashboard_settings.html")
+
+
 if __name__ == "__main__":
     app.run(debug=True)

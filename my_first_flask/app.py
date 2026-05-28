@@ -62,43 +62,100 @@ def home():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
-    form_data = {"full_name": "", "email": ""}
+    form_data = {"full_name": "", "email": "", "account_type": "individual",
+                 "company_name": "", "company_address": "", "pan_number": "", "company_email": ""}
     errors = {}
 
     if request.method == "POST":
-        full_name = request.form.get("full_name", "").strip()
-        email = request.form.get("email", "").strip().lower()
-        password = request.form.get("password", "")
-        confirm_password = request.form.get("confirm_password", "")
+        account_type = request.form.get("account_type", "individual")
+        if account_type not in ("individual", "company"):
+            account_type = "individual"
+        form_data["account_type"] = account_type
 
-        form_data = {"full_name": full_name, "email": email}
+        if account_type == "individual":
+            full_name = request.form.get("full_name", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            password = request.form.get("password", "")
+            confirm_password = request.form.get("confirm_password", "")
 
-        if not full_name:
-            errors["full_name"] = "Full name is required."
-        if not email or "@" not in email:
-            errors["email"] = "Enter a valid email address."
-        if len(password) < 8:
-            errors["password"] = "Password must be at least 8 characters."
-        if password != confirm_password:
-            errors["confirm_password"] = "Passwords do not match."
+            form_data.update({"full_name": full_name, "email": email})
 
-        if not errors:
-            conn = get_db()
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-                if cursor.fetchone():
-                    errors["email"] = "An account with that email already exists."
+            if not full_name:
+                errors["full_name"] = "Full name is required."
+            if not email or "@" not in email:
+                errors["email"] = "Enter a valid email address."
+            if len(password) < 8:
+                errors["password"] = "Password must be at least 8 characters."
+            if password != confirm_password:
+                errors["confirm_password"] = "Passwords do not match."
 
-        if not errors:
-            password_hash = generate_password_hash(password)
-            conn = get_db()
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO users (full_name, email, password_hash) VALUES (%s, %s, %s)",
-                    (full_name, email, password_hash)
-                )
-            flash("Registration successful. Please log in.", "success")
-            return redirect(url_for("login"))
+            if not errors:
+                conn = get_db()
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
+                    if cursor.fetchone():
+                        errors["email"] = "An account with that email already exists."
+
+            if not errors:
+                password_hash = generate_password_hash(password)
+                conn = get_db()
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO users (full_name, email, password_hash, account_type) VALUES (%s, %s, %s, 'individual')",
+                        (full_name, email, password_hash)
+                    )
+                flash("Registration successful. Please log in.", "success")
+                return redirect(url_for("login"))
+
+        else:  # company
+            company_name = request.form.get("company_name", "").strip()
+            company_address = request.form.get("company_address", "").strip()
+            pan_number = request.form.get("pan_number", "").strip()
+            company_email = request.form.get("company_email", "").strip().lower()
+            password = request.form.get("company_password", "")
+            confirm_password = request.form.get("company_confirm_password", "")
+
+            form_data.update({
+                "company_name": company_name,
+                "company_address": company_address,
+                "pan_number": pan_number,
+                "company_email": company_email
+            })
+
+            if not company_name:
+                errors["company_name"] = "Company name is required."
+            if not company_address:
+                errors["company_address"] = "Company address is required."
+            if not company_email or "@" not in company_email:
+                errors["company_email"] = "Enter a valid email address."
+            if len(password) < 8:
+                errors["company_password"] = "Password must be at least 8 characters."
+            if password != confirm_password:
+                errors["company_confirm_password"] = "Passwords do not match."
+
+            if not errors:
+                conn = get_db()
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT id FROM users WHERE email = %s", (company_email,))
+                    if cursor.fetchone():
+                        errors["company_email"] = "An account with that email already exists."
+
+            if not errors:
+                password_hash = generate_password_hash(password)
+                conn = get_db()
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO users (full_name, email, password_hash, account_type) VALUES (%s, %s, %s, 'company')",
+                        (company_name, company_email, password_hash)
+                    )
+                    user_id = cursor.lastrowid
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO companies (user_id, company_name, address, pan_number) VALUES (%s, %s, %s, %s)",
+                        (user_id, company_name, company_address, pan_number or None)
+                    )
+                flash("Company registered successfully. Please log in.", "success")
+                return redirect(url_for("login"))
 
     return render_template("register.html", form_data=form_data, errors=errors)
 
@@ -124,7 +181,7 @@ def login():
             conn = get_db()
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, full_name, email, password_hash, avatar FROM users WHERE email = %s",
+                    "SELECT id, full_name, email, password_hash, avatar, account_type FROM users WHERE email = %s",
                     (email,)
                 )
                 user = cursor.fetchone()
@@ -134,6 +191,7 @@ def login():
                 session["user_name"] = user["full_name"]
                 session["user_email"] = user["email"]
                 session["user_avatar"] = user["avatar"]
+                session["account_type"] = user["account_type"]
                 return redirect(url_for("home"))
             else:
                 error = "Invalid email or password."
@@ -468,27 +526,74 @@ def google_callback():
 
     conn = get_db()
     with conn.cursor() as cursor:
-        cursor.execute("SELECT id, full_name, avatar FROM users WHERE email = %s", (email,))
+        cursor.execute("SELECT id, full_name, avatar, account_type FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
 
     if not user:
-        import secrets
-        password_hash = generate_password_hash(secrets.token_hex(32))
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO users (full_name, email, password_hash, avatar) VALUES (%s, %s, %s, %s)",
-                (full_name, email, password_hash, avatar)
-            )
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
-            user = cursor.fetchone()
+        # New Google user — store info in session and ask them to choose account type
+        session["google_pending"] = {
+            "email": email,
+            "full_name": full_name,
+            "avatar": avatar
+        }
+        return redirect(url_for("select_account_type"))
 
+    # Existing user — log them in directly
     session["user_id"] = user["id"]
     session["user_name"] = user["full_name"]
     session["user_email"] = email
     session["user_avatar"] = user.get("avatar") or avatar
-
+    session["account_type"] = user["account_type"]
     return redirect(url_for("home"))
+
+
+@app.route("/select-account-type", methods=["GET", "POST"])
+def select_account_type():
+    # Only accessible after Google OAuth for new users
+    if not session.get("google_pending"):
+        return redirect(url_for("login"))
+
+    errors = {}
+    pending = session["google_pending"]
+
+    if request.method == "POST":
+        account_type = request.form.get("account_type", "individual")
+        company_name = request.form.get("company_name", "").strip()
+        company_address = request.form.get("company_address", "").strip()
+        pan_number = request.form.get("pan_number", "").strip()
+
+        if account_type == "company":
+            if not company_name:
+                errors["company_name"] = "Company name is required."
+            if not company_address:
+                errors["company_address"] = "Company address is required."
+
+        if not errors:
+            password_hash = generate_password_hash(secrets.token_hex(32))
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO users (full_name, email, password_hash, avatar, account_type) VALUES (%s, %s, %s, %s, %s)",
+                    (pending["full_name"], pending["email"], password_hash, pending["avatar"], account_type)
+                )
+                user_id = cursor.lastrowid
+
+            if account_type == "company":
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO companies (user_id, company_name, address, pan_number) VALUES (%s, %s, %s, %s)",
+                        (user_id, company_name, company_address, pan_number or None)
+                    )
+
+            session.pop("google_pending", None)
+            session["user_id"] = user_id
+            session["user_name"] = pending["full_name"]
+            session["user_email"] = pending["email"]
+            session["user_avatar"] = pending["avatar"]
+            session["account_type"] = account_type
+            return redirect(url_for("home"))
+
+    return render_template("select_account_type.html", errors=errors)
 
 
 if __name__ == "__main__":

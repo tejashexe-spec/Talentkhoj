@@ -45,6 +45,7 @@ class Database:
                     full_name VARCHAR(255) NOT NULL,
                     email VARCHAR(255) NOT NULL UNIQUE,
                     password_hash VARCHAR(255) NOT NULL,
+                    account_type ENUM('individual', 'company') NOT NULL DEFAULT 'individual',
                     avatar VARCHAR(255) DEFAULT NULL,
                     bio TEXT DEFAULT NULL,
                     location VARCHAR(255) DEFAULT NULL,
@@ -53,15 +54,32 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS companies (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL UNIQUE,
+                    company_name VARCHAR(255) NOT NULL,
+                    address VARCHAR(255) DEFAULT NULL,
+                    pan_number VARCHAR(50) DEFAULT NULL,
+                    industry VARCHAR(255) DEFAULT NULL,
+                    website VARCHAR(255) DEFAULT NULL,
+                    description TEXT DEFAULT NULL,
+                    logo VARCHAR(255) DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
 
     def _run_migrations(self):
         """Add any missing columns to existing tables."""
-        migrations = [
-            ("avatar",   "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) DEFAULT NULL"),
-            ("bio",      "ALTER TABLE users ADD COLUMN bio TEXT DEFAULT NULL"),
-            ("location", "ALTER TABLE users ADD COLUMN location VARCHAR(255) DEFAULT NULL"),
-            ("skills",   "ALTER TABLE users ADD COLUMN skills TEXT DEFAULT NULL"),
-            ("cv_path",  "ALTER TABLE users ADD COLUMN cv_path VARCHAR(255) DEFAULT NULL"),
+        # Users table migrations
+        user_migrations = [
+            ("avatar",       "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) DEFAULT NULL"),
+            ("bio",          "ALTER TABLE users ADD COLUMN bio TEXT DEFAULT NULL"),
+            ("location",     "ALTER TABLE users ADD COLUMN location VARCHAR(255) DEFAULT NULL"),
+            ("skills",       "ALTER TABLE users ADD COLUMN skills TEXT DEFAULT NULL"),
+            ("cv_path",      "ALTER TABLE users ADD COLUMN cv_path VARCHAR(255) DEFAULT NULL"),
+            ("account_type", "ALTER TABLE users ADD COLUMN account_type ENUM('individual','company') NOT NULL DEFAULT 'individual'"),
         ]
         with self.__connection.cursor() as cursor:
             cursor.execute(
@@ -69,10 +87,28 @@ class Database:
                 "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'users'",
                 (config.MYSQL_DATABASE,)
             )
-            existing = {row["COLUMN_NAME"] for row in cursor.fetchall()}
+            existing_users = {row["COLUMN_NAME"] for row in cursor.fetchall()}
 
-        for col, sql in migrations:
-            if col not in existing:
+        for col, sql in user_migrations:
+            if col not in existing_users:
+                with self.__connection.cursor() as cursor:
+                    cursor.execute(sql)
+
+        # Companies table migrations
+        companies_migrations = [
+            ("address",    "ALTER TABLE companies ADD COLUMN address VARCHAR(255) DEFAULT NULL"),
+            ("pan_number", "ALTER TABLE companies ADD COLUMN pan_number VARCHAR(50) DEFAULT NULL"),
+        ]
+        with self.__connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'companies'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing_companies = {row["COLUMN_NAME"] for row in cursor.fetchall()}
+
+        for col, sql in companies_migrations:
+            if col not in existing_companies:
                 with self.__connection.cursor() as cursor:
                     cursor.execute(sql)
 

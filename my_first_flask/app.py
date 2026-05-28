@@ -447,6 +447,38 @@ def profile():
     )
 
 
+# ─── PUBLIC PROFILES ─────────────────────────────────────────────────────────
+
+@app.route("/user/<int:user_id>")
+def user_profile(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, full_name, avatar, bio, location, skills, cv_path FROM users WHERE id = %s AND account_type = 'individual'",
+            (user_id,)
+        )
+        user = cursor.fetchone()
+    if not user:
+        flash("User not found.", "error")
+        return redirect(url_for("home"))
+    return render_template("user_profile.html", user=user)
+
+
+@app.route("/company/<int:user_id>")
+def company_profile(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT c.*, u.id as user_id FROM companies c JOIN users u ON c.user_id = u.id WHERE c.user_id = %s",
+            (user_id,)
+        )
+        company = cursor.fetchone()
+    if not company:
+        flash("Company not found.", "error")
+        return redirect(url_for("home"))
+    return render_template("company_profile.html", company=company)
+
+
 # ─── STATIC PAGES ────────────────────────────────────────────────────────────
 
 @app.route("/about")
@@ -500,6 +532,20 @@ def dashboard_inbox():
 @login_required
 def dashboard_settings():
     return render_template("dashboard_settings.html")
+
+
+@app.route("/dashboard/events")
+@login_required
+def dashboard_events():
+    return render_template("dashboard_events.html")
+
+
+@app.route("/dashboard/post-opportunity")
+@login_required
+def dashboard_post_opportunity():
+    if session.get("account_type") != "company":
+        return redirect(url_for("dashboard"))
+    return render_template("dashboard_post_opportunity.html")
 
 
 # ── Google OAuth ──────────────────────────────────────────────────────────────

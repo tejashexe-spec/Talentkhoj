@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.company_name }} | Talent Khoj{% endblock %}
+
+{% block content %}
+<div class="profile-wrapper">
+
+    <!-- Header -->
+    <div class="profile-header">
+        {% if company.logo %}
+            <img src="{{ company.logo }}" alt="{{ company.company_name }}" style="border-radius:12px;">
+        {% else %}
+            <img src="https://ui-avatars.com/api/?name={{ company.company_name }}&size=90&rounded=true&background=05154b&color=fff" alt="{{ company.company_name }}" style="border-radius:12px;">
+        {% endif %}
+        <div>
+            <h2>{{ company.company_name }}</h2>
+            {% if company.industry %}
+                <p style="color:#2456ff; font-size:13px; font-weight:600;">{{ company.industry }}</p>
+            {% endif %}
+            {% if company.address %}
+                <p style="color:#666; font-size:13px;">{{ company.address }}</p>
+            {% endif %}
+            {% if company.website %}
+                <p><a href="{{ company.website }}" target="_blank" style="color:#2456ff; font-size:13px;">{{ company.website }}</a></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- About -->
+    {% if company.description %}
+    <div class="profile-section">
+        <h3>About</h3>
+        <p style="font-size:14px; color:#444; line-height:1.7;">{{ company.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Company Details -->
+    <div class="profile-section">
+        <h3>Company Details</h3>
+        <table style="width:100%; font-size:14px; border-collapse:collapse;">
+            {% if company.industry %}
+            <tr>
+                <td style="padding:8px 0; color:#64748b; width:140px;">Industry</td>
+                <td style="padding:8px 0;">{{ company.industry }}</td>
+            </tr>
+            {% endif %}
+            {% if company.address %}
+            <tr>
+                <td style="padding:8px 0; color:#64748b;">Address</td>
+                <td style="padding:8px 0;">{{ company.address }}</td>
+            </tr>
+            {% endif %}
+            {% if company.website %}
+            <tr>
+                <td style="padding:8px 0; color:#64748b;">Website</td>
+                <td style="padding:8px 0;"><a href="{{ company.website }}" target="_blank" style="color:#2456ff;">{{ company.website }}</a></td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+
+    <!-- Edit button — only visible to the company owner -->
+    {% if session.get('user_id') == company.user_id %}
+    <div style="margin-top:16px;">
+        <a href="/company/edit" class="profile-btn">Edit Company Profile</a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

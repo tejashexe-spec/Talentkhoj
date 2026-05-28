@@ -7,3 +7,6 @@ __pycache__/
 .vscode/
 .env
 my_first_flask/static/uploads/
+walkthrough.md
+SPRINT2_GUIDE.md
+

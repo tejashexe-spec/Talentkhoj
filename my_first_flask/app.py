@@ -448,7 +448,8 @@ def dashboard_settings():
 
 @app.route("/login/google")
 def google_login():
-    redirect_uri = url_for("google_callback", _external=True)
+    redirect_uri = "http://127.0.0.1:5000/login/google/callback"
+    print(f"Using hardcoded redirect URI: {redirect_uri}")
     return google.authorize_redirect(redirect_uri)
 
 

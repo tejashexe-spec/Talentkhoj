@@ -3,8 +3,6 @@ from my_first_flask import config
 
 
 class Database:
-    _instance = None
-
     def __init__(self):
         try:
             # Create database if it doesn't exist
@@ -30,17 +28,16 @@ class Database:
                 autocommit=True,
             )
             self._init_tables()
-            print("Database connected successfully!")
+            self._run_migrations()
+            print("✅ Database connected successfully!")
 
         except pymysql.MySQLError as e:
-            print("Database connection failed!")
+            print("❌ Database connection failed!")
             print("Error:", e)
             self.__connection = None
 
     def _init_tables(self):
-        if not self.__connection:
-            return
-
+        """Create tables if they don't exist."""
         with self.__connection.cursor() as cursor:
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
@@ -49,49 +46,35 @@ class Database:
                     email VARCHAR(255) NOT NULL UNIQUE,
                     password_hash VARCHAR(255) NOT NULL,
                     avatar VARCHAR(255) DEFAULT NULL,
-                    email_verified BOOLEAN DEFAULT FALSE,
-                    verification_token VARCHAR(255) DEFAULT NULL,
-                    verification_token_expires_at DATETIME DEFAULT NULL,
-                    reset_password_token VARCHAR(255) DEFAULT NULL,
-                    reset_password_token_expires_at DATETIME DEFAULT NULL,
+                    bio TEXT DEFAULT NULL,
+                    location VARCHAR(255) DEFAULT NULL,
+                    skills TEXT DEFAULT NULL,
+                    cv_path VARCHAR(255) DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
-            
-            # Add missing columns if they don't exist
-            cursor.execute("SHOW COLUMNS FROM users LIKE 'email_verified'")
-            if not cursor.fetchone():
-                cursor.execute("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE")
-            
-            cursor.execute("SHOW COLUMNS FROM users LIKE 'verification_token'")
-            if not cursor.fetchone():
-                cursor.execute("ALTER TABLE users ADD COLUMN verification_token VARCHAR(255) DEFAULT NULL")
-            
-            cursor.execute("SHOW COLUMNS FROM users LIKE 'verification_token_expires_at'")
-            if not cursor.fetchone():
-                cursor.execute("ALTER TABLE users ADD COLUMN verification_token_expires_at DATETIME DEFAULT NULL")
-            
-            cursor.execute("SHOW COLUMNS FROM users LIKE 'reset_password_token'")
-            if not cursor.fetchone():
-                cursor.execute("ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(255) DEFAULT NULL")
-            
-            cursor.execute("SHOW COLUMNS FROM users LIKE 'reset_password_token_expires_at'")
-            if not cursor.fetchone():
-                cursor.execute("ALTER TABLE users ADD COLUMN reset_password_token_expires_at DATETIME DEFAULT NULL")
 
-    def fetch_one(self, query, params=()):
-        if not self.__connection:
-            return None
+    def _run_migrations(self):
+        """Add any missing columns to existing tables."""
+        migrations = [
+            ("avatar",   "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) DEFAULT NULL"),
+            ("bio",      "ALTER TABLE users ADD COLUMN bio TEXT DEFAULT NULL"),
+            ("location", "ALTER TABLE users ADD COLUMN location VARCHAR(255) DEFAULT NULL"),
+            ("skills",   "ALTER TABLE users ADD COLUMN skills TEXT DEFAULT NULL"),
+            ("cv_path",  "ALTER TABLE users ADD COLUMN cv_path VARCHAR(255) DEFAULT NULL"),
+        ]
         with self.__connection.cursor() as cursor:
-            cursor.execute(query, params)
-            return cursor.fetchone()
+            cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'users'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing = {row["COLUMN_NAME"] for row in cursor.fetchall()}
 
-    def execute(self, query, params=()):
-        if not self.__connection:
-            return False
-        with self.__connection.cursor() as cursor:
-            cursor.execute(query, params)
-            self.__connection.commit()
-            return True
+        for col, sql in migrations:
+            if col not in existing:
+                with self.__connection.cursor() as cursor:
+                    cursor.execute(sql)
+
     def get_connection(self):
         return self.__connection

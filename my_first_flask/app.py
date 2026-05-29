@@ -1059,9 +1059,31 @@ def dashboard_post_opportunity():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         opportunity_type = request.form.get("opportunity_type", "job").strip()
-        location = request.form.get("location", "").strip()
-        salary = request.form.get("salary", "").strip()
-        experience_level = request.form.get("experience_level", "").strip()
+        
+        city = request.form.get("city", "").strip()
+        location_type = request.form.get("location", "Onsite").strip()
+        location = f"{city} ({location_type})" if city else location_type
+        
+        min_salary = request.form.get("min_salary", "").strip()
+        max_salary = request.form.get("max_salary", "").strip()
+        salary_cycle = request.form.get("salary_cycle", "Monthly").strip()
+        
+        salary = f"Rs. {min_salary}"
+        if max_salary:
+            salary += f" - Rs. {max_salary}"
+        salary += f" {salary_cycle}"
+        
+        min_exp = request.form.get("min_experience", "").strip()
+        max_exp = request.form.get("max_experience", "").strip()
+        
+        if min_exp:
+            experience_level = f"{min_exp}"
+            if max_exp:
+                experience_level += f" - {max_exp}"
+            experience_level += " Years"
+        else:
+            experience_level = request.form.get("experience_level", "Entry").strip()
+            
         skills_required = request.form.get("skills_required", "").strip()
         apply_link = request.form.get("apply_link", "").strip()
         description = request.form.get("description", "").strip()
@@ -1071,9 +1093,8 @@ def dashboard_post_opportunity():
             return render_template("dashboard_post_opportunity.html")
             
         conn = get_db()
-        # Find company ID associated with the user ID
         with conn.cursor() as cursor:
-            cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+            cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (session["user_id"],))
             company = cursor.fetchone()
             
         if not company:
@@ -1088,18 +1109,22 @@ def dashboard_post_opportunity():
                 company["id"],
                 title,
                 opportunity_type,
-                location or None,
-                salary or None,
-                experience_level or None,
+                location,
+                salary,
+                experience_level,
                 skills_required or None,
                 description,
                 apply_link or None
             ))
             
+        # Log job posting event
+        print(f"[JOB LOG] User {session['user_id']} ({company['company_name']}) posted a new {opportunity_type}: '{title}' at {location}")
+        
         flash("Opportunity successfully published!", "success")
         return redirect(url_for("dashboard"))
         
     return render_template("dashboard_post_opportunity.html")
+
 
 
 

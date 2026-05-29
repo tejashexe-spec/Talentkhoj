@@ -51,6 +51,12 @@ class Database:
                     location VARCHAR(255) DEFAULT NULL,
                     skills TEXT DEFAULT NULL,
                     cv_path VARCHAR(255) DEFAULT NULL,
+                    cv_data TEXT DEFAULT NULL,
+                    email_verified TINYINT(1) NOT NULL DEFAULT 0,
+                    verification_token VARCHAR(255) DEFAULT NULL,
+                    verification_token_expires_at TIMESTAMP NULL DEFAULT NULL,
+                    reset_password_token VARCHAR(255) DEFAULT NULL,
+                    reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
@@ -69,6 +75,19 @@ class Database:
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS mail_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    from_email VARCHAR(255) NOT NULL,
+                    to_email VARCHAR(255) NOT NULL,
+                    subject VARCHAR(255) NOT NULL,
+                    html_content TEXT,
+                    status ENUM('success', 'failed') NOT NULL,
+                    error_message TEXT,
+                    resend_response TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
 
     def _run_migrations(self):
         """Add any missing columns to existing tables."""
@@ -79,7 +98,13 @@ class Database:
             ("location",     "ALTER TABLE users ADD COLUMN location VARCHAR(255) DEFAULT NULL"),
             ("skills",       "ALTER TABLE users ADD COLUMN skills TEXT DEFAULT NULL"),
             ("cv_path",      "ALTER TABLE users ADD COLUMN cv_path VARCHAR(255) DEFAULT NULL"),
+            ("cv_data",      "ALTER TABLE users ADD COLUMN cv_data TEXT DEFAULT NULL"),
             ("account_type", "ALTER TABLE users ADD COLUMN account_type ENUM('individual','company') NOT NULL DEFAULT 'individual'"),
+            ("email_verified", "ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0"),
+            ("verification_token", "ALTER TABLE users ADD COLUMN verification_token VARCHAR(255) DEFAULT NULL"),
+            ("verification_token_expires_at", "ALTER TABLE users ADD COLUMN verification_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
+            ("reset_password_token", "ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(255) DEFAULT NULL"),
+            ("reset_password_token_expires_at", "ALTER TABLE users ADD COLUMN reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
         ]
         with self.__connection.cursor() as cursor:
             cursor.execute(

@@ -5,8 +5,73 @@
 {% block content %}
 <div class="profile-wrapper">
     <h1>Contact Support</h1>
-    <br>
-    <p>Need help? Reach out to our support team and we'll get back to you as soon as possible.</p>
-    <p>Email: <a href="mailto:demoemail@gmail.com">demoemail@gmail.com</a></p>
+    <p>Have a question or need help? Send us a message and we'll get back to you.</p>
+
+    <div class="profile-section" style="margin-top:24px;">
+        <form id="contactForm">
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="name" style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#444;">Your Name</label>
+                <input id="name" name="name" type="text" placeholder="Your full name" required
+                    style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; font-family:inherit;">
+            </div>
+            <div class="form-group" style="margin-bottom:16px;">
+                <label for="email" style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#444;">Your Email</label>
+                <input id="email" name="email" type="email" placeholder="you@example.com" required
+                    style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; font-family:inherit;">
+            </div>
+            <div class="form-group" style="margin-bottom:20px;">
+                <label for="message" style="display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#444;">Message</label>
+                <textarea id="message" name="message" rows="5" placeholder="Write your message here..." required
+                    style="width:100%; padding:10px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; font-family:inherit; resize:vertical;"></textarea>
+            </div>
+            <button type="submit" class="profile-btn" id="send-btn">Send Message</button>
+            <p id="form-status" style="margin-top:12px; font-size:13px;"></p>
+        </form>
+    </div>
 </div>
+
+<script>
+document.getElementById('contactForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const btn = document.getElementById('send-btn');
+    const status = document.getElementById('form-status');
+
+    const payload = {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        message: document.getElementById('message').value.trim()
+    };
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    status.textContent = '';
+
+    fetch('/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            status.style.color = '#2d7a4f';
+            status.textContent = '✓ Message sent successfully! We\'ll get back to you soon.';
+            document.getElementById('contactForm').reset();
+        } else {
+            status.style.color = '#e53e3e';
+            status.textContent = '✗ ' + data.message;
+        }
+    })
+    .catch(() => {
+        status.style.color = '#e53e3e';
+        status.textContent = '✗ Something went wrong. Please try again.';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = 'Send Message';
+    });
+});
+</script>
+
 {% endblock %}

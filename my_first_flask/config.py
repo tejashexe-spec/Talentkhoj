@@ -13,4 +13,11 @@ MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
 MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "talent_khoj")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+
+# Flask-Mail (Gmail SMTP)
+MAIL_SERVER = "smtp.gmail.com"
+MAIL_PORT = 465
+MAIL_USE_SSL = True
+MAIL_USE_TLS = False
+MAIL_USERNAME = os.getenv("MAIL_USERNAME", "")
+MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "")

@@ -6,9 +6,10 @@ from datetime import datetime, timedelta
 from functools import wraps
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import Flask, render_template, session, redirect, url_for, request, flash
+from flask import Flask, render_template, session, redirect, url_for, request, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
+from flask_mail import Mail, Message
 from my_first_flask import config
 from my_first_flask.model.database import Database
 from my_first_flask.services.email_service import EmailService
@@ -20,6 +21,17 @@ app = Flask(__name__,
             static_folder=os.path.join(BASE_DIR, "static"))
 
 app.secret_key = config.SECRET_KEY
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False
+
+# ── Flask-Mail ────────────────────────────────────────────────────────────────
+app.config['MAIL_SERVER'] = config.MAIL_SERVER
+app.config['MAIL_PORT'] = config.MAIL_PORT
+app.config['MAIL_USE_SSL'] = config.MAIL_USE_SSL
+app.config['MAIL_USE_TLS'] = config.MAIL_USE_TLS
+app.config['MAIL_USERNAME'] = config.MAIL_USERNAME
+app.config['MAIL_PASSWORD'] = config.MAIL_PASSWORD
+mail = Mail(app)
 
 # ── Google OAuth ──────────────────────────────────────────────────────────────
 oauth = OAuth(app)
@@ -534,6 +546,475 @@ def dashboard_settings():
     return render_template("dashboard_settings.html")
 
 
+# ─── CV BUILDER / UPLOADER ──────────────────────────────────────────────────
+
+def generate_cv_html(data):
+    import re
+    
+    def format_bold(text):
+        return re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+
+    full_name = data.get("full_name", "")
+    email = data.get("email", "")
+    portfolio = data.get("portfolio", "")
+    github = data.get("github", "")
+    linkedin = data.get("linkedin", "")
+    
+    # Header links
+    links_list = []
+    if email:
+        links_list.append(f'<a href="mailto:{email}">Email</a>')
+    if portfolio:
+        port_url = portfolio if (portfolio.startswith("http://") or portfolio.startswith("https://")) else f"https://{portfolio}"
+        links_list.append(f'<a href="{port_url}" target="_blank">Portfolio</a>')
+    if github:
+        git_url = github if (github.startswith("http://") or github.startswith("https://")) else f"https://{github}"
+        links_list.append(f'<a href="{git_url}" target="_blank">Github</a>')
+    if linkedin:
+        li_url = linkedin if (linkedin.startswith("http://") or linkedin.startswith("https://")) else f"https://{linkedin}"
+        links_list.append(f'<a href="{li_url}" target="_blank">Linkedin</a>')
+        
+    links_html = " | ".join(links_list)
+    
+    # Education HTML
+    edu_html = ""
+    if data.get("education"):
+        edu_html += '<div class="section-title">Education</div>'
+        for edu in data["education"]:
+            details_str = f'<div class="entry-details">{edu["details"]}</div>' if edu.get("details") else ''
+            edu_html += f"""
+            <div class="entry">
+                <div class="entry-header">
+                    <span class="entry-title">{edu["degree"]}</span>
+                </div>
+                <div class="entry-subtitle">{edu["school"]}</div>
+                {details_str}
+            </div>
+            """
+            
+    # Work Experience HTML
+    exp_html = ""
+    if data.get("experience"):
+        exp_html += '<div class="section-title">Work Experience</div>'
+        for exp in data["experience"]:
+            desc_html = ""
+            if exp.get("description"):
+                bullets = exp["description"].split("\n")
+                bullets_li = "".join([f"<li>{format_bold(b.strip().lstrip('-*').strip())}</li>" for b in bullets if b.strip()])
+                if bullets_li:
+                    desc_html = f'<ul class="bullets">{bullets_li}</ul>'
+                    
+            dates_str = f'<span class="entry-tag">{exp["dates"]}</span>' if exp.get("dates") else ''
+            exp_html += f"""
+            <div class="entry">
+                <div class="entry-header">
+                    <span class="entry-title">{exp["title"]}</span>
+                    {dates_str}
+                </div>
+                <div class="entry-subtitle">{exp["company"]}</div>
+                {desc_html}
+            </div>
+            """
+            
+    # Projects HTML
+    proj_html = ""
+    if data.get("projects"):
+        proj_html += '<div class="section-title">Projects</div>'
+        for proj in data["projects"]:
+            desc_html = ""
+            if proj.get("description"):
+                bullets = proj["description"].split("\n")
+                bullets_li = "".join([f"<li>{format_bold(b.strip().lstrip('-*').strip())}</li>" for b in bullets if b.strip()])
+                if bullets_li:
+                    desc_html = f'<ul class="bullets">{bullets_li}</ul>'
+            
+            link_html = ""
+            if proj.get("link"):
+                p_url = proj["link"] if (proj["link"].startswith("http://") or proj["link"].startswith("https://")) else f"https://{proj['link']}"
+                link_html = f'<div class="project-link"><a href="{p_url}" target="_blank">Github</a></div>'
+                
+            tag_str = f'<span class="entry-tag">({proj["tag"]})</span>' if proj.get("tag") else ''
+            proj_html += f"""
+            <div class="entry">
+                <div class="entry-header">
+                    <span class="entry-title">"{proj["title"]}"</span>
+                    {tag_str}
+                </div>
+                {desc_html}
+                {link_html}
+            </div>
+            """
+            
+    # Technical Skills HTML
+    skills_html = ""
+    if data.get("skills"):
+        skills_html += '<div class="section-title">Skills</div>'
+        skills_html += '<ul class="skills-list">'
+        for sk in data["skills"]:
+            skills_html += f'<li><strong>{sk["category"]}</strong>: {sk["list"]}</li>'
+        skills_html += '</ul>'
+        
+    # Certifications HTML
+    certs_html = ""
+    if data.get("certifications"):
+        certs_html += '<div class="section-title">Certifications</div>'
+        certs_html += '<ul class="certifications-list">'
+        for cert in data["certifications"]:
+            certs_html += f'<li>{cert}</li>'
+        certs_html += '</ul>'
+        
+    html_template = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{full_name} - CV</title>
+    <style>
+        body {{
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #111827;
+            line-height: 1.5;
+            margin: 40px auto;
+            max-width: 800px;
+            padding: 0 20px;
+            background: #fff;
+        }}
+        
+        .header {{
+            text-align: center;
+            margin-bottom: 25px;
+        }}
+        
+        .header h1 {{
+            font-size: 26px;
+            margin: 0 0 8px 0;
+            color: #000;
+            font-weight: 700;
+        }}
+        
+        .links {{
+            font-size: 14px;
+            color: #2563eb;
+            margin: 0;
+        }}
+        
+        .links a {{
+            color: #2563eb;
+            text-decoration: underline;
+        }}
+        
+        .links span {{
+            color: #374151;
+            margin: 0 6px;
+        }}
+        
+        .section-title {{
+            font-size: 16px;
+            color: #1e3a8a;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding-bottom: 3px;
+            margin-top: 22px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-transform: capitalize;
+        }}
+        
+        .entry {{
+            margin-bottom: 12px;
+        }}
+        
+        .entry-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }}
+        
+        .entry-title {{
+            font-size: 14px;
+            color: #000;
+            font-weight: 700;
+        }}
+        
+        .entry-tag {{
+            font-size: 13px;
+            color: #374151;
+            font-weight: normal;
+        }}
+        
+        .entry-subtitle {{
+            font-size: 13.5px;
+            color: #374151;
+            margin: 1px 0;
+        }}
+        
+        .entry-details {{
+            font-size: 13px;
+            color: #4b5563;
+            margin: 1px 0;
+        }}
+        
+        .bullets {{
+            margin: 3px 0 0 0;
+            padding-left: 20px;
+            font-size: 13px;
+            color: #111827;
+        }}
+        
+        .bullets li {{
+            margin-bottom: 3px;
+        }}
+        
+        .bullets li strong {{
+            color: #000;
+        }}
+        
+        .project-link {{
+            font-size: 13px;
+            margin-top: 2px;
+            padding-left: 20px;
+        }}
+        
+        .project-link a {{
+            color: #2563eb;
+            text-decoration: underline;
+        }}
+        
+        .skills-list {{
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 13.5px;
+        }}
+        
+        .skills-list li {{
+            margin-bottom: 4px;
+        }}
+        
+        .certifications-list {{
+            padding-left: 20px;
+            margin: 0;
+            font-size: 13.5px;
+        }}
+        
+        .certifications-list li {{
+            margin-bottom: 3px;
+            font-weight: 700;
+            color: #111827;
+        }}
+        
+        @media print {{
+            body {{
+                margin: 20px;
+                max-width: 100%;
+                font-size: 12px;
+            }}
+            .section-title {{
+                margin-top: 15px;
+                margin-bottom: 8px;
+            }}
+            .entry {{
+                margin-bottom: 8px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{full_name}</h1>
+        <div class="links">{links_html}</div>
+    </div>
+    
+    {edu_html}
+    {exp_html}
+    {proj_html}
+    {skills_html}
+    {certs_html}
+</body>
+</html>"""
+    return html_template
+
+
+@app.route("/dashboard/cv", methods=["GET"])
+@login_required
+def dashboard_cv():
+    if session.get("account_type") != "individual":
+        flash("Only individuals can access the CV Builder.", "error")
+        return redirect(url_for("dashboard"))
+        
+    import json
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT cv_path, cv_data FROM users WHERE id = %s", (session["user_id"],))
+        user = cursor.fetchone()
+        
+    cv_data_str = user["cv_data"] if user and user["cv_data"] else "{}"
+    
+    try:
+        cv_data = json.loads(cv_data_str)
+    except Exception:
+        cv_data = {}
+        
+    return render_template(
+        "dashboard_cv.html", 
+        user_cv_path=user["cv_path"] if user else None,
+        cv_data=cv_data,
+        cv_data_raw=cv_data_str
+    )
+
+
+@app.route("/dashboard/cv/build", methods=["POST"])
+@login_required
+def dashboard_cv_build():
+    if session.get("account_type") != "individual":
+        flash("Only individuals can build a CV.", "error")
+        return redirect(url_for("dashboard"))
+        
+    import json
+    
+    full_name = request.form.get("full_name", "").strip()
+    email = request.form.get("email", "").strip()
+    portfolio = request.form.get("portfolio", "").strip()
+    github = request.form.get("github", "").strip()
+    linkedin = request.form.get("linkedin", "").strip()
+    
+    # Process Education lists
+    edu_degrees = request.form.getlist("edu_degree[]")
+    edu_schools = request.form.getlist("edu_school[]")
+    edu_details = request.form.getlist("edu_details[]")
+    education = []
+    for i in range(len(edu_degrees)):
+        if edu_degrees[i].strip() or edu_schools[i].strip():
+            education.append({
+                "degree": edu_degrees[i].strip(),
+                "school": edu_schools[i].strip(),
+                "details": edu_details[i].strip()
+            })
+            
+    # Process Experience lists
+    exp_titles = request.form.getlist("exp_title[]")
+    exp_companies = request.form.getlist("exp_company[]")
+    exp_dates = request.form.getlist("exp_dates[]")
+    exp_descriptions = request.form.getlist("exp_description[]")
+    experience = []
+    for i in range(len(exp_titles)):
+        if exp_titles[i].strip() or exp_companies[i].strip():
+            experience.append({
+                "title": exp_titles[i].strip(),
+                "company": exp_companies[i].strip(),
+                "dates": exp_dates[i].strip(),
+                "description": exp_descriptions[i].strip()
+            })
+            
+    # Process Projects lists
+    proj_titles = request.form.getlist("proj_title[]")
+    proj_tags = request.form.getlist("proj_tag[]")
+    proj_links = request.form.getlist("proj_link[]")
+    proj_descriptions = request.form.getlist("proj_description[]")
+    projects = []
+    for i in range(len(proj_titles)):
+        if proj_titles[i].strip():
+            projects.append({
+                "title": proj_titles[i].strip(),
+                "tag": proj_tags[i].strip(),
+                "link": proj_links[i].strip(),
+                "description": proj_descriptions[i].strip()
+            })
+            
+    # Process Skills lists
+    skill_categories = request.form.getlist("skill_category[]")
+    skill_lists = request.form.getlist("skill_list[]")
+    skills = []
+    for i in range(len(skill_categories)):
+        if skill_categories[i].strip() or skill_lists[i].strip():
+            skills.append({
+                "category": skill_categories[i].strip(),
+                "list": skill_lists[i].strip()
+            })
+            
+    # Process Certifications
+    cert_names = request.form.getlist("cert_name[]")
+    certifications = [c.strip() for c in cert_names if c.strip()]
+    
+    cv_data_dict = {
+        "full_name": full_name,
+        "email": email,
+        "portfolio": portfolio,
+        "github": github,
+        "linkedin": linkedin,
+        "education": education,
+        "experience": experience,
+        "projects": projects,
+        "skills": skills,
+        "certifications": certifications
+    }
+    
+    cv_data_json = json.dumps(cv_data_dict)
+    
+    # Now generate the HTML template
+    html_content = generate_cv_html(cv_data_dict)
+    
+    static_uploads_dir = os.path.join(BASE_DIR, "static", "uploads")
+    os.makedirs(static_uploads_dir, exist_ok=True)
+    
+    cv_filename = f"cv_{session['user_id']}_{int(time.time())}.html"
+    cv_filepath = os.path.join(static_uploads_dir, cv_filename)
+    
+    with open(cv_filepath, "w", encoding="utf-8") as f:
+        f.write(html_content)
+        
+    cv_path = f"/static/uploads/{cv_filename}"
+    
+    # Save to Database
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "UPDATE users SET cv_path = %s, cv_data = %s WHERE id = %s",
+            (cv_path, cv_data_json, session["user_id"])
+        )
+        
+    flash("CV successfully built and set active!", "success")
+    return redirect(url_for("dashboard_cv"))
+
+
+@app.route("/dashboard/cv/upload", methods=["POST"])
+@login_required
+def dashboard_cv_upload():
+    if session.get("account_type") != "individual":
+        flash("Only individuals can upload a CV.", "error")
+        return redirect(url_for("dashboard"))
+        
+    cv_file = request.files.get("cv_file")
+    allowed_extensions = {"pdf", "doc", "docx", "png", "jpg", "jpeg"}
+    
+    if cv_file and cv_file.filename:
+        ext = cv_file.filename.rsplit(".", 1)[-1].lower()
+        if ext in allowed_extensions:
+            static_uploads_dir = os.path.join(BASE_DIR, "static", "uploads")
+            os.makedirs(static_uploads_dir, exist_ok=True)
+            
+            filename = f"cv_uploaded_{session['user_id']}_{int(time.time())}.{ext}"
+            filepath = os.path.join(static_uploads_dir, filename)
+            cv_file.save(filepath)
+            
+            cv_path = f"/static/uploads/{filename}"
+            
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET cv_path = %s WHERE id = %s",
+                    (cv_path, session["user_id"])
+                )
+                
+            flash("CV file uploaded successfully and set active!", "success")
+        else:
+            flash("Invalid file type. Supported formats: PDF, DOC, DOCX, PNG, JPG, JPEG.", "error")
+    else:
+        flash("No file selected.", "error")
+        
+    return redirect(url_for("dashboard_cv"))
+
+
 @app.route("/dashboard/events")
 @login_required
 def dashboard_events():
@@ -548,6 +1029,35 @@ def dashboard_post_opportunity():
     return render_template("dashboard_post_opportunity.html")
 
 
+# ─── CONTACT / SEND EMAIL ─────────────────────────────────────────────────────
+
+@app.route("/send-email", methods=["POST"])
+def send_email():
+    data = request.get_json()
+    if not data:
+        return jsonify({"success": False, "message": "No data received."}), 400
+
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip()
+    message_body = data.get("message", "").strip()
+
+    if not name or not email or not message_body:
+        return jsonify({"success": False, "message": "All fields are required."}), 400
+
+    try:
+        msg = Message(
+            subject=f"New Contact Message from {name} — Talent Khoj",
+            sender=config.MAIL_USERNAME,
+            recipients=[config.MAIL_USERNAME],
+            reply_to=email,
+            body=f"Name: {name}\nEmail: {email}\n\nMessage:\n{message_body}"
+        )
+        mail.send(msg)
+        return jsonify({"success": True, "message": "Email sent successfully!"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Failed to send email: {str(e)}"}), 500
+
+
 # ── Google OAuth ──────────────────────────────────────────────────────────────
 
 @app.route("/login/google")
@@ -559,7 +1069,12 @@ def google_login():
 
 @app.route("/login/google/callback")
 def google_callback():
-    token = google.authorize_access_token()
+    try:
+        token = google.authorize_access_token()
+    except Exception:
+        # State mismatch — redirect back to Google login to retry
+        return redirect(url_for("google_login"))
+
     user_info = token.get("userinfo")
 
     if not user_info:

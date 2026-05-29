@@ -1,0 +1,751 @@
+{% extends "dashboard_base.html" %}
+{% set active = "cv" %}
+
+{% block title %}CV Builder & Uploader | Talent Khoj{% endblock %}
+
+{% block content %}
+<style>
+    /* Premium UI Styles for CV Builder */
+    .cv-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .cv-card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .cv-card:hover {
+        box-shadow: 0 15px 35px rgba(36, 86, 255, 0.06);
+    }
+
+    .section-title {
+        font-size: 20px;
+        color: #05154b;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 2px solid #f0ede8;
+        padding-bottom: 12px;
+    }
+
+    .section-title svg {
+        color: #2456ff;
+    }
+
+    /* Tabs Layout */
+    .cv-tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 25px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 2px;
+    }
+
+    .cv-tab-btn {
+        background: none;
+        border: none;
+        padding: 12px 24px;
+        font-size: 15px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-bottom: 3px solid transparent;
+        margin-bottom: -2px;
+    }
+
+    .cv-tab-btn:hover {
+        color: #2456ff;
+    }
+
+    .cv-tab-btn.active {
+        color: #2456ff;
+        border-bottom-color: #2456ff;
+    }
+
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.4s ease;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Form Fields Styling */
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #475569;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        color: #1e293b;
+        outline: none;
+        font-family: inherit;
+        background: #f8fafc;
+        transition: all 0.25s ease;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+        border-color: #2456ff;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(36, 86, 255, 0.1);
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 100px;
+    }
+
+    .required-tag {
+        color: #ef4444;
+        margin-left: 2px;
+    }
+
+    /* Uploader design */
+    .upload-area {
+        border: 3px dashed #cbd5e1;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+    }
+
+    .upload-area:hover, .upload-area.dragover {
+        border-color: #2456ff;
+        background: #f0f4ff;
+    }
+
+    .upload-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(36, 86, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #2456ff;
+        font-size: 24px;
+        transition: all 0.3s ease;
+    }
+
+    .upload-area:hover .upload-icon {
+        transform: scale(1.1);
+        background: #2456ff;
+        color: white;
+    }
+
+    /* Dynamic entries design */
+    .entry-card {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        position: relative;
+        animation: slideIn 0.3s ease;
+        transition: all 0.2s ease;
+    }
+
+    .entry-card:hover {
+        border-color: #cbd5e1;
+        background: #f1f5f9;
+    }
+
+    .btn-remove {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: #fee2e2;
+        color: #ef4444;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .btn-remove:hover {
+        background: #ef4444;
+        color: white;
+    }
+
+    .btn-add-more {
+        background: #f0f4ff;
+        color: #2456ff;
+        border: 2px dashed rgba(36, 86, 255, 0.3);
+        border-radius: 10px;
+        padding: 12px;
+        width: 100%;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 25px;
+    }
+
+    .btn-add-more:hover {
+        background: #2456ff;
+        color: white;
+        border-style: solid;
+    }
+
+    /* Action Buttons */
+    .action-row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 15px;
+        margin-top: 30px;
+        border-top: 2px solid #f0ede8;
+        padding-top: 20px;
+    }
+
+    .btn-primary {
+        background: #2456ff;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px rgba(36, 86, 255, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: #1848d8;
+        transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+        background: white;
+        color: #64748b;
+        border: 1.5px solid #cbd5e1;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+    }
+
+    .cv-view-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #34d399;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px rgba(52, 211, 153, 0.3);
+    }
+
+    .cv-view-link:hover {
+        background: #059669;
+        transform: translateY(-2px);
+    }
+
+    .file-input {
+        display: none;
+    }
+
+    .file-info {
+        font-size: 14px;
+        color: #475569;
+        margin-top: 5px;
+        font-weight: 500;
+    }
+
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<div class="dashboard-header">
+    <h1>CV / Resume Management</h1>
+    <p>Build an impressive print-ready CV or upload an existing file to share with potential employers.</p>
+</div>
+
+<div class="cv-container">
+    <div class="cv-card">
+        
+        <!-- Tabs Header -->
+        <div class="cv-tabs">
+            <button class="cv-tab-btn active" onclick="switchTab('builder')">
+                <span style="display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Automated CV Builder
+                </span>
+            </button>
+            <button class="cv-tab-btn" onclick="switchTab('uploader')">
+                <span style="display:inline-flex; align-items:center; gap:6px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Upload Pre-built CV
+                </span>
+            </button>
+        </div>
+
+        {% if user_cv_path %}
+        <div style="margin-bottom: 25px; padding: 16px; background: #e0f2fe; border-radius: 12px; border: 1px solid #bae6fd; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <span style="color:#0369a1; font-weight:600; font-size:14px; display:block;">Active CV Configured</span>
+                <span style="color:#0284c7; font-size:13px; display:block;">Your CV is linked to your profile and visible to recruiters.</span>
+            </div>
+            <a href="{{ user_cv_path }}" target="_blank" class="cv-view-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                View Active CV
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- BUILDER TAB CONTENT -->
+        <div class="tab-content active" id="builderTab">
+            <form action="/dashboard/cv/build" method="POST" id="cvForm">
+                
+                <!-- PERSONAL DETAILS -->
+                <div class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Personal Information & Contact
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fullName">Full Name <span class="required-tag">*</span></label>
+                        <input type="text" id="fullName" name="full_name" value="{{ cv_data.full_name or session['user_name'] }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Contact Email <span class="required-tag">*</span></label>
+                        <input type="email" id="email" name="email" value="{{ cv_data.email or session['user_email'] }}" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="portfolio">Portfolio Website</label>
+                        <input type="text" id="portfolio" name="portfolio" value="{{ cv_data.portfolio or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="github">GitHub URL</label>
+                        <input type="text" id="github" name="github" value="{{ cv_data.github or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="linkedin">LinkedIn URL</label>
+                        <input type="text" id="linkedin" name="linkedin" value="{{ cv_data.linkedin or '' }}">
+                    </div>
+                </div>
+
+                <!-- EDUCATION -->
+                <div class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>
+                    Education History <span class="required-tag">*</span>
+                </div>
+                
+                <div id="educationContainer">
+                    <!-- Javascript injection -->
+                </div>
+                <button type="button" class="btn-add-more" onclick="addEducation()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Education Entry
+                </button>
+
+                <!-- WORK EXPERIENCE -->
+                <div class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    Work Experience
+                </div>
+                
+                <div id="experienceContainer">
+                    <!-- Javascript injection -->
+                </div>
+                <button type="button" class="btn-add-more" onclick="addExperience()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Work Experience Entry
+                </button>
+
+                <!-- PROJECTS -->
+                <div class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    Projects
+                </div>
+                
+                <div id="projectsContainer">
+                    <!-- Javascript injection -->
+                </div>
+                <button type="button" class="btn-add-more" onclick="addProject()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Project Entry
+                </button>
+
+                <!-- SKILLS -->
+                <div class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><line x1="12" y1="2" x2="12" y2="22"/></svg>
+                    Skills <span class="required-tag">*</span>
+                </div>
+                
+                <div id="skillsContainer">
+                    <!-- Javascript injection -->
+                </div>
+                <button type="button" class="btn-add-more" onclick="addSkill()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Skills Category Group
+                </button>
+
+                <!-- CERTIFICATIONS -->
+                <div class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Certifications
+                </div>
+                
+                <div id="certificationsContainer">
+                    <!-- Javascript injection -->
+                </div>
+                <button type="button" class="btn-add-more" onclick="addCertification()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Certification
+                </button>
+
+                <!-- SUBMIT ACTION -->
+                <div class="action-row">
+                    <button type="button" class="btn-secondary" onclick="window.location.reload();">Reset</button>
+                    <button type="submit" class="btn-primary">Generate & Set Active CV</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- UPLOADER TAB CONTENT -->
+        <div class="tab-content" id="uploaderTab">
+            <form action="/dashboard/cv/upload" method="POST" enctype="multipart/form-data">
+                
+                <div class="section-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Upload CV File
+                </div>
+
+                <div style="margin-bottom: 20px; font-size:14px; color:#475569; line-height: 1.5;">
+                    If you have already built a professional CV in PDF, DOC, or DOCX formats, you can upload it here directly. Your uploaded file will be shared instantly with recruiters.
+                </div>
+
+                <div class="upload-area" onclick="document.getElementById('cv_file').click();" id="dropzone">
+                    <div class="upload-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    </div>
+                    <div>
+                        <span style="font-weight: 600; color:#2456ff; font-size:16px;">Click to upload</span>
+                        <span style="color:#64748b; font-size:14px;"> or drag and drop your file</span>
+                    </div>
+                    <span style="color:#94a3b8; font-size:12px;">Supported formats: PDF, DOC, DOCX, PNG (Max 5MB)</span>
+                    <input type="file" id="cv_file" name="cv_file" class="file-input" onchange="fileSelected(this)" required>
+                    <div class="file-info" id="fileInfo"></div>
+                </div>
+
+                <div class="action-row">
+                    <button type="submit" class="btn-primary">Upload & Set Active CV</button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Tab switching logic
+    function switchTab(tab) {
+        document.querySelectorAll('.cv-tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        if (tab === 'builder') {
+            document.querySelectorAll('.cv-tab-btn')[0].classList.add('active');
+            document.getElementById('builderTab').classList.add('active');
+        } else {
+            document.querySelectorAll('.cv-tab-btn')[1].classList.add('active');
+            document.getElementById('uploaderTab').classList.add('active');
+        }
+    }
+
+    // Direct Upload Handlers
+    function fileSelected(input) {
+        var info = document.getElementById('fileInfo');
+        if (input.files && input.files.length > 0) {
+            info.innerHTML = "Selected file: <strong>" + input.files[0].name + "</strong> (" + (input.files[0].size / (1024 * 1024)).toFixed(2) + " MB)";
+        } else {
+            info.innerHTML = "";
+        }
+    }
+
+    var dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', function(e) {
+        dropzone.classList.remove('dragover');
+    });
+    dropzone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        var files = e.dataTransfer.files;
+        if (files.length > 0) {
+            var fileInput = document.getElementById('cv_file');
+            fileInput.files = files;
+            fileSelected(fileInput);
+        }
+    });
+
+    // Automated CV Builder Forms Logic
+    var educationIndex = 0;
+    var experienceIndex = 0;
+    var projectIndex = 0;
+    var skillIndex = 0;
+    var certIndex = 0;
+
+    // Add Education Row
+    function addEducation(data) {
+        var html = `
+            <div class="entry-card" id="edu_${educationIndex}">
+                <button type="button" class="btn-remove" onclick="removeEntry('edu_${educationIndex}')">&times;</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Degree / Qualification <span class="required-tag">*</span></label>
+                        <input type="text" name="edu_degree[]" value="${data ? data.degree : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Institution / University <span class="required-tag">*</span></label>
+                        <input type="text" name="edu_school[]" value="${data ? data.school : ''}" required>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Details / GPA / Graduation Year</label>
+                    <input type="text" name="edu_details[]" value="${data ? data.details : ''}">
+                </div>
+            </div>
+        `;
+        document.getElementById('educationContainer').insertAdjacentHTML('beforeend', html);
+        educationIndex++;
+    }
+
+    // Add Experience Row
+    function addExperience(data) {
+        var html = `
+            <div class="entry-card" id="exp_${experienceIndex}">
+                <button type="button" class="btn-remove" onclick="removeEntry('exp_${experienceIndex}')">&times;</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Job Title <span class="required-tag">*</span></label>
+                        <input type="text" name="exp_title[]" value="${data ? data.title : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Company Name <span class="required-tag">*</span></label>
+                        <input type="text" name="exp_company[]" value="${data ? data.company : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Dates / Duration</label>
+                        <input type="text" name="exp_dates[]" value="${data ? data.dates : ''}">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Description / Core Responsibilities</label>
+                    <textarea name="exp_description[]">${data ? data.description : ''}</textarea>
+                </div>
+            </div>
+        `;
+        document.getElementById('experienceContainer').insertAdjacentHTML('beforeend', html);
+        experienceIndex++;
+    }
+
+    // Add Project Row
+    function addProject(data) {
+        var html = `
+            <div class="entry-card" id="proj_${projectIndex}">
+                <button type="button" class="btn-remove" onclick="removeEntry('proj_${projectIndex}')">&times;</button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Project Title <span class="required-tag">*</span></label>
+                        <input type="text" name="proj_title[]" value="${data ? data.title : ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Project Type / Tag</label>
+                        <input type="text" name="proj_tag[]" value="${data ? data.tag : ''}">
+                    </div>
+                    <div class="form-group">
+                        <label>GitHub or Live Link</label>
+                        <input type="text" name="proj_link[]" value="${data ? data.link : ''}">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Project Description / Key Tech Details <span class="required-tag">*</span></label>
+                    <textarea name="proj_description[]" required>${data ? data.description : ''}</textarea>
+                </div>
+            </div>
+        `;
+        document.getElementById('projectsContainer').insertAdjacentHTML('beforeend', html);
+        projectIndex++;
+    }
+
+    // Add Skills Row
+    function addSkill(data) {
+        var html = `
+            <div class="entry-card" id="skill_${skillIndex}">
+                <button type="button" class="btn-remove" onclick="removeEntry('skill_${skillIndex}')">&times;</button>
+                <div class="form-row" style="margin-bottom:0;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Category Group <span class="required-tag">*</span></label>
+                        <input type="text" name="skill_category[]" value="${data ? data.category : ''}" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Skills (Comma-separated) <span class="required-tag">*</span></label>
+                        <input type="text" name="skill_list[]" value="${data ? data.list : ''}" required>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('skillsContainer').insertAdjacentHTML('beforeend', html);
+        skillIndex++;
+    }
+
+    // Add Certification Row
+    function addCertification(data) {
+        var html = `
+            <div class="entry-card" id="cert_${certIndex}" style="padding-right: 60px;">
+                <button type="button" class="btn-remove" onclick="removeEntry('cert_${certIndex}')">&times;</button>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Certification Name <span class="required-tag">*</span></label>
+                    <input type="text" name="cert_name[]" value="${data ? data.name : ''}" required>
+                </div>
+            </div>
+        `;
+        document.getElementById('certificationsContainer').insertAdjacentHTML('beforeend', html);
+        certIndex++;
+    }
+
+    // Remove entry utility
+    function removeEntry(id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-10px)';
+            setTimeout(function() {
+                el.remove();
+            }, 250);
+        }
+    }
+
+    // Initialize with existing data or defaults
+    document.addEventListener("DOMContentLoaded", function() {
+        // Parse raw JSON of cv_data injected from python controller
+        var existingData = null;
+        try {
+            existingData = {{ cv_data_raw|safe }};
+        } catch(e) {
+            existingData = null;
+        }
+
+        if (existingData) {
+            // Load Education
+            if (existingData.education && existingData.education.length > 0) {
+                existingData.education.forEach(function(edu) {
+                    addEducation(edu);
+                });
+            } else {
+                addEducation();
+            }
+
+            // Load Experience
+            if (existingData.experience && existingData.experience.length > 0) {
+                existingData.experience.forEach(function(exp) {
+                    addExperience(exp);
+                });
+            }
+
+            // Load Projects
+            if (existingData.projects && existingData.projects.length > 0) {
+                existingData.projects.forEach(function(proj) {
+                    addProject(proj);
+                });
+            }
+
+            // Load Skills
+            if (existingData.skills && existingData.skills.length > 0) {
+                existingData.skills.forEach(function(sk) {
+                    addSkill(sk);
+                });
+            }
+
+            // Load Certifications
+            if (existingData.certifications && existingData.certifications.length > 0) {
+                existingData.certifications.forEach(function(cert) {
+                    addCertification({ name: cert });
+                });
+            }
+        } else {
+            // Initial blank states
+            addEducation();
+            addSkill();
+        }
+    });
+</script>
+{% endblock %}

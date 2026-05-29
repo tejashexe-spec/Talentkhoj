@@ -378,9 +378,9 @@
 
     .detail-actions {
         display: flex;
-        flex-direction: column;
-        gap: 8px;
-        align-items: flex-end;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
     }
 
     .btn-apply-now {
@@ -396,6 +396,8 @@
         gap: 6px;
         transition: all 0.2s;
         box-shadow: 0 4px 12px rgba(36, 86, 255, 0.15);
+        border: none;
+        cursor: pointer;
     }
 
     .btn-apply-now:hover {
@@ -403,6 +405,55 @@
         transform: translateY(-1px);
         box-shadow: 0 6px 16px rgba(36, 86, 255, 0.25);
     }
+
+    .btn-apply-now.applied {
+        background: #22c55e !important;
+        color: white !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        box-shadow: none !important;
+    }
+
+
+    /* Toast Notification styles */
+    .toast-notification {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: #0f172a;
+        color: white;
+        padding: 14px 24px;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toast-notification.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .toast-icon {
+        color: #22c55e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+
 
     /* Info Grid Cards */
     .info-metrics-row {
@@ -692,10 +743,12 @@
                     </div>
                     <div class="detail-actions">
                         <a href="#" target="_blank" class="btn-apply-now" id="detApplyBtn">
-                            Apply Now
+                            <span>Apply Now</span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                         </a>
                     </div>
+
+
                 </div>
 
                 <!-- KEY METRICS INFO ROW -->
@@ -762,6 +815,65 @@
 
 </div>
 
+<!-- TOAST CONTAINER -->
+<div class="toast-notification" id="easyApplyToast">
+    <span class="toast-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+    </span>
+    <span id="toastMessage">Application submitted successfully!</span>
+</div>
+
+<!-- APPLY MODAL WITH SCREENING QUESTIONS -->
+<div class="modal-backdrop" id="applyModalBackdrop" onclick="closeApplyModal()">
+    <div class="opp-modal" onclick="event.stopPropagation()" style="max-width: 600px;">
+        <div class="modal-header" style="padding: 20px 24px;">
+            <div>
+                <h2 style="font-size: 20px; font-weight: 800; color: #05154b; margin-bottom: 2px;">Apply Job</h2>
+                <div style="font-size: 13px; color: #64748b; font-weight: 600;" id="applyModalJobMeta">Senior UI/UX Designer</div>
+            </div>
+            <button class="btn-close-modal" onclick="closeApplyModal()">&times;</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 24px;">
+            <div style="background: #f8fafc; border-radius: 8px; padding: 12px 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                <strong style="font-size: 13px; color: #475569; display: block; margin-bottom: 4px;">Job Description:</strong>
+                <p id="applyModalJobDesc" style="font-size: 13px; color: #64748b; line-height: 1.5; max-height: 80px; overflow-y: auto; margin: 0;"></p>
+            </div>
+
+            <!-- Dynamic screening questions will be rendered here -->
+            <form id="screeningForm" onsubmit="submitPortalApplication(event)">
+                <div id="screeningQuestionsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
+                    <!-- Question items -->
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 16px;">
+                    <button type="button" class="btn-modal-cancel" onclick="closeApplyModal()">Cancel</button>
+                    <button type="submit" class="btn-apply-now" id="btnSubmitScreening" style="box-shadow: none;">Submit Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- PROFILE INCOMPLETE MODAL -->
+<div class="modal-backdrop" id="incompleteModalBackdrop" onclick="closeIncompleteModal()">
+    <div class="opp-modal" onclick="event.stopPropagation()" style="max-width: 460px; text-align: center; padding: 30px;">
+        <div style="margin: 0 auto 20px; width: 64px; height: 64px; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; color: #05154b; margin-bottom: 10px;">CV & Resume Incomplete</h2>
+        <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+            To apply for opportunities, you must build your professional profile using our CV builder first. Recruiters evaluate candidate resumes directly.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button type="button" class="btn-modal-cancel" onclick="closeIncompleteModal()">Dismiss</button>
+            <a href="/dashboard/cv" class="btn-apply-now" style="text-decoration: none; box-shadow: none;">Build CV Now</a>
+        </div>
+    </div>
+</div>
+
 <script>
     // Selected opportunity details state updater
     function selectOpportunity(opp) {
@@ -807,16 +919,219 @@
 
         // Apply Link Action
         const applyBtn = document.getElementById('detApplyBtn');
-        if (opp.apply_link) {
+        const applyText = applyBtn.querySelector('span');
+        
+        // Remove previous classes
+        applyBtn.classList.remove('applied');
+        applyBtn.style.pointerEvents = '';
+        
+        if (opp.already_applied) {
+            applyBtn.href = "javascript:void(0);";
+            applyBtn.removeAttribute('target');
+            applyBtn.classList.add('applied');
+            if (applyText) applyText.innerText = "Applied ✓";
+        } else if (opp.apply_link) {
             applyBtn.href = opp.apply_link;
-            applyBtn.style.display = 'inline-flex';
+            applyBtn.setAttribute('target', '_blank');
+            if (applyText) applyText.innerText = "Apply Now";
         } else {
-            applyBtn.style.display = 'none';
+            applyBtn.href = "javascript:handlePortalApply();";
+            applyBtn.removeAttribute('target');
+            if (applyText) applyText.innerText = "Apply";
         }
+        applyBtn.style.display = 'inline-flex';
+
+        // Keep current selected opportunity globally so Portal Apply can reference it
+        window.currentSelectedOpportunity = opp;
 
         // Scroll Detail pane back to top
         document.getElementById('detailScroller').scrollTop = 0;
     }
+
+    const isProfileComplete = {{ 'true' if profile_complete else 'false' }};
+
+    function openIncompleteModal() {
+        document.getElementById('incompleteModalBackdrop').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeIncompleteModal() {
+        document.getElementById('incompleteModalBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function openApplyModal(opp) {
+        document.getElementById('applyModalJobMeta').innerText = opp.title + " — " + opp.company_name;
+        document.getElementById('applyModalJobDesc').innerText = opp.description;
+        
+        const list = document.getElementById('screeningQuestionsList');
+        list.innerHTML = '';
+        
+        opp.questions_list.forEach((q, index) => {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.flexDirection = 'column';
+            div.style.gap = '6px';
+            
+            div.innerHTML = `
+                <label style="font-size: 13.5px; font-weight: 600; color: #334155; text-align: left; display: block; margin-bottom: 2px;">
+                    ${q} <span style="color: #ef4444;">*</span>
+                </label>
+                <textarea name="answer_${index}" required style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13.5px; resize: vertical; outline: none; font-family: inherit;" placeholder="Type your answer here..."></textarea>
+            `;
+            list.appendChild(div);
+        });
+
+        document.getElementById('applyModalBackdrop').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeApplyModal() {
+        document.getElementById('applyModalBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function submitPortalApplication(event) {
+        event.preventDefault();
+        const opp = window.currentSelectedOpportunity;
+        if (!opp) return;
+
+        // Gather answers
+        const answers = [];
+        opp.questions_list.forEach((q, index) => {
+            const textarea = document.querySelector(`[name="answer_${index}"]`);
+            answers.push({
+                question: q,
+                answer: textarea ? textarea.value.trim() : ""
+            });
+        });
+
+        const btn = document.getElementById('btnSubmitScreening');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = `Applying...`;
+
+        fetch('/dashboard/apply/' + opp.id, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ answers: answers })
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.innerHTML = originalHtml;
+            
+            if (data.success) {
+                closeApplyModal();
+                
+                // Style details button as Applied
+                opp.already_applied = true;
+                const applyBtn = document.getElementById('detApplyBtn');
+                const applyText = applyBtn.querySelector('span');
+                applyBtn.classList.add('applied');
+                applyBtn.href = "javascript:void(0);";
+                if (applyText) applyText.innerText = "Applied ✓";
+
+                // Show Success Toast Notification
+                const toast = document.getElementById('easyApplyToast');
+                document.getElementById('toastMessage').innerText = data.message;
+                toast.classList.add('show');
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            } else {
+                alert(data.message || "An error occurred.");
+            }
+        })
+        .catch(err => {
+            console.error("Error submitting screening form:", err);
+            alert("Connection error. Please try again.");
+            btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.innerHTML = originalHtml;
+        });
+    }
+
+    function handlePortalApply() {
+        const opp = window.currentSelectedOpportunity;
+        if (!opp) return;
+
+        // 1. Hard Profile Completeness Check
+        if (!isProfileComplete) {
+            openIncompleteModal();
+            return;
+        }
+
+        // 2. Screening Questions Check
+        if (opp.questions_list && opp.questions_list.length > 0) {
+            openApplyModal(opp);
+            return;
+        }
+
+        const applyBtn = document.getElementById('detApplyBtn');
+        const applyText = applyBtn.querySelector('span');
+        const originalText = applyText ? applyText.innerText : "Apply";
+
+        // Visual loading state
+        applyBtn.style.pointerEvents = 'none';
+        if (applyText) {
+            applyText.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle;">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.25"/>
+                    <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor"/>
+                </svg>
+                Applying...
+            `;
+        }
+
+        // POST request to backend API (no questions)
+        fetch('/dashboard/apply/' + opp.id, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ answers: [] })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mark in memory so state is preserved if they switch selection
+                opp.already_applied = true;
+                
+                // Style as Applied
+                applyBtn.classList.add('applied');
+                applyBtn.href = "javascript:void(0);";
+                if (applyText) applyText.innerText = "Applied ✓";
+                
+                // Show Success Toast Notification
+                const toast = document.getElementById('easyApplyToast');
+                document.getElementById('toastMessage').innerText = data.message;
+                toast.classList.add('show');
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            } else {
+                alert(data.message || "An error occurred. Please try again.");
+                // Restore button
+                applyBtn.style.pointerEvents = '';
+                if (applyText) applyText.innerText = originalText;
+            }
+        })
+        .catch(err => {
+            console.error("Error applying:", err);
+            alert("Connection error. Please try again.");
+            // Restore button
+            applyBtn.style.pointerEvents = '';
+            if (applyText) applyText.innerText = originalText;
+        });
+    }
+
 
     // Auto-select first opportunity on load if lists aren't empty
     document.addEventListener('DOMContentLoaded', () => {

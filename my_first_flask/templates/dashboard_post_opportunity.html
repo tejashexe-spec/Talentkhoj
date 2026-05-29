@@ -640,6 +640,19 @@
                         <label for="descriptionInput">Detailed Description & Responsibilities <span class="required-star">*</span></label>
                         <textarea name="description" id="descriptionInput" required placeholder="Enter role requirements, company environment, responsibilities..."></textarea>
                     </div>
+
+                    <div class="form-group" style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 24px;">
+                        <label style="font-weight: 700; font-size: 15px; color: #05154b; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span>Screening Questions (Optional)</span>
+                            <button type="button" class="btn-action" style="padding: 6px 12px; font-size: 12px; background: #2456ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="addScreeningQuestion()">+ Add Question</button>
+                        </label>
+                        <p style="color: #64748b; font-size: 12px; margin-bottom: 12px;">Add custom screening questions for candidates to answer before they can apply for this role.</p>
+                        
+                        <div id="questionsContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Dynamic questions will be appended here -->
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="wizard-actions">
@@ -801,6 +814,29 @@
                 item.classList.add('completed');
             }
         });
+    }
+
+    function addScreeningQuestion() {
+        const container = document.getElementById('questionsContainer');
+        const count = container.children.length;
+        if (count >= 5) {
+            alert("You can add at most 5 screening questions.");
+            return;
+        }
+
+        const div = document.createElement('div');
+        div.className = 'input-dropdown-group';
+        div.style.display = 'flex';
+        div.style.gap = '10px';
+        div.style.alignItems = 'center';
+
+        div.innerHTML = `
+            <input type="text" name="questions[]" placeholder="e.g. Share your portfolio link (Figma / Behance / Dribbble)..." style="flex: 1; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px;" required>
+            <button type="button" class="btn-wizard-cancel" style="padding: 10px; background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; margin: 0; min-height: auto; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="this.parentElement.remove()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        `;
+        container.appendChild(div);
     }
 </script>
 {% endblock %}

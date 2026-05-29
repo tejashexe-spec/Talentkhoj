@@ -14,11 +14,11 @@ class EmailService:
         return EmailService._db
     
     @staticmethod
-    def _log_email(from_email: str, to_email: str, subject: str, html: str, status: str, error_message: str = None, resend_response: dict = None):
+    def _log_email(from_email: str, to_email: str, subject: str, html: str, status: str, error_message: str = None, smtp_response: dict = None):
         try:
             conn = EmailService._get_db().get_connection()
             with conn.cursor() as cursor:
-                response_json = json.dumps(resend_response) if resend_response else None
+                response_json = json.dumps(smtp_response) if smtp_response else None
                 cursor.execute("""
                     INSERT INTO mail_logs 
                     (from_email, to_email, subject, html_content, status, error_message, resend_response)
@@ -64,11 +64,24 @@ class EmailService:
             mail.send(msg)
             print("Email sent successfully via Google SMTP!")
             
+            # Hook system activity file logger
+            try:
+                from my_first_flask.utils.logger import log_activity
+                log_type = "EMAIL SENT"
+                subj_lower = subject.lower()
+                if "verify" in subj_lower or "verification" in subj_lower:
+                    log_type = "VERIFY EMAIL"
+                elif "reset" in subj_lower or "password" in subj_lower:
+                    log_type = "RESET PASSWORD"
+                log_activity(log_type, f"Successfully sent email to {to} (Subject: '{subject}')")
+            except Exception as log_err:
+                print(f"Failed to log email activity file: {log_err}")
+            
             response = {
                 "status": "sent",
                 "provider": "google_smtp"
             }
-            EmailService._log_email(from_email, to, subject, html, "success", resend_response=response)
+            EmailService._log_email(from_email, to, subject, html, "success", smtp_response=response)
             return response
             
         except Exception as e:

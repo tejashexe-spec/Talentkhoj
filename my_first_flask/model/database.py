@@ -100,10 +100,25 @@ class Database:
                     skills_required TEXT DEFAULT NULL,
                     description TEXT NOT NULL,
                     apply_link VARCHAR(255) DEFAULT NULL,
+                    questions TEXT DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS applications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    job_id INT NOT NULL,
+                    status ENUM('applied', 'reviewed', 'shortlisted', 'rejected') NOT NULL DEFAULT 'applied',
+                    answers TEXT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_user_job (user_id, job_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+
 
 
     def _run_migrations(self):
@@ -153,6 +168,33 @@ class Database:
             if col not in existing_companies:
                 with self.__connection.cursor() as cursor:
                     cursor.execute(sql)
+
+        # Jobs table migrations (questions column)
+        with self.__connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'jobs'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing_jobs = {row["COLUMN_NAME"] for row in cursor.fetchall()}
+            
+        if "questions" not in existing_jobs:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE jobs ADD COLUMN questions TEXT DEFAULT NULL")
+
+        # Applications table migrations (answers column)
+        with self.__connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'applications'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing_apps = {row["COLUMN_NAME"] for row in cursor.fetchall()}
+            
+        if "answers" not in existing_apps:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE applications ADD COLUMN answers TEXT DEFAULT NULL")
+
 
     def get_connection(self):
         return self.__connection

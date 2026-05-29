@@ -593,18 +593,41 @@ def dashboard_search():
         cursor.execute(query, tuple(params))
         opportunities = cursor.fetchall()
         
-    # Also parse skills_required for each job so we can render them as pills easily
+    # Get applied job IDs for current candidate
+    applied_job_ids = []
+    profile_complete = False
+    if session.get("account_type") == "individual":
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT job_id FROM applications WHERE user_id = %s", (session["user_id"],))
+            applied_job_ids = {row["job_id"] for row in cursor.fetchall()}
+            
+            cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
+            user_profile = cursor.fetchone()
+            profile_complete = bool(user_profile and user_profile.get("cv_path"))
+
+    # Also parse skills_required and questions for each job
+    import json
     for opp in opportunities:
+        opp["already_applied"] = opp["id"] in applied_job_ids
         if opp.get("skills_required"):
             opp["skills_list"] = [s.strip() for s in opp["skills_required"].split(",") if s.strip()]
         else:
             opp["skills_list"] = []
+            
+        if opp.get("questions"):
+            try:
+                opp["questions_list"] = json.loads(opp["questions"])
+            except Exception:
+                opp["questions_list"] = []
+        else:
+            opp["questions_list"] = []
             
     return render_template(
         "dashboard_search.html",
         opportunities=opportunities,
         locations=locations,
         experience_levels=experience_levels,
+        profile_complete=profile_complete,
         filters={
             "q": keyword,
             "type": opp_type,
@@ -612,6 +635,44 @@ def dashboard_search():
             "experience": experience
         }
     )
+@app.route("/dashboard/apply/<int:job_id>", methods=["POST"])
+@login_required
+def dashboard_apply(job_id):
+    if session.get("account_type") != "individual":
+        return jsonify({"success": False, "message": "Only candidate accounts can apply for opportunities."}), 403
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        # Hard backend profile completeness validation check
+        cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
+        user_profile = cursor.fetchone()
+        if not user_profile or not user_profile.get("cv_path"):
+            return jsonify({"success": False, "message": "Your profile is incomplete. You must build a professional CV first before applying!"})
+
+        # Check if already applied
+        cursor.execute("SELECT id FROM applications WHERE user_id = %s AND job_id = %s", (session["user_id"], job_id))
+        existing = cursor.fetchone()
+        if existing:
+            return jsonify({"success": False, "message": "You have already applied for this opportunity!"})
+            
+        # Parse screening answers from request payload
+        import json
+        data = request.get_json() or {}
+        answers = data.get("answers", [])
+        answers_json = json.dumps(answers) if answers else None
+            
+        # Record application with answers
+        cursor.execute("INSERT INTO applications (user_id, job_id, answers) VALUES (%s, %s, %s)", (session["user_id"], job_id, answers_json))
+        
+        # Log application
+        print(f"[Application Log] Candidate {session['user_name']} (ID: {session['user_id']}) applied to job ID {job_id}")
+        try:
+            from my_first_flask.utils.logger import log_activity
+            log_activity("Apply Opportunity", f"Candidate {session['user_name']} (ID: {session['user_id']}) applied to job ID {job_id}")
+        except Exception as log_err:
+            print(f"Failed to write apply log: {log_err}")
+        
+    return jsonify({"success": True, "message": "Your application has been successfully submitted!"})
 
 
 
@@ -1153,6 +1214,11 @@ def dashboard_post_opportunity():
         apply_link = request.form.get("apply_link", "").strip()
         description = request.form.get("description", "").strip()
         
+        # Serialize optional screening questions to JSON
+        import json
+        questions_list = [q.strip() for q in request.form.getlist("questions[]") if q.strip()]
+        questions_json = json.dumps(questions_list) if questions_list else None
+        
         if not title or not description:
             flash("Opportunity title and detailed description are required.", "error")
             return render_template("dashboard_post_opportunity.html")
@@ -1168,8 +1234,8 @@ def dashboard_post_opportunity():
             
         with conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link, questions)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 company["id"],
                 title,
@@ -1179,11 +1245,17 @@ def dashboard_post_opportunity():
                 experience_level,
                 skills_required or None,
                 description,
-                apply_link or None
+                apply_link or None,
+                questions_json
             ))
             
         # Log job posting event
         print(f"[JOB LOG] User {session['user_id']} ({company['company_name']}) posted a new {opportunity_type}: '{title}' at {location}")
+        try:
+            from my_first_flask.utils.logger import log_activity
+            log_activity("Post Opportunity", f"Company '{company['company_name']}' (ID: {company['id']}) posted a new {opportunity_type}: '{title}' at {location}")
+        except Exception as log_err:
+            print(f"Failed to write post job log: {log_err}")
         
         flash("Opportunity successfully published!", "success")
         return redirect(url_for("dashboard"))
@@ -1217,6 +1289,12 @@ def send_email():
             body=f"Name: {name}\nEmail: {email}\n\nMessage:\n{message_body}"
         )
         mail.send(msg)
+        try:
+            from my_first_flask.utils.logger import log_activity
+            log_activity("Contact Email", f"Sender '{name}' ({email}) successfully sent a contact message: '{message_body[:60]}...'")
+        except Exception as log_err:
+            print(f"Failed to log contact email activity: {log_err}")
+            
         return jsonify({"success": True, "message": "Email sent successfully!"})
     except Exception as e:
         return jsonify({"success": False, "message": f"Failed to send email: {str(e)}"}), 500

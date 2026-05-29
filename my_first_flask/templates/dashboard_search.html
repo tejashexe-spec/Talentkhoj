@@ -5,52 +5,49 @@
 
 {% block content %}
 <style>
-    /* Search Hero Section */
-    .search-hero {
-        background: linear-gradient(135deg, #05154b 0%, #0d287a 100%);
-        border-radius: 16px;
-        padding: 40px;
-        color: white;
-        margin-bottom: 30px;
-        box-shadow: 0 10px 25px rgba(5, 21, 75, 0.15);
-    }
-
-    .search-hero h1 {
-        font-size: 28px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        color: white;
-    }
-
-    .search-hero p {
-        color: #b0b8d0;
-        font-size: 15px;
+    /* Premium Header */
+    .search-header-container {
         margin-bottom: 24px;
     }
-
-    /* Filter Form */
-    .search-form {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        background: rgba(255, 255, 255, 0.08);
-        padding: 20px;
-        border-radius: 12px;
-        backdrop-filter: blur(8px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    
+    .search-header-container h1 {
+        font-size: 26px;
+        color: #0f172a;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    
+    .search-header-container p {
+        color: #64748b;
+        font-size: 14px;
     }
 
-    .search-row-main {
+    /* Top Filters Bar */
+    .filters-bar {
+        background: white;
+        border-radius: 14px;
+        padding: 16px 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        margin-bottom: 24px;
         display: flex;
+        flex-direction: column;
         gap: 12px;
     }
 
-    .search-input-wrapper {
+    .filters-main-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .search-input-box {
         flex: 1;
+        min-width: 280px;
         position: relative;
     }
 
-    .search-input-wrapper svg {
+    .search-input-box svg {
         position: absolute;
         left: 14px;
         top: 50%;
@@ -59,715 +56,757 @@
         pointer-events: none;
     }
 
-    .search-input {
+    .search-field {
         width: 100%;
-        padding: 14px 14px 14px 44px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        background: rgba(255, 255, 255, 0.1);
+        padding: 11px 11px 11px 40px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
         border-radius: 8px;
-        color: white;
-        font-size: 15px;
-        outline: none;
-        transition: all 0.3s;
-    }
-
-    .search-input::placeholder {
-        color: #94a3b8;
-    }
-
-    .search-input:focus {
-        background: white;
         color: #0f172a;
-        border-color: #2456ff;
-        box-shadow: 0 0 0 4px rgba(36, 86, 255, 0.2);
-    }
-
-    .btn-search {
-        background: #2456ff;
-        color: white;
-        border: none;
-        padding: 0 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 15px;
-        cursor: pointer;
+        font-size: 14px;
+        outline: none;
         transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
     }
 
-    .btn-search:hover {
-        background: #1848d8;
-        transform: translateY(-1px);
+    .search-field:focus {
+        background: white;
+        border-color: #2456ff;
+        box-shadow: 0 0 0 3px rgba(36, 86, 255, 0.15);
     }
 
-    .filters-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
-    }
-
-    .filter-select {
+    .select-filter {
         padding: 10px 14px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #475569;
         border-radius: 8px;
         font-size: 14px;
         outline: none;
         cursor: pointer;
         transition: all 0.2s;
+        min-width: 160px;
         appearance: none;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
         background-repeat: no-repeat;
         background-position: right 12px center;
-        background-size: 16px;
+        background-size: 14px;
+        padding-right: 32px;
     }
 
-    .filter-select option {
-        background: #0d1e54;
-        color: white;
-    }
-
-    .filter-select:focus {
+    .select-filter:focus {
         background-color: white;
-        color: #0f172a;
         border-color: #2456ff;
     }
 
+    .btn-filter-submit {
+        background: #2456ff;
+        color: white;
+        border: none;
+        padding: 0 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-filter-submit:hover {
+        background: #1848d8;
+    }
+
     /* Active Filter Tags */
-    .active-filters {
+    .tags-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 12px;
+        gap: 6px;
         align-items: center;
-    }
-
-    .active-filters-label {
         font-size: 13px;
-        color: #b0b8d0;
     }
 
-    .filter-tag {
-        background: rgba(255, 255, 255, 0.15);
-        color: white;
-        padding: 4px 10px;
+    .tags-label {
+        color: #64748b;
+    }
+
+    .tag-chip {
+        background: #e2e8f0;
+        color: #334155;
+        padding: 3px 8px;
         border-radius: 6px;
         font-size: 12px;
         display: inline-flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
         text-decoration: none;
     }
 
-    .filter-tag:hover {
-        background: rgba(255, 255, 255, 0.25);
+    .tag-chip:hover {
+        background: #cbd5e1;
     }
 
-    .clear-all-link {
-        font-size: 13px;
+    .clear-btn {
         color: #2456ff;
-        background: white;
-        padding: 4px 10px;
-        border-radius: 6px;
         text-decoration: none;
         font-weight: 600;
-        transition: all 0.2s;
+        margin-left: 6px;
     }
 
-    .clear-all-link:hover {
-        background: #f0f4ff;
-    }
-
-    /* Opportunities Grid */
-    .opp-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 24px;
-        margin-bottom: 40px;
-    }
-
-    .opp-card {
+    /* Split Pane Layout */
+    .split-container {
+        display: flex;
         background: white;
         border-radius: 16px;
-        padding: 24px;
         border: 1px solid rgba(0, 0, 0, 0.05);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+        height: calc(100vh - 220px);
+        min-height: 520px;
+    }
+
+    /* Left Opportunities List */
+    .list-pane {
+        width: 380px;
+        min-width: 380px;
+        border-right: 1px solid #f1f5f9;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #fafbfe;
+    }
+
+    .list-pane-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        background: white;
+    }
+
+    .scrollable-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* Compact Job Cards */
+    .compact-card {
+        background: white;
+        border-radius: 10px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
         position: relative;
     }
 
-    .opp-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 30px rgba(5, 21, 75, 0.08);
-        border-color: rgba(36, 86, 255, 0.2);
+    .compact-card:hover {
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     }
 
-    .opp-card-header {
+    .compact-card.selected {
+        border-color: #2456ff;
+        background: #f0f4ff;
+        box-shadow: 0 4px 12px rgba(36, 86, 255, 0.08);
+    }
+
+    .compact-card.selected::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 12px;
+        bottom: 12px;
+        width: 4px;
+        background: #2456ff;
+        border-radius: 0 4px 4px 0;
+    }
+
+    .compact-header {
         display: flex;
-        gap: 16px;
-        margin-bottom: 16px;
+        gap: 12px;
+        margin-bottom: 10px;
     }
 
-    .company-logo-container {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
+    .compact-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
         background: #f1f5f9;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 700;
         color: #2456ff;
-        font-size: 18px;
+        font-size: 14px;
         overflow: hidden;
         border: 1px solid #e2e8f0;
         flex-shrink: 0;
     }
 
-    .company-logo-container img {
+    .compact-logo img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
 
-    .opp-meta-info {
+    .compact-meta {
         flex: 1;
         min-width: 0;
     }
 
-    .company-name {
-        font-size: 13px;
-        font-weight: 600;
-        color: #64748b;
+    .compact-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #0f172a;
         margin-bottom: 2px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .opp-title {
-        font-size: 17px;
-        font-weight: 700;
-        color: #0f172a;
-        line-height: 1.4;
+    .compact-company {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .badge-row {
+    .compact-info-row {
         display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 16px;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: auto;
+        font-size: 11px;
+        color: #94a3b8;
     }
 
-    .badge {
-        display: inline-block;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 11px;
+    .compact-badges {
+        display: flex;
+        gap: 4px;
+    }
+
+    .badge-mini {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.3px;
     }
 
-    .badge-job { background: #dbeafe; color: #1e40af; }
-    .badge-internship { background: #fef3c7; color: #92400e; }
-    .badge-event { background: #dcfce7; color: #166534; }
-    .badge-exp { background: #f1f5f9; color: #475569; }
+    .badge-mini-job { background: #dbeafe; color: #1e40af; }
+    .badge-mini-internship { background: #fef3c7; color: #92400e; }
+    .badge-mini-event { background: #dcfce7; color: #166534; }
 
-    .opp-details-row {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        margin-bottom: 16px;
-        border-top: 1px solid #f1f5f9;
-        border-bottom: 1px solid #f1f5f9;
-        padding: 12px 0;
-    }
-
-    .opp-detail-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        color: #475569;
-    }
-
-    .opp-detail-item svg {
-        color: #94a3b8;
-    }
-
-    .skills-pills {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-bottom: 20px;
-    }
-
-    .skill-pill {
-        background: #f8fafc;
-        color: #64748b;
-        padding: 3px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 500;
-        border: 1px solid #e2e8f0;
-    }
-
-    .opp-card-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: auto;
-    }
-
-    .post-date {
-        font-size: 12px;
-        color: #94a3b8;
-    }
-
-    .btn-view-details {
-        background: #2456ff;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-view-details:hover {
-        background: #1848d8;
-        transform: translateY(-1px);
-    }
-
-    /* Modal Backdrop */
-    .modal-backdrop {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(4px);
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-        padding: 20px;
-    }
-
-    .modal-backdrop.open {
-        opacity: 1;
-        pointer-events: auto;
-    }
-
-    /* Modal Container */
-    .opp-modal {
+    /* Right Details Pane */
+    .detail-pane {
+        flex: 1;
         background: white;
-        width: 100%;
-        max-width: 640px;
-        border-radius: 16px;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-        overflow: hidden;
-        transform: translateY(20px);
-        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
         display: flex;
         flex-direction: column;
-        max-height: 90vh;
+        overflow: hidden;
     }
 
-    .modal-backdrop.open .opp-modal {
-        transform: translateY(0);
+    .detail-scroller {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px;
     }
 
-    .modal-header {
-        padding: 24px;
-        border-bottom: 1px solid #f1f5f9;
+    .detail-header-block {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        background: #f8fafc;
-    }
-
-    .modal-title-group {
-        display: flex;
-        gap: 16px;
-    }
-
-    .btn-close-modal {
-        background: none;
-        border: none;
-        font-size: 20px;
-        color: #94a3b8;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-    }
-
-    .btn-close-modal:hover {
-        background: #e2e8f0;
-        color: #475569;
-    }
-
-    .modal-body {
-        padding: 24px;
-        overflow-y: auto;
-        flex: 1;
-    }
-
-    .modal-section {
+        gap: 20px;
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 24px;
         margin-bottom: 24px;
     }
 
-    .modal-section h3 {
+    .detail-company-logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #2456ff;
+        font-size: 24px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+    .detail-company-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .detail-title-group {
+        flex: 1;
+    }
+
+    .detail-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 6px;
+        line-height: 1.3;
+    }
+
+    .detail-company-link {
+        font-size: 15px;
+        color: #2456ff;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .detail-company-link:hover {
+        text-decoration: underline;
+    }
+
+    .detail-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+    }
+
+    .btn-apply-now {
+        background: #2456ff;
+        color: white;
+        text-decoration: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(36, 86, 255, 0.15);
+    }
+
+    .btn-apply-now:hover {
+        background: #1848d8;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(36, 86, 255, 0.25);
+    }
+
+    /* Info Grid Cards */
+    .info-metrics-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 16px;
+        margin-bottom: 30px;
+    }
+
+    .metric-cell {
+        background: #fafbfe;
+        border: 1px solid #eef2f6;
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .metric-cell-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: #f0f4ff;
+        color: #2456ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .metric-cell-text {
+        min-width: 0;
+    }
+
+    .metric-cell-label {
+        font-size: 10px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
+    .metric-cell-val {
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Sections */
+    .detail-section {
+        margin-bottom: 28px;
+    }
+
+    .detail-section-title {
         font-size: 14px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         color: #64748b;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         font-weight: 700;
+        border-left: 3px solid #2456ff;
+        padding-left: 8px;
     }
 
-    .modal-description {
-        font-size: 14px;
-        color: #334155;
-        line-height: 1.6;
-        white-space: pre-wrap;
-    }
-
-    .modal-footer {
-        padding: 16px 24px;
-        border-top: 1px solid #f1f5f9;
+    .skills-flex {
         display: flex;
-        justify-content: flex-end;
-        gap: 12px;
-        background: #f8fafc;
-    }
-
-    .btn-modal-cancel {
-        background: #f1f5f9;
-        color: #475569;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .btn-modal-cancel:hover {
-        background: #e2e8f0;
-    }
-
-    .btn-modal-apply {
-        background: #2456ff;
-        color: white;
-        border: none;
-        padding: 10px 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
+        flex-wrap: wrap;
         gap: 8px;
     }
 
-    .btn-modal-apply:hover {
-        background: #1848d8;
-        transform: translateY(-1px);
+    .skill-badge {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid #e2e8f0;
+    }
+
+    .detail-desc-text {
+        font-size: 14px;
+        color: #334155;
+        line-height: 1.7;
+        white-space: pre-wrap;
     }
 
     /* Empty state */
-    .empty-state {
-        grid-column: 1 / -1;
+    .split-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 40px;
         text-align: center;
-        background: white;
-        border-radius: 16px;
-        padding: 60px 20px;
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        height: 100%;
+        color: #64748b;
     }
 
-    .empty-state h3 {
+    .split-empty-state svg {
+        color: #cbd5e1;
+        margin-bottom: 16px;
+    }
+
+    .split-empty-state h3 {
         font-size: 18px;
         font-weight: 700;
         color: #0f172a;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
     }
 
-    .empty-state p {
-        color: #64748b;
+    .split-empty-state p {
         font-size: 14px;
         margin-bottom: 20px;
+        max-width: 320px;
+    }
+
+    /* Detail Empty state (when nothing is selected yet) */
+    .detail-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        color: #94a3b8;
+        padding: 40px;
+    }
+
+    .detail-empty svg {
+        margin-bottom: 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+        .split-container {
+            flex-direction: column;
+            height: auto;
+            max-height: none;
+        }
+
+        .list-pane {
+            width: 100%;
+            min-width: 100%;
+            border-right: none;
+            border-bottom: 1px solid #f1f5f9;
+            height: 300px;
+        }
+        
+        .detail-pane {
+            height: 500px;
+        }
     }
 </style>
 
-<div class="search-hero">
-    <h1>Find Your Dream Opportunity</h1>
-    <p>Discover roles and programs built for high-talent builders and ambitious professionals in Nepal.</p>
+<div class="search-header-container">
+    <h1>Search Opportunities</h1>
+    <p>Discover high-value positions, internships, and career programs tailored for you.</p>
+</div>
 
-    <!-- SEARCH & FILTER FORM -->
-    <form class="search-form" method="GET" action="/dashboard/search">
-        <div class="search-row-main">
-            <div class="search-input-wrapper">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<!-- FILTERS PANEL -->
+<div class="filters-bar">
+    <form class="filters-form" method="GET" action="/dashboard/search">
+        <div class="filters-main-row">
+            <div class="search-input-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input type="text" class="search-input" name="q" placeholder="Search by title, description or skills (e.g. Python, Frontend)..." value="{{ filters.get('q', '') }}">
+                <input type="text" class="search-field" name="q" placeholder="Search title, description, skills..." value="{{ filters.get('q', '') }}">
             </div>
-            <button type="submit" class="btn-search">
-                Search
-            </button>
-        </div>
 
-        <div class="filters-row">
-            <!-- TYPE FILTER -->
-            <select class="filter-select" name="type" onchange="this.form.submit()">
-                <option value="">All Opportunity Types</option>
+            <select class="select-filter" name="type" onchange="this.form.submit()">
+                <option value="">All Types</option>
                 <option value="job" {% if filters.get('type') == 'job' %}selected{% endif %}>Jobs</option>
                 <option value="internship" {% if filters.get('type') == 'internship' %}selected{% endif %}>Internships</option>
                 <option value="event" {% if filters.get('type') == 'event' %}selected{% endif %}>Events</option>
             </select>
 
-            <!-- LOCATION FILTER -->
-            <select class="filter-select" name="location" onchange="this.form.submit()">
+            <select class="select-filter" name="location" onchange="this.form.submit()">
                 <option value="">All Locations</option>
                 {% for loc in locations %}
                     <option value="{{ loc }}" {% if filters.get('location') == loc %}selected{% endif %}>{{ loc }}</option>
                 {% endfor %}
             </select>
 
-            <!-- EXPERIENCE FILTER -->
-            <select class="filter-select" name="experience" onchange="this.form.submit()">
-                <option value="">All Experience Levels</option>
+            <select class="select-filter" name="experience" onchange="this.form.submit()">
+                <option value="">All Levels</option>
                 {% for exp in experience_levels %}
                     <option value="{{ exp }}" {% if filters.get('experience') == exp %}selected{% endif %}>{{ exp }}</option>
                 {% endfor %}
             </select>
+
+            <button type="submit" class="btn-filter-submit">Apply</button>
         </div>
 
-        <!-- ACTIVE FILTER TAGS -->
         {% if filters.get('q') or filters.get('type') or filters.get('location') or filters.get('experience') %}
-            <div class="active-filters">
-                <span class="active-filters-label">Active Filters:</span>
+            <div class="tags-row" style="margin-top: 14px;">
+                <span class="tags-label">Filters active:</span>
                 {% if filters.get('q') %}
-                    <a href="/dashboard/search?{{ 'type='~filters.get('type') if filters.get('type') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="filter-tag">
+                    <a href="/dashboard/search?{{ 'type='~filters.get('type') if filters.get('type') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="tag-chip">
                         "{{ filters.get('q') }}" &times;
                     </a>
                 {% endif %}
                 {% if filters.get('type') %}
-                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="filter-tag">
+                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="tag-chip">
                         Type: {{ filters.get('type')|capitalize }} &times;
                     </a>
                 {% endif %}
                 {% if filters.get('location') %}
-                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&type='~filters.get('type') if filters.get('type') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="filter-tag">
+                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&type='~filters.get('type') if filters.get('type') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="tag-chip">
                         Location: {{ filters.get('location') }} &times;
                     </a>
                 {% endif %}
                 {% if filters.get('experience') %}
-                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&type='~filters.get('type') if filters.get('type') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}" class="filter-tag">
+                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&type='~filters.get('type') if filters.get('type') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}" class="tag-chip">
                         Experience: {{ filters.get('experience') }} &times;
                     </a>
                 {% endif %}
-                <a href="/dashboard/search" class="clear-all-link">Clear All</a>
+                <a href="/dashboard/search" class="clear-btn">Clear all</a>
             </div>
         {% endif %}
     </form>
 </div>
 
-<!-- RESULTS SECTION -->
-<div class="opp-grid">
-    {% if opportunities %}
-        {% for opp in opportunities %}
-            <div class="opp-card">
-                <div>
-                    <div class="opp-card-header">
-                        <div class="company-logo-container">
-                            {% if opp.logo %}
-                                <img src="{{ opp.logo }}" alt="{{ opp.company_name }} Logo">
-                            {% else %}
-                                {{ opp.company_name[:2]|upper }}
-                            {% endif %}
-                        </div>
-                        <div class="opp-meta-info">
-                            <div class="company-name">{{ opp.company_name }}</div>
-                            <div class="opp-title" title="{{ opp.title }}">{{ opp.title }}</div>
-                        </div>
-                    </div>
+<!-- SPLIT PANE MAIN CONTAINER -->
+<div class="split-container">
 
-                    <div class="badge-row">
-                        <span class="badge badge-{{ opp.opportunity_type }}">
-                            {{ opp.opportunity_type }}
-                        </span>
-                        {% if opp.experience_level %}
-                            <span class="badge badge-exp">
-                                {{ opp.experience_level }}
-                            </span>
-                        {% endif %}
-                    </div>
-
-                    <div class="opp-details-row">
-                        <div class="opp-detail-item">
-                            <!-- Location Icon -->
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                            <span>{{ opp.location or 'Remote' }}</span>
-                        </div>
-                        <div class="opp-detail-item">
-                            <!-- Salary Icon -->
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span>{{ opp.salary or 'N/A' }}</span>
-                        </div>
-                    </div>
-
-                    {% if opp.skills_list %}
-                        <div class="skills-pills">
-                            {% for skill in opp.skills_list[:4] %}
-                                <span class="skill-pill">{{ skill }}</span>
-                            {% endfor %}
-                            {% if opp.skills_list|length > 4 %}
-                                <span class="skill-pill">+{{ opp.skills_list|length - 4 }} more</span>
-                            {% endif %}
-                        </div>
-                    {% endif %}
-                </div>
-
-                <div class="opp-card-footer">
-                    <span class="post-date">{{ opp.created_at.strftime('%b %d, %Y') }}</span>
-                    <button class="btn-view-details" onclick="openDetailsModal({{ opp|tojson|safe }})">
-                        View Details
-                    </button>
-                </div>
-            </div>
-        {% endfor %}
-    {% else %}
-        <div class="empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin-bottom: 16px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
-            <h3>No opportunities found</h3>
-            <p>Try refining your search keyword or clearing filters to find more listings.</p>
-            <a href="/dashboard/search" class="clear-all-link" style="display: inline-block;">View All Listings</a>
+    <!-- LEFT LIST PANE -->
+    <div class="list-pane">
+        <div class="list-pane-header">
+            Showing {{ opportunities|length }} opportunit{{ 'ies' if opportunities|length != 1 else 'y' }}
         </div>
-    {% endif %}
-</div>
-
-<!-- DETAILS MODAL -->
-<div class="modal-backdrop" id="modalBackdrop" onclick="closeDetailsModal()">
-    <div class="opp-modal" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <div class="modal-title-group">
-                <div class="company-logo-container" id="modalCompanyLogo"></div>
-                <div>
-                    <div class="company-name" id="modalCompanyName">Company Name</div>
-                    <div class="opp-title" id="modalTitle" style="white-space: normal;">Opportunity Title</div>
-                </div>
-            </div>
-            <button class="btn-close-modal" onclick="closeDetailsModal()">&times;</button>
-        </div>
-
-        <div class="modal-body">
-            <div class="badge-row" id="modalBadges" style="margin-bottom: 20px;"></div>
-
-            <div class="opp-details-row" style="display: grid; grid-template-columns: 1fr 1fr; border: none; padding: 0 0 20px 0; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9;">
-                <div class="opp-detail-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    <div>
-                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Location</div>
-                        <span id="modalLocation" style="font-weight: 600;">Location</span>
+        <div class="scrollable-list">
+            {% if opportunities %}
+                {% for opp in opportunities %}
+                    <div class="compact-card {% if loop.first %}selected{% endif %}" id="card-{{ opp.id }}" onclick="selectOpportunity({{ opp|tojson|safe }})">
+                        <div class="compact-header">
+                            <div class="compact-logo">
+                                {% if opp.logo %}
+                                    <img src="{{ opp.logo }}" alt="logo">
+                                {% else %}
+                                    {{ opp.company_name[:2]|upper }}
+                                {% endif %}
+                            </div>
+                            <div class="compact-meta">
+                                <div class="compact-title" title="{{ opp.title }}">{{ opp.title }}</div>
+                                <div class="compact-company">{{ opp.company_name }}</div>
+                            </div>
+                        </div>
+                        <div class="compact-info-row">
+                            <div class="compact-badges">
+                                <span class="badge-mini badge-mini-{{ opp.opportunity_type }}">
+                                    {{ opp.opportunity_type }}
+                                </span>
+                            </div>
+                            <span>{{ opp.created_at.strftime('%b %d') }}</span>
+                        </div>
                     </div>
+                {% endfor %}
+            {% else %}
+                <div class="split-empty-state">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <h3>No items found</h3>
+                    <p>Try matching other words or reset options.</p>
+                    <a href="/dashboard/search" class="btn-filter-submit" style="text-decoration: none; padding: 8px 16px; display: inline-block;">Reset</a>
                 </div>
-                <div class="opp-detail-item">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                    <div>
-                        <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase;">Compensation</div>
-                        <span id="modalSalary" style="font-weight: 600;">Salary</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-section">
-                <h3>Skills Required</h3>
-                <div class="skills-pills" id="modalSkills"></div>
-            </div>
-
-            <div class="modal-section">
-                <h3>Description & Requirements</h3>
-                <div class="modal-description" id="modalDescription">Description details here...</div>
-            </div>
-        </div>
-
-        <div class="modal-footer">
-            <button class="btn-modal-cancel" onclick="closeDetailsModal()">Close</button>
-            <a href="#" target="_blank" class="btn-modal-apply" id="modalApplyBtn">
-                Apply Now
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-            </a>
+            {% endif %}
         </div>
     </div>
+
+    <!-- RIGHT DETAIL PANE -->
+    <div class="detail-pane">
+        {% if opportunities %}
+            <!-- RICH DETAIL CONTAINER -->
+            <div class="detail-scroller" id="detailScroller">
+                <div class="detail-header-block">
+                    <div class="detail-company-logo" id="detLogo"></div>
+                    <div class="detail-title-group">
+                        <h2 class="detail-title" id="detTitle">Opportunity Title</h2>
+                        <div class="detail-company-link" id="detCompany">Company Name</div>
+                    </div>
+                    <div class="detail-actions">
+                        <a href="#" target="_blank" class="btn-apply-now" id="detApplyBtn">
+                            Apply Now
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- KEY METRICS INFO ROW -->
+                <div class="info-metrics-row">
+                    <div class="metric-cell">
+                        <div class="metric-cell-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </div>
+                        <div class="metric-cell-text">
+                            <div class="metric-cell-label">Salary</div>
+                            <div class="metric-cell-val" id="detSalary">N/A</div>
+                        </div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-cell-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </div>
+                        <div class="metric-cell-text">
+                            <div class="metric-cell-label">Location</div>
+                            <div class="metric-cell-val" id="detLocation">Remote</div>
+                        </div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-cell-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        </div>
+                        <div class="metric-cell-text">
+                            <div class="metric-cell-label">Experience</div>
+                            <div class="metric-cell-val" id="detExp">All Levels</div>
+                        </div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-cell-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div class="metric-cell-text">
+                            <div class="metric-cell-label">Type</div>
+                            <div class="metric-cell-val" id="detType" style="text-transform: capitalize;">Job</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REQUIRED SKILLS -->
+                <div class="detail-section">
+                    <div class="detail-section-title">Skills Required</div>
+                    <div class="skills-flex" id="detSkills"></div>
+                </div>
+
+                <!-- DESCRIPTION -->
+                <div class="detail-section">
+                    <div class="detail-section-title">Job Description & Requirements</div>
+                    <div class="detail-desc-text" id="detDescription">Description content...</div>
+                </div>
+            </div>
+        {% else %}
+            <div class="detail-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+                <p>Select an opportunity from the list to view its complete description.</p>
+            </div>
+        {% endif %}
+    </div>
+
 </div>
 
 <script>
-    function openDetailsModal(opp) {
-        // Logo
-        const logoDiv = document.getElementById('modalCompanyLogo');
+    // Selected opportunity details state updater
+    function selectOpportunity(opp) {
+        // Highlight active compact card
+        document.querySelectorAll('.compact-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        const activeCard = document.getElementById('card-' + opp.id);
+        if (activeCard) {
+            activeCard.classList.add('selected');
+        }
+
+        // Update Details Panel Content
+        document.getElementById('detTitle').innerText = opp.title;
+        document.getElementById('detCompany').innerText = opp.company_name;
+        document.getElementById('detSalary').innerText = opp.salary || 'N/A';
+        document.getElementById('detLocation').innerText = opp.location || 'Remote';
+        document.getElementById('detExp').innerText = opp.experience_level || 'All Levels';
+        document.getElementById('detType').innerText = opp.opportunity_type;
+        document.getElementById('detDescription').innerText = opp.description;
+
+        // Company Logo
+        const logoDiv = document.getElementById('detLogo');
         if (opp.logo) {
-            logoDiv.innerHTML = `<img src="${opp.logo}" alt="logo">`;
+            logoDiv.innerHTML = `<img src="${opp.logo}" alt="Logo">`;
         } else {
-            logoDiv.innerHTML = opp.company_name.substring(0, 2).toUpperCase();
+            logoDiv.innerHTML = opp.company_name.substring(0,2).toUpperCase();
         }
 
-        // Details
-        document.getElementById('modalCompanyName').innerText = opp.company_name;
-        document.getElementById('modalTitle').innerText = opp.title;
-        document.getElementById('modalLocation').innerText = opp.location || 'Remote';
-        document.getElementById('modalSalary').innerText = opp.salary || 'N/A';
-        document.getElementById('modalDescription').innerText = opp.description;
-
-        // Badges
-        const badgesContainer = document.getElementById('modalBadges');
-        let badgesHtml = `<span class="badge badge-${opp.opportunity_type}">${opp.opportunity_type}</span>`;
-        if (opp.experience_level) {
-            badgesHtml += `<span class="badge badge-exp">${opp.experience_level}</span>`;
-        }
-        badgesContainer.innerHTML = badgesHtml;
-
-        // Skills
-        const skillsContainer = document.getElementById('modalSkills');
+        // Skills Pills
+        const skillsContainer = document.getElementById('detSkills');
         skillsContainer.innerHTML = '';
         if (opp.skills_list && opp.skills_list.length > 0) {
             opp.skills_list.forEach(skill => {
-                const span = document.createElement('span');
-                span.className = 'skill-pill';
-                span.innerText = skill;
-                skillsContainer.appendChild(span);
+                const badge = document.createElement('span');
+                badge.className = 'skill-badge';
+                badge.innerText = skill;
+                skillsContainer.appendChild(badge);
             });
         } else {
-            skillsContainer.innerHTML = '<span style="font-size: 13px; color: #64748b; font-style: italic;">No specific skills specified</span>';
+            skillsContainer.innerHTML = '<span style="font-size: 13px; color: #94a3b8; font-style: italic;">No specific skills required</span>';
         }
 
-        // Apply CTA
-        const applyBtn = document.getElementById('modalApplyBtn');
+        // Apply Link Action
+        const applyBtn = document.getElementById('detApplyBtn');
         if (opp.apply_link) {
             applyBtn.href = opp.apply_link;
             applyBtn.style.display = 'inline-flex';
@@ -775,21 +814,16 @@
             applyBtn.style.display = 'none';
         }
 
-        // Open modal
-        document.getElementById('modalBackdrop').classList.add('open');
-        document.body.style.overflow = 'hidden'; // Disable background scroll
+        // Scroll Detail pane back to top
+        document.getElementById('detailScroller').scrollTop = 0;
     }
 
-    function closeDetailsModal() {
-        document.getElementById('modalBackdrop').classList.remove('open');
-        document.body.style.overflow = ''; // Re-enable background scroll
-    }
-
-    // Close modal on Escape key press
-    document.addEventListener('keydown', function(event) {
-        if (event.key === 'Escape') {
-            closeDetailsModal();
-        }
+    // Auto-select first opportunity on load if lists aren't empty
+    document.addEventListener('DOMContentLoaded', () => {
+        {% if opportunities %}
+            const firstOpportunity = {{ opportunities[0]|tojson|safe }};
+            selectOpportunity(firstOpportunity);
+        {% endif %}
     });
 </script>
 {% endblock %}

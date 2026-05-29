@@ -1,9 +1,1144 @@
 {% extends "dashboard_base.html" %}
 {% set active = "search" %}
+
 {% block title %}Search Opportunities | Talent Khoj{% endblock %}
+
 {% block content %}
-<div class="dashboard-header">
+<style>
+    /* Premium Header */
+    .search-header-container {
+        margin-bottom: 24px;
+    }
+    
+    .search-header-container h1 {
+        font-size: 26px;
+        color: #0f172a;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+    
+    .search-header-container p {
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    /* Top Filters Bar */
+    .filters-bar {
+        background: white;
+        border-radius: 14px;
+        padding: 16px 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        margin-bottom: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .filters-main-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .search-input-box {
+        flex: 1;
+        min-width: 280px;
+        position: relative;
+    }
+
+    .search-input-box svg {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        pointer-events: none;
+    }
+
+    .search-field {
+        width: 100%;
+        padding: 11px 11px 11px 40px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        border-radius: 8px;
+        color: #0f172a;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .search-field:focus {
+        background: white;
+        border-color: #2456ff;
+        box-shadow: 0 0 0 3px rgba(36, 86, 255, 0.15);
+    }
+
+    .select-filter {
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc;
+        color: #475569;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-width: 160px;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 14px;
+        padding-right: 32px;
+    }
+
+    .select-filter:focus {
+        background-color: white;
+        border-color: #2456ff;
+    }
+
+    .btn-filter-submit {
+        background: #2456ff;
+        color: white;
+        border: none;
+        padding: 0 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-filter-submit:hover {
+        background: #1848d8;
+    }
+
+    /* Active Filter Tags */
+    .tags-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        font-size: 13px;
+    }
+
+    .tags-label {
+        color: #64748b;
+    }
+
+    .tag-chip {
+        background: #e2e8f0;
+        color: #334155;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-decoration: none;
+    }
+
+    .tag-chip:hover {
+        background: #cbd5e1;
+    }
+
+    .clear-btn {
+        color: #2456ff;
+        text-decoration: none;
+        font-weight: 600;
+        margin-left: 6px;
+    }
+
+    /* Split Pane Layout */
+    .split-container {
+        display: flex;
+        background: white;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+        height: calc(100vh - 220px);
+        min-height: 520px;
+    }
+
+    /* Left Opportunities List */
+    .list-pane {
+        width: 380px;
+        min-width: 380px;
+        border-right: 1px solid #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        background: #fafbfe;
+    }
+
+    .list-pane-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        background: white;
+    }
+
+    .scrollable-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* Compact Job Cards */
+    .compact-card {
+        background: white;
+        border-radius: 10px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .compact-card:hover {
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    .compact-card.selected {
+        border-color: #2456ff;
+        background: #f0f4ff;
+        box-shadow: 0 4px 12px rgba(36, 86, 255, 0.08);
+    }
+
+    .compact-card.selected::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 12px;
+        bottom: 12px;
+        width: 4px;
+        background: #2456ff;
+        border-radius: 0 4px 4px 0;
+    }
+
+    .compact-header {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .compact-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #2456ff;
+        font-size: 14px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        flex-shrink: 0;
+    }
+
+    .compact-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .compact-meta {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .compact-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .compact-company {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .compact-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: auto;
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .compact-badges {
+        display: flex;
+        gap: 4px;
+    }
+
+    .badge-mini {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .badge-mini-job { background: #dbeafe; color: #1e40af; }
+    .badge-mini-internship { background: #fef3c7; color: #92400e; }
+    .badge-mini-event { background: #dcfce7; color: #166534; }
+
+    /* Right Details Pane */
+    .detail-pane {
+        flex: 1;
+        background: white;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .detail-scroller {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px;
+    }
+
+    .detail-header-block {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 24px;
+        margin-bottom: 24px;
+    }
+
+    .detail-company-logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 12px;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #2456ff;
+        font-size: 24px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+    }
+
+    .detail-company-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .detail-title-group {
+        flex: 1;
+    }
+
+    .detail-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 6px;
+        line-height: 1.3;
+    }
+
+    .detail-company-link {
+        font-size: 15px;
+        color: #2456ff;
+        text-decoration: none;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .detail-company-link:hover {
+        text-decoration: underline;
+    }
+
+    .detail-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-apply-now {
+        background: #2456ff;
+        color: white;
+        text-decoration: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(36, 86, 255, 0.15);
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-apply-now:hover {
+        background: #1848d8;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(36, 86, 255, 0.25);
+    }
+
+    .btn-apply-now.applied {
+        background: #22c55e !important;
+        color: white !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        box-shadow: none !important;
+    }
+
+
+    /* Toast Notification styles */
+    .toast-notification {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        background: #0f172a;
+        color: white;
+        padding: 14px 24px;
+        border-radius: 10px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        transform: translateY(100px);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .toast-notification.show {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .toast-icon {
+        color: #22c55e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+
+
+    /* Info Grid Cards */
+    .info-metrics-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 16px;
+        margin-bottom: 30px;
+    }
+
+    .metric-cell {
+        background: #fafbfe;
+        border: 1px solid #eef2f6;
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .metric-cell-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: #f0f4ff;
+        color: #2456ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .metric-cell-text {
+        min-width: 0;
+    }
+
+    .metric-cell-label {
+        font-size: 10px;
+        color: #94a3b8;
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 2px;
+    }
+
+    .metric-cell-val {
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Sections */
+    .detail-section {
+        margin-bottom: 28px;
+    }
+
+    .detail-section-title {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        margin-bottom: 12px;
+        font-weight: 700;
+        border-left: 3px solid #2456ff;
+        padding-left: 8px;
+    }
+
+    .skills-flex {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .skill-badge {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid #e2e8f0;
+    }
+
+    .detail-desc-text {
+        font-size: 14px;
+        color: #334155;
+        line-height: 1.7;
+        white-space: pre-wrap;
+    }
+
+    /* Empty state */
+    .split-empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 40px;
+        text-align: center;
+        height: 100%;
+        color: #64748b;
+    }
+
+    .split-empty-state svg {
+        color: #cbd5e1;
+        margin-bottom: 16px;
+    }
+
+    .split-empty-state h3 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 6px;
+    }
+
+    .split-empty-state p {
+        font-size: 14px;
+        margin-bottom: 20px;
+        max-width: 320px;
+    }
+
+    /* Detail Empty state (when nothing is selected yet) */
+    .detail-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        color: #94a3b8;
+        padding: 40px;
+    }
+
+    .detail-empty svg {
+        margin-bottom: 16px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+        .split-container {
+            flex-direction: column;
+            height: auto;
+            max-height: none;
+        }
+
+        .list-pane {
+            width: 100%;
+            min-width: 100%;
+            border-right: none;
+            border-bottom: 1px solid #f1f5f9;
+            height: 300px;
+        }
+        
+        .detail-pane {
+            height: 500px;
+        }
+    }
+</style>
+
+<div class="search-header-container">
     <h1>Search Opportunities</h1>
-    <p>Find internships, jobs and events.</p>
+    <p>Discover high-value positions, internships, and career programs tailored for you.</p>
 </div>
+
+<!-- FILTERS PANEL -->
+<div class="filters-bar">
+    <form class="filters-form" method="GET" action="/dashboard/search">
+        <div class="filters-main-row">
+            <div class="search-input-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" class="search-field" name="q" placeholder="Search title, description, skills..." value="{{ filters.get('q', '') }}">
+            </div>
+
+            <select class="select-filter" name="type" onchange="this.form.submit()">
+                <option value="">All Types</option>
+                <option value="job" {% if filters.get('type') == 'job' %}selected{% endif %}>Jobs</option>
+                <option value="internship" {% if filters.get('type') == 'internship' %}selected{% endif %}>Internships</option>
+                <option value="event" {% if filters.get('type') == 'event' %}selected{% endif %}>Events</option>
+            </select>
+
+            <select class="select-filter" name="location" onchange="this.form.submit()">
+                <option value="">All Locations</option>
+                {% for loc in locations %}
+                    <option value="{{ loc }}" {% if filters.get('location') == loc %}selected{% endif %}>{{ loc }}</option>
+                {% endfor %}
+            </select>
+
+            <select class="select-filter" name="experience" onchange="this.form.submit()">
+                <option value="">All Levels</option>
+                {% for exp in experience_levels %}
+                    <option value="{{ exp }}" {% if filters.get('experience') == exp %}selected{% endif %}>{{ exp }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" class="btn-filter-submit">Apply</button>
+        </div>
+
+        {% if filters.get('q') or filters.get('type') or filters.get('location') or filters.get('experience') %}
+            <div class="tags-row" style="margin-top: 14px;">
+                <span class="tags-label">Filters active:</span>
+                {% if filters.get('q') %}
+                    <a href="/dashboard/search?{{ 'type='~filters.get('type') if filters.get('type') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="tag-chip">
+                        "{{ filters.get('q') }}" &times;
+                    </a>
+                {% endif %}
+                {% if filters.get('type') %}
+                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="tag-chip">
+                        Type: {{ filters.get('type')|capitalize }} &times;
+                    </a>
+                {% endif %}
+                {% if filters.get('location') %}
+                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&type='~filters.get('type') if filters.get('type') else '' }}{{ '&experience='~filters.get('experience') if filters.get('experience') else '' }}" class="tag-chip">
+                        Location: {{ filters.get('location') }} &times;
+                    </a>
+                {% endif %}
+                {% if filters.get('experience') %}
+                    <a href="/dashboard/search?{{ 'q='~filters.get('q') if filters.get('q') else '' }}{{ '&type='~filters.get('type') if filters.get('type') else '' }}{{ '&location='~filters.get('location') if filters.get('location') else '' }}" class="tag-chip">
+                        Experience: {{ filters.get('experience') }} &times;
+                    </a>
+                {% endif %}
+                <a href="/dashboard/search" class="clear-btn">Clear all</a>
+            </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- SPLIT PANE MAIN CONTAINER -->
+<div class="split-container">
+
+    <!-- LEFT LIST PANE -->
+    <div class="list-pane">
+        <div class="list-pane-header">
+            Showing {{ opportunities|length }} opportunit{{ 'ies' if opportunities|length != 1 else 'y' }}
+        </div>
+        <div class="scrollable-list">
+            {% if opportunities %}
+                {% for opp in opportunities %}
+                    <div class="compact-card {% if loop.first %}selected{% endif %}" id="card-{{ opp.id }}" onclick="selectOpportunity({{ opp|tojson|safe }})">
+                        <div class="compact-header">
+                            <div class="compact-logo">
+                                {% if opp.logo %}
+                                    <img src="{{ opp.logo }}" alt="logo">
+                                {% else %}
+                                    {{ opp.company_name[:2]|upper }}
+                                {% endif %}
+                            </div>
+                            <div class="compact-meta">
+                                <div class="compact-title" title="{{ opp.title }}">{{ opp.title }}</div>
+                                <div class="compact-company">{{ opp.company_name }}</div>
+                            </div>
+                        </div>
+                        <div class="compact-info-row">
+                            <div class="compact-badges">
+                                <span class="badge-mini badge-mini-{{ opp.opportunity_type }}">
+                                    {{ opp.opportunity_type }}
+                                </span>
+                            </div>
+                            <span>{{ opp.created_at.strftime('%b %d') }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="split-empty-state">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <h3>No items found</h3>
+                    <p>Try matching other words or reset options.</p>
+                    <a href="/dashboard/search" class="btn-filter-submit" style="text-decoration: none; padding: 8px 16px; display: inline-block;">Reset</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- RIGHT DETAIL PANE -->
+    <div class="detail-pane">
+        {% if opportunities %}
+            <!-- RICH DETAIL CONTAINER -->
+            <div class="detail-scroller" id="detailScroller">
+                <div class="detail-header-block">
+                    <div class="detail-company-logo" id="detLogo"></div>
+                    <div class="detail-title-group">
+                        <h2 class="detail-title" id="detTitle">Opportunity Title</h2>
+                        <div class="detail-company-link" id="detCompany">Company Name</div>
+                    </div>
+                    <div class="detail-actions">
+                        <a href="#" target="_blank" class="btn-apply-now" id="detApplyBtn">
+                            <span>Apply Now</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </a>
+                    </div>
+
+
+                </div>
+
+                <!-- KEY METRICS INFO ROW -->
+                <div class="info-metrics-row">
+                    <div class="metric-cell">
+                        <div class="metric-cell-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </div>
+                        <div class="metric-cell-text">
+                            <div class="metric-cell-label">Salary</div>
+                            <div class="metric-cell-val" id="detSalary">N/A</div>
+                        </div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-cell-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        </div>
+                        <div class="metric-cell-text">
+                            <div class="metric-cell-label">Location</div>
+                            <div class="metric-cell-val" id="detLocation">Remote</div>
+                        </div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-cell-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        </div>
+                        <div class="metric-cell-text">
+                            <div class="metric-cell-label">Experience</div>
+                            <div class="metric-cell-val" id="detExp">All Levels</div>
+                        </div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-cell-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </div>
+                        <div class="metric-cell-text">
+                            <div class="metric-cell-label">Type</div>
+                            <div class="metric-cell-val" id="detType" style="text-transform: capitalize;">Job</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REQUIRED SKILLS -->
+                <div class="detail-section">
+                    <div class="detail-section-title">Skills Required</div>
+                    <div class="skills-flex" id="detSkills"></div>
+                </div>
+
+                <!-- DESCRIPTION -->
+                <div class="detail-section">
+                    <div class="detail-section-title">Job Description & Requirements</div>
+                    <div class="detail-desc-text" id="detDescription">Description content...</div>
+                </div>
+            </div>
+        {% else %}
+            <div class="detail-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+                <p>Select an opportunity from the list to view its complete description.</p>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-notification" id="easyApplyToast">
+    <span class="toast-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+    </span>
+    <span id="toastMessage">Application submitted successfully!</span>
+</div>
+
+<!-- APPLY MODAL WITH SCREENING QUESTIONS -->
+<div class="modal-backdrop" id="applyModalBackdrop" onclick="closeApplyModal()">
+    <div class="opp-modal" onclick="event.stopPropagation()" style="max-width: 600px;">
+        <div class="modal-header" style="padding: 20px 24px;">
+            <div>
+                <h2 style="font-size: 20px; font-weight: 800; color: #05154b; margin-bottom: 2px;">Apply Job</h2>
+                <div style="font-size: 13px; color: #64748b; font-weight: 600;" id="applyModalJobMeta">Senior UI/UX Designer</div>
+            </div>
+            <button class="btn-close-modal" onclick="closeApplyModal()">&times;</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 24px;">
+            <div style="background: #f8fafc; border-radius: 8px; padding: 12px 16px; border: 1px solid #e2e8f0; margin-bottom: 20px;">
+                <strong style="font-size: 13px; color: #475569; display: block; margin-bottom: 4px;">Job Description:</strong>
+                <p id="applyModalJobDesc" style="font-size: 13px; color: #64748b; line-height: 1.5; max-height: 80px; overflow-y: auto; margin: 0;"></p>
+            </div>
+
+            <!-- Dynamic screening questions will be rendered here -->
+            <form id="screeningForm" onsubmit="submitPortalApplication(event)">
+                <div id="screeningQuestionsList" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
+                    <!-- Question items -->
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 16px;">
+                    <button type="button" class="btn-modal-cancel" onclick="closeApplyModal()">Cancel</button>
+                    <button type="submit" class="btn-apply-now" id="btnSubmitScreening" style="box-shadow: none;">Submit Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- PROFILE INCOMPLETE MODAL -->
+<div class="modal-backdrop" id="incompleteModalBackdrop" onclick="closeIncompleteModal()">
+    <div class="opp-modal" onclick="event.stopPropagation()" style="max-width: 460px; text-align: center; padding: 30px;">
+        <div style="margin: 0 auto 20px; width: 64px; height: 64px; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h2 style="font-size: 20px; font-weight: 800; color: #05154b; margin-bottom: 10px;">CV & Resume Incomplete</h2>
+        <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+            To apply for opportunities, you must build your professional profile using our CV builder first. Recruiters evaluate candidate resumes directly.
+        </p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <button type="button" class="btn-modal-cancel" onclick="closeIncompleteModal()">Dismiss</button>
+            <a href="/dashboard/cv" class="btn-apply-now" style="text-decoration: none; box-shadow: none;">Build CV Now</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Selected opportunity details state updater
+    function selectOpportunity(opp) {
+        // Highlight active compact card
+        document.querySelectorAll('.compact-card').forEach(card => {
+            card.classList.remove('selected');
+        });
+        const activeCard = document.getElementById('card-' + opp.id);
+        if (activeCard) {
+            activeCard.classList.add('selected');
+        }
+
+        // Update Details Panel Content
+        document.getElementById('detTitle').innerText = opp.title;
+        document.getElementById('detCompany').innerText = opp.company_name;
+        document.getElementById('detSalary').innerText = opp.salary || 'N/A';
+        document.getElementById('detLocation').innerText = opp.location || 'Remote';
+        document.getElementById('detExp').innerText = opp.experience_level || 'All Levels';
+        document.getElementById('detType').innerText = opp.opportunity_type;
+        document.getElementById('detDescription').innerText = opp.description;
+
+        // Company Logo
+        const logoDiv = document.getElementById('detLogo');
+        if (opp.logo) {
+            logoDiv.innerHTML = `<img src="${opp.logo}" alt="Logo">`;
+        } else {
+            logoDiv.innerHTML = opp.company_name.substring(0,2).toUpperCase();
+        }
+
+        // Skills Pills
+        const skillsContainer = document.getElementById('detSkills');
+        skillsContainer.innerHTML = '';
+        if (opp.skills_list && opp.skills_list.length > 0) {
+            opp.skills_list.forEach(skill => {
+                const badge = document.createElement('span');
+                badge.className = 'skill-badge';
+                badge.innerText = skill;
+                skillsContainer.appendChild(badge);
+            });
+        } else {
+            skillsContainer.innerHTML = '<span style="font-size: 13px; color: #94a3b8; font-style: italic;">No specific skills required</span>';
+        }
+
+        // Apply Link Action
+        const applyBtn = document.getElementById('detApplyBtn');
+        const applyText = applyBtn.querySelector('span');
+        
+        // Remove previous classes
+        applyBtn.classList.remove('applied');
+        applyBtn.style.pointerEvents = '';
+        
+        if (opp.already_applied) {
+            applyBtn.href = "javascript:void(0);";
+            applyBtn.removeAttribute('target');
+            applyBtn.classList.add('applied');
+            if (applyText) applyText.innerText = "Applied ✓";
+        } else if (opp.apply_link) {
+            applyBtn.href = opp.apply_link;
+            applyBtn.setAttribute('target', '_blank');
+            if (applyText) applyText.innerText = "Apply Now";
+        } else {
+            applyBtn.href = "javascript:handlePortalApply();";
+            applyBtn.removeAttribute('target');
+            if (applyText) applyText.innerText = "Apply";
+        }
+        applyBtn.style.display = 'inline-flex';
+
+        // Keep current selected opportunity globally so Portal Apply can reference it
+        window.currentSelectedOpportunity = opp;
+
+        // Scroll Detail pane back to top
+        document.getElementById('detailScroller').scrollTop = 0;
+    }
+
+    const isProfileComplete = {{ 'true' if profile_complete else 'false' }};
+
+    function openIncompleteModal() {
+        document.getElementById('incompleteModalBackdrop').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeIncompleteModal() {
+        document.getElementById('incompleteModalBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function openApplyModal(opp) {
+        document.getElementById('applyModalJobMeta').innerText = opp.title + " — " + opp.company_name;
+        document.getElementById('applyModalJobDesc').innerText = opp.description;
+        
+        const list = document.getElementById('screeningQuestionsList');
+        list.innerHTML = '';
+        
+        opp.questions_list.forEach((q, index) => {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.flexDirection = 'column';
+            div.style.gap = '6px';
+            
+            div.innerHTML = `
+                <label style="font-size: 13.5px; font-weight: 600; color: #334155; text-align: left; display: block; margin-bottom: 2px;">
+                    ${q} <span style="color: #ef4444;">*</span>
+                </label>
+                <textarea name="answer_${index}" required style="width: 100%; min-height: 80px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13.5px; resize: vertical; outline: none; font-family: inherit;" placeholder="Type your answer here..."></textarea>
+            `;
+            list.appendChild(div);
+        });
+
+        document.getElementById('applyModalBackdrop').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeApplyModal() {
+        document.getElementById('applyModalBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function submitPortalApplication(event) {
+        event.preventDefault();
+        const opp = window.currentSelectedOpportunity;
+        if (!opp) return;
+
+        // Gather answers
+        const answers = [];
+        opp.questions_list.forEach((q, index) => {
+            const textarea = document.querySelector(`[name="answer_${index}"]`);
+            answers.push({
+                question: q,
+                answer: textarea ? textarea.value.trim() : ""
+            });
+        });
+
+        const btn = document.getElementById('btnSubmitScreening');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = `Applying...`;
+
+        fetch('/dashboard/apply/' + opp.id, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ answers: answers })
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.innerHTML = originalHtml;
+            
+            if (data.success) {
+                closeApplyModal();
+                
+                // Style details button as Applied
+                opp.already_applied = true;
+                const applyBtn = document.getElementById('detApplyBtn');
+                const applyText = applyBtn.querySelector('span');
+                applyBtn.classList.add('applied');
+                applyBtn.href = "javascript:void(0);";
+                if (applyText) applyText.innerText = "Applied ✓";
+
+                // Show Success Toast Notification
+                const toast = document.getElementById('easyApplyToast');
+                document.getElementById('toastMessage').innerText = data.message;
+                toast.classList.add('show');
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            } else {
+                alert(data.message || "An error occurred.");
+            }
+        })
+        .catch(err => {
+            console.error("Error submitting screening form:", err);
+            alert("Connection error. Please try again.");
+            btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.innerHTML = originalHtml;
+        });
+    }
+
+    function handlePortalApply() {
+        const opp = window.currentSelectedOpportunity;
+        if (!opp) return;
+
+        // 1. Hard Profile Completeness Check
+        if (!isProfileComplete) {
+            openIncompleteModal();
+            return;
+        }
+
+        // 2. Screening Questions Check
+        if (opp.questions_list && opp.questions_list.length > 0) {
+            openApplyModal(opp);
+            return;
+        }
+
+        const applyBtn = document.getElementById('detApplyBtn');
+        const applyText = applyBtn.querySelector('span');
+        const originalText = applyText ? applyText.innerText : "Apply";
+
+        // Visual loading state
+        applyBtn.style.pointerEvents = 'none';
+        if (applyText) {
+            applyText.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle;">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-opacity="0.25"/>
+                    <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor"/>
+                </svg>
+                Applying...
+            `;
+        }
+
+        // POST request to backend API (no questions)
+        fetch('/dashboard/apply/' + opp.id, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ answers: [] })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mark in memory so state is preserved if they switch selection
+                opp.already_applied = true;
+                
+                // Style as Applied
+                applyBtn.classList.add('applied');
+                applyBtn.href = "javascript:void(0);";
+                if (applyText) applyText.innerText = "Applied ✓";
+                
+                // Show Success Toast Notification
+                const toast = document.getElementById('easyApplyToast');
+                document.getElementById('toastMessage').innerText = data.message;
+                toast.classList.add('show');
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            } else {
+                alert(data.message || "An error occurred. Please try again.");
+                // Restore button
+                applyBtn.style.pointerEvents = '';
+                if (applyText) applyText.innerText = originalText;
+            }
+        })
+        .catch(err => {
+            console.error("Error applying:", err);
+            alert("Connection error. Please try again.");
+            // Restore button
+            applyBtn.style.pointerEvents = '';
+            if (applyText) applyText.innerText = originalText;
+        });
+    }
+
+
+    // Auto-select first opportunity on load if lists aren't empty
+    document.addEventListener('DOMContentLoaded', () => {
+        {% if opportunities %}
+            const firstOpportunity = {{ opportunities[0]|tojson|safe }};
+            selectOpportunity(firstOpportunity);
+        {% endif %}
+    });
+</script>
 {% endblock %}

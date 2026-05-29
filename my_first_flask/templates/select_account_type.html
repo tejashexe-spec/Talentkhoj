@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Choose Account Type | Talent Khoj{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <h2>One more step</h2>
+        <p class="auth-subtitle">How would you like to use Talent Khoj?</p>
+
+        {% if error %}
+            <p class="form-error">{{ error }}</p>
+        {% endif %}
+
+        <!-- Account Type Toggle -->
+        <div class="account-type-toggle">
+            <button type="button" class="type-btn active" id="btn-individual" onclick="selectType('individual')">
+                Individual
+            </button>
+            <button type="button" class="type-btn" id="btn-company" onclick="selectType('company')">
+                Company
+            </button>
+        </div>
+
+        <form method="post" action="/select-account-type">
+            <input type="hidden" name="account_type" id="account_type" value="individual">
+
+            <!-- Individual — no extra fields needed -->
+            <div id="individual-fields">
+                <p style="font-size:13px; color:#64748b; margin-bottom:16px;">
+                    You'll be able to search for jobs, build your CV, and connect with companies.
+                </p>
+            </div>
+
+            <!-- Company fields -->
+            <div id="company-fields" style="display:none;">
+                <div class="form-group">
+                    <label for="company_name">Company Name</label>
+                    <input id="company_name" name="company_name" type="text" placeholder="e.g. TalentKhoj">
+                    {% if errors and errors.company_name %}<span class="field-error">{{ errors.company_name }}</span>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="company_address">Company Address</label>
+                    <input id="company_address" name="company_address" type="text" placeholder="e.g. Kathmandu, Nepal">
+                    {% if errors and errors.company_address %}<span class="field-error">{{ errors.company_address }}</span>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="pan_number">PAN Number <span style="color:#aaa; font-weight:400;">(optional)</span></label>
+                    <input id="pan_number" name="pan_number" type="text" placeholder="e.g. 123456789">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Continue</button>
+        </form>
+    </div>
+</div>
+
+<style>
+.account-type-toggle {
+    display: flex;
+    margin-bottom: 24px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.type-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: white;
+    color: #888;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+.type-btn.active { background: #2456ff; color: white; }
+</style>
+
+<script>
+function selectType(type) {
+    document.getElementById('account_type').value = type;
+    document.getElementById('btn-individual').classList.toggle('active', type === 'individual');
+    document.getElementById('btn-company').classList.toggle('active', type === 'company');
+    document.getElementById('individual-fields').style.display = type === 'individual' ? 'block' : 'none';
+    document.getElementById('company-fields').style.display = type === 'company' ? 'block' : 'none';
+}
+</script>
+
+{% endblock %}

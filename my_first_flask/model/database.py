@@ -29,10 +29,10 @@ class Database:
             )
             self._init_tables()
             self._run_migrations()
-            print("✅ Database connected successfully!")
+            print("Database connected successfully!")
 
         except pymysql.MySQLError as e:
-            print("❌ Database connection failed!")
+            print("Database connection failed!")
             print("Error:", e)
             self.__connection = None
 
@@ -88,6 +88,23 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS jobs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    company_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    opportunity_type ENUM('job', 'internship', 'event') NOT NULL DEFAULT 'job',
+                    location VARCHAR(255) DEFAULT NULL,
+                    salary VARCHAR(255) DEFAULT NULL,
+                    experience_level VARCHAR(255) DEFAULT NULL,
+                    skills_required TEXT DEFAULT NULL,
+                    description TEXT NOT NULL,
+                    apply_link VARCHAR(255) DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+
 
     def _run_migrations(self):
         """Add any missing columns to existing tables."""

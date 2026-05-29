@@ -513,7 +513,35 @@ def privacy():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    conn = get_db()
+    stats = {}
+    my_opportunities = []
+    
+    if session.get("account_type") == "company":
+        with conn.cursor() as cursor:
+            # Get company details
+            cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+            company = cursor.fetchone()
+            
+            if company:
+                # Fetch posted jobs
+                cursor.execute("""
+                    SELECT id, title, opportunity_type, location, salary, created_at 
+                    FROM jobs 
+                    WHERE company_id = %s 
+                    ORDER BY created_at DESC
+                """, (company["id"],))
+                my_opportunities = cursor.fetchall()
+                stats["posted_count"] = len(my_opportunities)
+    else:
+        # Candidate metrics
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
+            user = cursor.fetchone()
+            stats["has_cv"] = bool(user and user["cv_path"])
+            
+    return render_template("dashboard.html", stats=stats, opportunities=my_opportunities)
+
 
 
 @app.route("/dashboard/search")
@@ -1021,12 +1049,58 @@ def dashboard_events():
     return render_template("dashboard_events.html")
 
 
-@app.route("/dashboard/post-opportunity")
+@app.route("/dashboard/post-opportunity", methods=["GET", "POST"])
 @login_required
 def dashboard_post_opportunity():
     if session.get("account_type") != "company":
+        flash("Only company accounts can post opportunities.", "error")
         return redirect(url_for("dashboard"))
+        
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        opportunity_type = request.form.get("opportunity_type", "job").strip()
+        location = request.form.get("location", "").strip()
+        salary = request.form.get("salary", "").strip()
+        experience_level = request.form.get("experience_level", "").strip()
+        skills_required = request.form.get("skills_required", "").strip()
+        apply_link = request.form.get("apply_link", "").strip()
+        description = request.form.get("description", "").strip()
+        
+        if not title or not description:
+            flash("Opportunity title and detailed description are required.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
+        conn = get_db()
+        # Find company ID associated with the user ID
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+            company = cursor.fetchone()
+            
+        if not company:
+            flash("Please complete your company profile before posting an opportunity.", "error")
+            return redirect(url_for("profile"))
+            
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                company["id"],
+                title,
+                opportunity_type,
+                location or None,
+                salary or None,
+                experience_level or None,
+                skills_required or None,
+                description,
+                apply_link or None
+            ))
+            
+        flash("Opportunity successfully published!", "success")
+        return redirect(url_for("dashboard"))
+        
     return render_template("dashboard_post_opportunity.html")
+
 
 
 # ─── CONTACT / SEND EMAIL ─────────────────────────────────────────────────────

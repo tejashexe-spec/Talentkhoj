@@ -370,93 +370,192 @@ def logout():
 
 # ─── PROFILE ─────────────────────────────────────────────────────────────────
 
-@app.route("/profile", methods=["GET", "POST"])
+@app.route("/profile", methods=["GET"])
+@login_required
 def profile():
-    if not session.get("user_id"):
-        return redirect(url_for("login"))
+    conn = get_db()
+    user_id = session["user_id"]
+    
+    # Load user data
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        
+    import json
+    try:
+        cv_data = json.loads(user["cv_data"]) if (user and user.get("cv_data")) else {}
+    except Exception:
+        cv_data = {}
+        
+    # Standardize loaded fields
+    profile_data = {
+        "first_name": cv_data.get("first_name", ""),
+        "last_name": cv_data.get("last_name", ""),
+        "gender": cv_data.get("gender", ""),
+        "dob": cv_data.get("dob", ""),
+        "sectors": cv_data.get("sectors", ""),
+        "designation": cv_data.get("designation", ""),
+        "bio": user.get("bio", "") or "",
+        "province": cv_data.get("province", ""),
+        "city": cv_data.get("city", ""),
+        "postal_code": cv_data.get("postal_code", ""),
+        "current_address": cv_data.get("current_address", ""),
+        "socials": cv_data.get("socials", []),
+        "cv_path": user.get("cv_path", ""),
+        "avatar": user.get("avatar", "")
+    }
+    
+    # Try parsing first name from full_name if empty
+    if not profile_data["first_name"] and user.get("full_name"):
+        parts = user["full_name"].split(" ", 1)
+        profile_data["first_name"] = parts[0]
+        if len(parts) > 1:
+            profile_data["last_name"] = parts[1]
 
-    name_message = None
-    password_message = None
-    password_errors = []
+    return render_template("profile.html", profile=profile_data)
 
-    if request.method == "POST":
-        action = request.form.get("action")
 
-        # ── Change Name ──────────────────────────────────────────────────────
-        if action == "change_name":
-            full_name = request.form.get("full_name", "").strip()
-            if not full_name:
-                name_message = "Name cannot be empty."
-            else:
-                conn = get_db()
+@app.route("/profile/update", methods=["POST"])
+@login_required
+def profile_update():
+    conn = get_db()
+    action = request.form.get("action")
+    user_id = session["user_id"]
+    
+    # Fetch existing cv_data to merge keys
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT cv_data FROM users WHERE id = %s", (user_id,))
+        row = cursor.fetchone()
+        import json
+        try:
+            cv_data = json.loads(row["cv_data"]) if (row and row.get("cv_data")) else {}
+        except Exception:
+            cv_data = {}
+
+    if action == "about":
+        first_name = request.form.get("first_name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
+        gender = request.form.get("gender", "").strip()
+        dob = request.form.get("dob", "").strip()
+        sectors = request.form.get("sectors", "").strip()
+        designation = request.form.get("designation", "").strip()
+        bio = request.form.get("bio", "").strip()
+        
+        # Save first + last as full_name
+        full_name = f"{first_name} {last_name}".strip() or session["user_name"]
+        
+        # Merge in cv_data
+        cv_data["first_name"] = first_name
+        cv_data["last_name"] = last_name
+        cv_data["gender"] = gender
+        cv_data["dob"] = dob
+        cv_data["sectors"] = sectors
+        cv_data["designation"] = designation
+        
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET full_name = %s, bio = %s, cv_data = %s WHERE id = %s",
+                (full_name, bio, json.dumps(cv_data), user_id)
+            )
+        session["user_name"] = full_name
+        session.modified = True
+        
+        # Log to file
+        try:
+            from my_first_flask.utils.logger import log_activity
+            log_activity("Profile Update", f"User '{full_name}' updated 'About Yourself' profile section.")
+        except Exception:
+            pass
+            
+        return jsonify({"success": True, "message": "About details updated successfully!"})
+        
+    elif action == "address":
+        province = request.form.get("province", "").strip()
+        city = request.form.get("city", "").strip()
+        postal_code = request.form.get("postal_code", "").strip()
+        current_address = request.form.get("current_address", "").strip()
+        
+        # Merge
+        cv_data["province"] = province
+        cv_data["city"] = city
+        cv_data["postal_code"] = postal_code
+        cv_data["current_address"] = current_address
+        
+        location = f"{current_address}, {city}, {province}".strip(", ")
+        
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET location = %s, cv_data = %s WHERE id = %s",
+                (location, json.dumps(cv_data), user_id)
+            )
+            
+        # Log
+        try:
+            from my_first_flask.utils.logger import log_activity
+            log_activity("Profile Update", f"User '{session['user_name']}' updated 'Address' profile section.")
+        except Exception:
+            pass
+            
+        return jsonify({"success": True, "message": "Address updated successfully!"})
+        
+    elif action == "socials":
+        # Capture lists
+        types = request.form.getlist("social_type[]")
+        links = request.form.getlist("social_link[]")
+        
+        socials_list = []
+        for t, l in zip(types, links):
+            if t.strip() or l.strip():
+                socials_list.append({"type": t.strip(), "link": l.strip()})
+                
+        cv_data["socials"] = socials_list
+        
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "UPDATE users SET cv_data = %s WHERE id = %s",
+                (json.dumps(cv_data), user_id)
+            )
+            
+        # Log
+        try:
+            from my_first_flask.utils.logger import log_activity
+            log_activity("Profile Update", f"User '{session['user_name']}' updated 'Social Links' profile section.")
+        except Exception:
+            pass
+            
+        return jsonify({"success": True, "message": "Social links updated successfully!"})
+
+    elif action == "upload_avatar":
+        avatar = request.files.get("avatar")
+        allowed = {"png", "jpg", "jpeg", "gif", "webp"}
+        if avatar and avatar.filename:
+            ext = avatar.filename.rsplit(".", 1)[-1].lower()
+            if ext in allowed:
+                filename = f"user_{user_id}_{int(time.time())}.{ext}"
+                upload_path = os.path.join(BASE_DIR, "static", "uploads", filename)
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                avatar.save(upload_path)
+                avatar_url = f"/static/uploads/{filename}"
+
                 with conn.cursor() as cursor:
                     cursor.execute(
-                        "UPDATE users SET full_name = %s WHERE id = %s",
-                        (full_name, session["user_id"])
+                        "UPDATE users SET avatar = %s WHERE id = %s",
+                        (avatar_url, user_id)
                     )
-                session["user_name"] = full_name
+                session["user_avatar"] = avatar_url
                 session.modified = True
-                name_message = "Name updated successfully."
+                
+                # Log
+                try:
+                    from my_first_flask.utils.logger import log_activity
+                    log_activity("Profile Update", f"User '{session['user_name']}' uploaded a new profile picture.")
+                except Exception:
+                    pass
+                    
+                return jsonify({"success": True, "message": "Avatar uploaded successfully!", "avatar_url": avatar_url})
+        return jsonify({"success": False, "message": "Invalid file format or upload failed."}), 400
 
-        # ── Change Password ──────────────────────────────────────────────────
-        elif action == "change_password":
-            current_password = request.form.get("current_password", "")
-            new_password = request.form.get("new_password", "")
-            confirm_password = request.form.get("confirm_password", "")
-
-            conn = get_db()
-            with conn.cursor() as cursor:
-                cursor.execute(
-                    "SELECT password_hash FROM users WHERE id = %s",
-                    (session["user_id"],)
-                )
-                user = cursor.fetchone()
-
-            if not user or not check_password_hash(user["password_hash"], current_password):
-                password_errors.append("Current password is incorrect.")
-            if len(new_password) < 8:
-                password_errors.append("New password must be at least 8 characters.")
-            if new_password != confirm_password:
-                password_errors.append("Passwords do not match.")
-
-            if not password_errors:
-                new_hash = generate_password_hash(new_password)
-                conn = get_db()
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        "UPDATE users SET password_hash = %s WHERE id = %s",
-                        (new_hash, session["user_id"])
-                    )
-                password_message = "Password updated successfully."
-
-        # ── Upload Avatar ────────────────────────────────────────────────────
-        elif action == "upload_avatar":
-            avatar = request.files.get("avatar")
-            allowed = {"png", "jpg", "jpeg", "gif", "webp"}
-            if avatar and avatar.filename:
-                ext = avatar.filename.rsplit(".", 1)[-1].lower()
-                if ext in allowed:
-                    filename = f"user_{session['user_id']}_{int(time.time())}.{ext}"
-                    upload_path = os.path.join(BASE_DIR, "static", "uploads", filename)
-                    avatar.save(upload_path)
-                    avatar_url = f"/static/uploads/{filename}"
-
-                    conn = get_db()
-                    with conn.cursor() as cursor:
-                        cursor.execute(
-                            "UPDATE users SET avatar = %s WHERE id = %s",
-                            (avatar_url, session["user_id"])
-                        )
-                    session["user_avatar"] = avatar_url
-                    session.modified = True
-                else:
-                    name_message = "Invalid file type. Use PNG, JPG, GIF or WEBP."
-
-    return render_template("profile.html",
-        name_message=name_message,
-        password_message=password_message,
-        password_errors=password_errors
-    )
+    return jsonify({"success": False, "message": "Invalid action."}), 400
 
 
 # ─── PUBLIC PROFILES ─────────────────────────────────────────────────────────
@@ -540,7 +639,63 @@ def dashboard():
             user = cursor.fetchone()
             stats["has_cv"] = bool(user and user["cv_path"])
             
-    return render_template("dashboard.html", stats=stats, opportunities=my_opportunities)
+            # Applied count
+            cursor.execute("SELECT COUNT(*) as count FROM applications WHERE user_id = %s", (session["user_id"],))
+            stats["applied_count"] = cursor.fetchone()["count"]
+            
+            # Rejected count
+            cursor.execute("SELECT COUNT(*) as count FROM applications WHERE user_id = %s AND status = 'rejected'", (session["user_id"],))
+            stats["rejected_count"] = cursor.fetchone()["count"]
+            
+            stats["alerts_count"] = 0
+            stats["bookmarks_count"] = 0
+            
+            # Fetch applied jobs recently
+            cursor.execute("""
+                SELECT a.id as app_id, a.status, a.created_at as applied_at, j.title, j.location, j.opportunity_type, c.company_name, c.logo
+                FROM applications a
+                JOIN jobs j ON a.job_id = j.id
+                JOIN companies c ON j.company_id = c.id
+                WHERE a.user_id = %s
+                ORDER BY a.created_at DESC
+                LIMIT 5
+            """, (session["user_id"],))
+            applied_recently = cursor.fetchall()
+            
+            # Build recent activities dynamically from DB
+            recent_activities = []
+            if stats["has_cv"]:
+                recent_activities.append({
+                    "title": "Resume uploaded",
+                    "detail": f"{session['user_name']} | {session.get('user_email', '')}",
+                    "time": "Active"
+                })
+            for app in applied_recently:
+                recent_activities.append({
+                    "title": f"Applied to {app['title']}",
+                    "detail": f"at {app['company_name']}",
+                    "time": app["applied_at"].strftime("%b %d, %H:%M")
+                })
+                if app["status"] == "rejected":
+                    recent_activities.append({
+                        "title": "Application status changed to REJECTED",
+                        "detail": f"for {app['title']} at {app['company_name']}",
+                        "time": "Recent"
+                    })
+            if not recent_activities:
+                recent_activities.append({
+                    "title": "Account created",
+                    "detail": f"Welcome to TalentKhoj, {session['user_name']}!",
+                    "time": "Recent"
+                })
+            
+    return render_template(
+        "dashboard.html", 
+        stats=stats, 
+        opportunities=my_opportunities,
+        applied_recently=applied_recently if session.get("account_type") != "company" else [],
+        recent_activities=recent_activities if session.get("account_type") != "company" else []
+    )
 
 
 

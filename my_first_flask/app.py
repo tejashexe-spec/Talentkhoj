@@ -547,7 +547,72 @@ def dashboard():
 @app.route("/dashboard/search")
 @login_required
 def dashboard_search():
-    return render_template("dashboard_search.html")
+    conn = get_db()
+    
+    keyword = request.args.get("q", "").strip()
+    opp_type = request.args.get("type", "").strip()
+    location = request.args.get("location", "").strip()
+    experience = request.args.get("experience", "").strip()
+    
+    # Fetch unique locations and experience levels for the dropdowns
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT location FROM jobs WHERE location IS NOT NULL AND location != '' ORDER BY location")
+        locations = [row["location"] for row in cursor.fetchall()]
+        
+        cursor.execute("SELECT DISTINCT experience_level FROM jobs WHERE experience_level IS NOT NULL AND experience_level != '' ORDER BY experience_level")
+        experience_levels = [row["experience_level"] for row in cursor.fetchall()]
+
+    query = """
+        SELECT j.*, c.company_name, c.logo 
+        FROM jobs j
+        JOIN companies c ON j.company_id = c.id
+        WHERE 1=1
+    """
+    params = []
+    
+    if keyword:
+        query += " AND (j.title LIKE %s OR j.description LIKE %s OR j.skills_required LIKE %s)"
+        like_keyword = f"%{keyword}%"
+        params.extend([like_keyword, like_keyword, like_keyword])
+        
+    if opp_type:
+        query += " AND j.opportunity_type = %s"
+        params.append(opp_type)
+        
+    if location:
+        query += " AND j.location = %s"
+        params.append(location)
+        
+    if experience:
+        query += " AND j.experience_level = %s"
+        params.append(experience)
+        
+    query += " ORDER BY j.created_at DESC"
+    
+    with conn.cursor() as cursor:
+        cursor.execute(query, tuple(params))
+        opportunities = cursor.fetchall()
+        
+    # Also parse skills_required for each job so we can render them as pills easily
+    for opp in opportunities:
+        if opp.get("skills_required"):
+            opp["skills_list"] = [s.strip() for s in opp["skills_required"].split(",") if s.strip()]
+        else:
+            opp["skills_list"] = []
+            
+    return render_template(
+        "dashboard_search.html",
+        opportunities=opportunities,
+        locations=locations,
+        experience_levels=experience_levels,
+        filters={
+            "q": keyword,
+            "type": opp_type,
+            "location": location,
+            "experience": experience
+        }
+    )
+
 
 
 @app.route("/dashboard/applications")

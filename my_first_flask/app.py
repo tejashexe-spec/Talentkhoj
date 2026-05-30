@@ -776,6 +776,13 @@ def dashboard_search():
                 opp["questions_list"] = []
         else:
             opp["questions_list"] = []
+
+        if opp.get("created_at"):
+            opp["created_at_formatted"] = opp["created_at"].strftime("%b %d")
+            opp["created_at"] = opp["created_at"].strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            opp["created_at_formatted"] = ""
+            opp["created_at"] = ""
             
     return render_template(
         "dashboard_search.html",

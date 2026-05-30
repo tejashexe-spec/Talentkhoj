@@ -683,7 +683,7 @@
 </div>
 
 <!-- SPLIT PANE MAIN CONTAINER -->
-<div class="split-container">
+<div class="split-container" id="searchDashboard" data-profile-complete="{{ 'true' if profile_complete else 'false' }}">
 
     <!-- LEFT LIST PANE -->
     <div class="list-pane">
@@ -693,7 +693,7 @@
         <div class="scrollable-list">
             {% if opportunities %}
                 {% for opp in opportunities %}
-                    <div class="compact-card {% if loop.first %}selected{% endif %}" id="card-{{ opp.id }}" onclick="selectOpportunity({{ opp|tojson|safe }})">
+                    <div class="compact-card {% if loop.first %}selected{% endif %} opportunity-card" id="card-{{ opp.id }}" data-opp-id="{{ opp.id }}">
                         <div class="compact-header">
                             <div class="compact-logo">
                                 {% if opp.logo %}
@@ -713,7 +713,7 @@
                                     {{ opp.opportunity_type }}
                                 </span>
                             </div>
-                            <span>{{ opp.created_at.strftime('%b %d') }}</span>
+                            <span>{{ opp.created_at_formatted }}</span>
                         </div>
                     </div>
                 {% endfor %}
@@ -874,7 +874,28 @@
     </div>
 </div>
 
+<script id="opportunities-json" type="application/json">
+    {{ opportunities|tojson|safe }}
+</script>
+
 <script>
+    // Parse opportunities safely from the JSON block
+    const oppsElement = document.getElementById('opportunities-json');
+    const globalOpportunities = oppsElement ? JSON.parse(oppsElement.textContent) : [];
+    
+    // Create quick lookup map
+    const opportunitiesMap = {};
+    globalOpportunities.forEach(opp => {
+        opportunitiesMap[opp.id] = opp;
+    });
+
+    function selectOpportunityById(id) {
+        const opp = opportunitiesMap[id];
+        if (opp) {
+            selectOpportunity(opp);
+        }
+    }
+
     // Selected opportunity details state updater
     function selectOpportunity(opp) {
         // Highlight active compact card
@@ -948,7 +969,7 @@
         document.getElementById('detailScroller').scrollTop = 0;
     }
 
-    const isProfileComplete = {{ 'true' if profile_complete else 'false' }};
+    const isProfileComplete = document.getElementById('searchDashboard').dataset.profileComplete === 'true';
 
     function openIncompleteModal() {
         document.getElementById('incompleteModalBackdrop').classList.add('open');
@@ -1133,12 +1154,25 @@
     }
 
 
-    // Auto-select first opportunity on load if lists aren't empty
+    // Auto-select first opportunity and attach event listeners on load
     document.addEventListener('DOMContentLoaded', () => {
-        {% if opportunities %}
-            const firstOpportunity = {{ opportunities[0]|tojson|safe }};
-            selectOpportunity(firstOpportunity);
-        {% endif %}
+        // Event delegation for opportunity card clicks
+        const scrollableList = document.querySelector('.scrollable-list');
+        if (scrollableList) {
+            scrollableList.addEventListener('click', (e) => {
+                const card = e.target.closest('.opportunity-card');
+                if (card) {
+                    const oppId = parseInt(card.dataset.oppId, 10);
+                    if (!isNaN(oppId)) {
+                        selectOpportunityById(oppId);
+                    }
+                }
+            });
+        }
+
+        if (globalOpportunities.length > 0) {
+            selectOpportunity(globalOpportunities[0]);
+        }
     });
 </script>
 {% endblock %}

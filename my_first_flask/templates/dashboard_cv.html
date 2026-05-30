@@ -511,6 +511,9 @@
 
     </div>
 </div>
+<script id="cv-data-json" type="application/json">
+    {{ cv_data_raw|safe }}
+</script>
 
 <script>
     // Tab switching logic
@@ -696,10 +699,11 @@
 
     // Initialize with existing data or defaults
     document.addEventListener("DOMContentLoaded", function() {
-        // Parse raw JSON of cv_data injected from python controller
+        // Parse raw JSON of cv_data injected from HTML JSON block
         var existingData = null;
         try {
-            existingData = {{ cv_data_raw|safe }};
+            var dataElement = document.getElementById('cv-data-json');
+            existingData = dataElement ? JSON.parse(dataElement.textContent) : null;
         } catch(e) {
             existingData = null;
         }

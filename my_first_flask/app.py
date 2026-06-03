@@ -809,6 +809,58 @@ def dashboard_ats_filter():
     return jsonify({"success": True, "applicants": filtered_apps})
 
 
+@app.route("/dashboard/ats/update-status", methods=["POST"])
+@login_required
+def dashboard_ats_update_status():
+    if session.get("account_type") != "company":
+        return jsonify({"success": False, "message": "Unauthorized access."}), 403
+        
+    data = request.get_json() or {}
+    app_id = data.get("application_id")
+    new_status = data.get("status")
+    
+    if not app_id or not new_status:
+        return jsonify({"success": False, "message": "Missing application_id or status."}), 400
+        
+    allowed_statuses = {"applied", "reviewed", "shortlisted", "rejected"}
+    if new_status not in allowed_statuses:
+        return jsonify({"success": False, "message": "Invalid status value."}), 400
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        return jsonify({"success": False, "message": "Complete your company profile first."}), 400
+        
+    company_id = company["id"]
+    
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT a.id, a.user_id, u.full_name, j.title as job_title 
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.id
+            JOIN users u ON a.user_id = u.id
+            WHERE a.id = %s AND j.company_id = %s
+        """, (app_id, company_id))
+        application = cursor.fetchone()
+        
+    if not application:
+        return jsonify({"success": False, "message": "Application not found or unauthorized."}), 404
+        
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE applications SET status = %s WHERE id = %s", (new_status, app_id))
+        
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("ATS Update", f"Applicant '{application['full_name']}' (ID: {application['user_id']}) moved to '{new_status}' for job '{application['job_title']}' by Company (ID: {company_id})")
+    except Exception as e:
+        print(f"Failed to log activity: {e}")
+        
+    return jsonify({"success": True, "message": f"Applicant moved to {new_status} successfully."})
+
+
 @app.route("/dashboard/search")
 @login_required
 def dashboard_search():

@@ -1,0 +1,518 @@
+{% extends "dashboard_base.html" %}
+{% set active = "ats" %}
+
+{% block title %}ATS Board | Talent Khoj{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Applicant Tracking System (ATS)</h1>
+    <p>Manage candidate stages, filter by criteria, and select the best talent for your roles.</p>
+</div>
+
+<!-- FILTER BAR -->
+<div class="ats-filter-bar">
+    <div class="ats-filter-group" style="flex: 1.5;">
+        <label for="jobFilter">Filter by Job Opportunity</label>
+        <select id="jobFilter" class="ats-filter-select" onchange="applyFilters()">
+            <option value="">All Posted Jobs</option>
+            {% for job in jobs %}
+                <option value="{{ job.id }}" {% if selected_job_id|string == job.id|string %}selected{% endif %}>{{ job.title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="ats-filter-group">
+        <label for="skillFilter">Skills</label>
+        <input type="text" id="skillFilter" class="ats-filter-input" placeholder="e.g., Python, React" value="{{ filters.skills }}" oninput="debounceFilter()">
+    </div>
+
+    <div class="ats-filter-group">
+        <label for="locationFilter">Location</label>
+        <input type="text" id="locationFilter" class="ats-filter-input" placeholder="e.g., Kathmandu" value="{{ filters.location }}" oninput="debounceFilter()">
+    </div>
+
+    <div class="ats-filter-group">
+        <label for="experienceFilter">Experience Level</label>
+        <input type="text" id="experienceFilter" class="ats-filter-input" placeholder="e.g., Entry, Mid" value="{{ filters.experience }}" oninput="debounceFilter()">
+    </div>
+</div>
+
+<!-- KANBAN BOARD -->
+<div class="ats-board-container">
+
+    <!-- APPLIED COLUMN -->
+    <div class="ats-column column-applied" data-status="applied" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+        <div class="ats-column-header">
+            <span class="ats-column-title">
+                <span style="color: #3b82f6;">●</span> Applied
+            </span>
+            <span class="ats-column-count" id="count-applied">{{ counts.applied }}</span>
+        </div>
+        <div class="ats-cards-list" id="list-applied">
+            {% for app in board.applied %}
+                {{ render_card(app) }}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- REVIEWED COLUMN -->
+    <div class="ats-column column-reviewed" data-status="reviewed" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+        <div class="ats-column-header">
+            <span class="ats-column-title">
+                <span style="color: #eab308;">●</span> Reviewed
+            </span>
+            <span class="ats-column-count" id="count-reviewed">{{ counts.reviewed }}</span>
+        </div>
+        <div class="ats-cards-list" id="list-reviewed">
+            {% for app in board.reviewed %}
+                {{ render_card(app) }}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- SHORTLISTED COLUMN -->
+    <div class="ats-column column-shortlisted" data-status="shortlisted" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+        <div class="ats-column-header">
+            <span class="ats-column-title">
+                <span style="color: #22c55e;">●</span> Shortlisted
+            </span>
+            <span class="ats-column-count" id="count-shortlisted">{{ counts.shortlisted }}</span>
+        </div>
+        <div class="ats-cards-list" id="list-shortlisted">
+            {% for app in board.shortlisted %}
+                {{ render_card(app) }}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- REJECTED COLUMN -->
+    <div class="ats-column column-rejected" data-status="rejected" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+        <div class="ats-column-header">
+            <span class="ats-column-title">
+                <span style="color: #ef4444;">●</span> Rejected
+            </span>
+            <span class="ats-column-count" id="count-rejected">{{ counts.rejected }}</span>
+        </div>
+        <div class="ats-cards-list" id="list-rejected">
+            {% for app in board.rejected %}
+                {{ render_card(app) }}
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- APPLICANT DETAIL PREVIEW MODAL -->
+<div class="ats-modal" id="applicantModal">
+    <div class="ats-modal-content">
+        <div class="ats-modal-header">
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <img id="modalAvatar" class="ats-card-avatar" style="width: 56px; height: 56px;" src="" alt="avatar">
+                <div>
+                    <h2 id="modalName" style="font-size: 20px; color: #0f172a; margin-bottom: 4px;">Candidate Name</h2>
+                    <p id="modalEmail" style="font-size: 13px; color: #64748b; margin-bottom: 2px;">email@domain.com</p>
+                    <p id="modalJob" style="font-size: 12px; color: #2456ff; font-weight: 700;">Job Title Applied For</p>
+                </div>
+            </div>
+            <button class="ats-modal-close" onclick="closeModal()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="ats-modal-body">
+            <div>
+                <h4 class="modal-section-title">Candidate Overview & Skills</h4>
+                <p id="modalBio" style="font-size: 13.5px; color: #334155; margin-bottom: 12px; line-height: 1.6;">No biography provided.</p>
+                <div id="modalSkills" class="ats-card-tags"></div>
+            </div>
+            
+            <div id="modalAnswersSection">
+                <h4 class="modal-section-title">Screening Question Answers</h4>
+                <div id="modalAnswers" class="modal-answers-list"></div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 10px;">
+                <a id="modalCVBtn" href="#" target="_blank" class="btn-action" style="padding: 10px 20px;">Open Candidate CV</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HELPER MACRO FOR CARD RENDERING -->
+{% macro render_card(app) %}
+<div class="ats-card" id="app-card-{{ app.application_id }}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" onclick="openApplicantDetails({{ app|tojson|safe }})">
+    <div class="ats-card-header">
+        {% if app.avatar %}
+            <img class="ats-card-avatar" src="{{ app.avatar }}" alt="avatar">
+        {% else %}
+            <img class="ats-card-avatar" src="https://ui-avatars.com/api/?name={{ app.full_name }}&size=36&rounded=true&background=2456ff&color=fff" alt="avatar">
+        {% endif %}
+        <div class="ats-card-info">
+            <div class="ats-card-name">{{ app.full_name }}</div>
+            <div class="ats-card-job">{{ app.job_title }}</div>
+        </div>
+    </div>
+    
+    <div class="ats-card-tags">
+        {% if app.location %}
+            <span class="ats-card-tag location">{{ app.location.split(',')[0] }}</span>
+        {% endif %}
+        {% if app.experience_tag %}
+            <span class="ats-card-tag experience">{{ app.experience_tag }}</span>
+        {% endif %}
+        {% for skill in app.skills_list %}
+            <span class="ats-card-tag">{{ skill }}</span>
+        {% endfor %}
+    </div>
+    
+    <div class="ats-card-footer" onclick="event.stopPropagation()">
+        <!-- Fallback dropdown for stage movement accessibility -->
+        <select class="ats-card-select-stage" onchange="changeStageDropdown({{ app.application_id }}, this)">
+            <option value="applied" {% if app.status == 'applied' %}selected{% endif %}>Applied</option>
+            <option value="reviewed" {% if app.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+            <option value="shortlisted" {% if app.status == 'shortlisted' %}selected{% endif %}>Shortlisted</option>
+            <option value="rejected" {% if app.status == 'rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+        
+        <div class="ats-card-actions">
+            <button class="btn-card-action" onclick="openApplicantDetailsDirect({{ app.application_id }})" title="View Details">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+<script>
+    // Keep a cache of all loaded applicants for direct details lookup
+    let applicantsCache = {};
+    
+    // Cache the initial page load candidates
+    document.addEventListener("DOMContentLoaded", () => {
+        {% for group in board.values() %}
+            {% for app in group %}
+                applicantsCache[{{ app.application_id }}] = {{ app|tojson|safe }};
+            {% endfor %}
+        {% endfor %}
+    });
+
+    // --- FILTERS LOGIC ---
+    let filterDebounceTimer;
+    function debounceFilter() {
+        clearTimeout(filterDebounceTimer);
+        filterDebounceTimer = setTimeout(applyFilters, 400);
+    }
+    
+    function applyFilters() {
+        const jobId = document.getElementById("jobFilter").value;
+        const skills = document.getElementById("skillFilter").value;
+        const location = document.getElementById("locationFilter").value;
+        const experience = document.getElementById("experienceFilter").value;
+        
+        const params = new URLSearchParams({
+            job_id: jobId,
+            skills: skills,
+            location: location,
+            experience: experience
+        });
+        
+        // Fetch matching JSON from backend API
+        fetch(`/dashboard/ats/filter?${params.toString()}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    rebuildBoard(data.applicants);
+                }
+            })
+            .catch(err => console.error("Filter error:", err));
+    }
+    
+    function rebuildBoard(applicants) {
+        // Clear all columns
+        const lists = {
+            applied: document.getElementById("list-applied"),
+            reviewed: document.getElementById("list-reviewed"),
+            shortlisted: document.getElementById("list-shortlisted"),
+            rejected: document.getElementById("list-rejected")
+        };
+        
+        Object.values(lists).forEach(list => list.innerHTML = "");
+        
+        // Re-populate cache and lists
+        applicantsCache = {};
+        const counts = { applied: 0, reviewed: 0, shortlisted: 0, rejected: 0 };
+        
+        applicants.forEach(app => {
+            applicantsCache[app.application_id] = app;
+            counts[app.status]++;
+            
+            // Build card element
+            const cardHtml = renderCardElement(app);
+            if (lists[app.status]) {
+                lists[app.status].insertAdjacentHTML("beforeend", cardHtml);
+            }
+        });
+        
+        // Update column headers counts
+        Object.keys(counts).forEach(status => {
+            document.getElementById(`count-${status}`).innerText = counts[status];
+        });
+    }
+    
+    function renderCardElement(app) {
+        const avatar = app.avatar ? app.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(app.full_name)}&size=36&rounded=true&background=2456ff&color=fff`;
+        const locationTag = app.location ? `<span class="ats-card-tag location">${app.location.split(',')[0]}</span>` : '';
+        const expTag = app.experience_tag ? `<span class="ats-card-tag experience">${app.experience_tag}</span>` : '';
+        
+        const skillsTags = (app.skills_list || []).map(sk => `<span class="ats-card-tag">${sk}</span>`).join('');
+        
+        const escapedApp = JSON.stringify(app).replace(/"/g, '&quot;');
+        
+        return `
+            <div class="ats-card" id="app-card-${app.application_id}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" onclick='openApplicantDetails(${escapedApp})'>
+                <div class="ats-card-header">
+                    <img class="ats-card-avatar" src="${avatar}" alt="avatar">
+                    <div class="ats-card-info">
+                        <div class="ats-card-name">${app.full_name}</div>
+                        <div class="ats-card-job">${app.job_title}</div>
+                    </div>
+                </div>
+                
+                <div class="ats-card-tags">
+                    ${locationTag}
+                    ${expTag}
+                    ${skillsTags}
+                </div>
+                
+                <div class="ats-card-footer" onclick="event.stopPropagation()">
+                    <select class="ats-card-select-stage" onchange="changeStageDropdown(${app.application_id}, this)">
+                        <option value="applied" ${app.status === 'applied' ? 'selected' : ''}>Applied</option>
+                        <option value="reviewed" ${app.status === 'reviewed' ? 'selected' : ''}>Reviewed</option>
+                        <option value="shortlisted" ${app.status === 'shortlisted' ? 'selected' : ''}>Shortlisted</option>
+                        <option value="rejected" ${app.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                    </select>
+                    
+                    <div class="ats-card-actions">
+                        <button class="btn-card-action" onclick="openApplicantDetailsDirect(${app.application_id})" title="View Details">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- DRAG AND DROP ---
+    let draggedCard = null;
+    
+    function handleDragStart(e) {
+        draggedCard = e.currentTarget;
+        draggedCard.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", draggedCard.id);
+    }
+    
+    function handleDragEnd(e) {
+        if (draggedCard) {
+            draggedCard.classList.remove("dragging");
+        }
+        draggedCard = null;
+        
+        // Remove hover state from columns
+        document.querySelectorAll(".ats-column").forEach(col => {
+            col.classList.remove("dragover");
+        });
+    }
+    
+    function allowDrop(e) {
+        e.preventDefault();
+    }
+    
+    function dragEnter(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add("dragover");
+    }
+    
+    function dragLeave(e) {
+        e.currentTarget.classList.remove("dragover");
+    }
+    
+    function handleDrop(e) {
+        e.preventDefault();
+        const column = e.currentTarget;
+        column.classList.remove("dragover");
+        
+        const cardId = e.dataTransfer.getData("text/plain");
+        const card = document.getElementById(cardId);
+        
+        if (card && column) {
+            const listContainer = column.querySelector(".ats-cards-list");
+            const newStatus = column.dataset.status;
+            const appId = cardId.replace("app-card-", "");
+            
+            // Check if card is dropped in a different column
+            const oldStatus = card.closest(".ats-column").dataset.status;
+            if (oldStatus !== newStatus) {
+                listContainer.appendChild(card);
+                updateApplicantStatus(appId, newStatus, card);
+            }
+        }
+    }
+    
+    function changeStageDropdown(appId, selectEl) {
+        const newStatus = selectEl.value;
+        const card = document.getElementById(`app-card-${appId}`);
+        const targetColumn = document.querySelector(`.ats-column[data-status="${newStatus}"]`);
+        
+        if (card && targetColumn) {
+            const listContainer = targetColumn.querySelector(".ats-cards-list");
+            listContainer.appendChild(card);
+            updateApplicantStatus(appId, newStatus, card);
+        }
+    }
+    
+    function updateApplicantStatus(appId, status, cardEl) {
+        // Send updates to backend
+        fetch("/dashboard/ats/update-status", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                application_id: parseInt(appId),
+                status: status
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Update select dropdown value just in case
+                const select = cardEl.querySelector(".ats-card-select-stage");
+                if (select) select.value = status;
+                
+                // Update applicant status in cache
+                if (applicantsCache[appId]) {
+                    applicantsCache[appId].status = status;
+                }
+                
+                // Recalculate column counters
+                recalculateCounters();
+            } else {
+                alert(data.message || "Failed to update applicant status.");
+                // Reload page if state gets out of sync
+                window.location.reload();
+            }
+        })
+        .catch(err => {
+            console.error("Status update error:", err);
+            window.location.reload();
+        });
+    }
+    
+    function recalculateCounters() {
+        const columns = ["applied", "reviewed", "shortlisted", "rejected"];
+        columns.forEach(status => {
+            const list = document.getElementById(`list-${status}`);
+            const count = list.querySelectorAll(".ats-card").length;
+            document.getElementById(`count-${status}`).innerText = count;
+        });
+    }
+
+    // --- MODAL PREVIEW ---
+    function openApplicantDetailsDirect(appId) {
+        const app = applicantsCache[appId];
+        if (app) {
+            openApplicantDetails(app);
+        }
+    }
+    
+    function openApplicantDetails(app) {
+        document.getElementById("modalName").innerText = app.full_name;
+        document.getElementById("modalEmail").innerText = app.email;
+        document.getElementById("modalJob").innerText = app.job_title;
+        
+        const avatar = app.avatar ? app.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(app.full_name)}&size=56&rounded=true&background=2456ff&color=fff`;
+        document.getElementById("modalAvatar").src = avatar;
+        
+        // Parse bio and skills
+        let cvData = {};
+        if (app.cv_data) {
+            try {
+                cvData = (typeof app.cv_data === "string") ? JSON.parse(app.cv_data) : app.cv_data;
+            } catch(e) {
+                console.error(e);
+            }
+        }
+        
+        document.getElementById("modalBio").innerText = app.bio || cvData.bio || "No biography provided.";
+        
+        // Populate skills tags
+        const skillsContainer = document.getElementById("modalSkills");
+        skillsContainer.innerHTML = "";
+        
+        let allSkills = [];
+        if (app.skills) {
+            allSkills = app.skills.split(",");
+        } else if (cvData.skills) {
+            cvData.skills.forEach(cat => {
+                if (cat.list) {
+                    allSkills.push(...cat.list.split(","));
+                }
+            });
+        }
+        
+        allSkills.forEach(sk => {
+            if (sk.trim()) {
+                const tag = document.createElement("span");
+                tag.className = "ats-card-tag";
+                tag.innerText = sk.trim();
+                skillsContainer.appendChild(tag);
+            }
+        });
+        
+        // Populate screening answers
+        const answersContainer = document.getElementById("modalAnswers");
+        const answersSection = document.getElementById("modalAnswersSection");
+        answersContainer.innerHTML = "";
+        
+        const answers = (typeof app.answers_list === "string") ? JSON.parse(app.answers_list) : app.answers_list;
+        
+        if (answers && answers.length > 0) {
+            answersSection.style.display = "block";
+            answers.forEach(item => {
+                const ansItem = document.createElement("div");
+                ansItem.className = "modal-answer-item";
+                ansItem.innerHTML = `
+                    <div class="modal-question">Q: ${item.question}</div>
+                    <div class="modal-answer">A: ${item.answer}</div>
+                `;
+                answersContainer.appendChild(ansItem);
+            });
+        } else {
+            answersSection.style.display = "none";
+        }
+        
+        // Set CV link
+        const cvBtn = document.getElementById("modalCVBtn");
+        if (app.cv_path) {
+            cvBtn.href = app.cv_path;
+            cvBtn.style.display = "inline-block";
+        } else {
+            cvBtn.style.display = "none";
+        }
+        
+        // Open Modal
+        document.getElementById("applicantModal").classList.add("open");
+    }
+    
+    function closeModal() {
+        document.getElementById("applicantModal").classList.remove("open");
+    }
+    
+    // Close modal on click outside modal content
+    document.getElementById("applicantModal").addEventListener("click", (e) => {
+        if (e.target.id === "applicantModal") {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}

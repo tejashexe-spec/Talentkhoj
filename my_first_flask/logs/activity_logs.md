@@ -9,3 +9,5 @@
 | 2026-05-29 23:15:28 | **VERIFY EMAIL** | Successfully sent email to gautamprasiddha@gmail.com (Subject: 'Verify Your Email - Talent Khoj') |
 | 2026-05-31 20:08:18 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 8) applied to job ID 2 |
 
+| 2026-06-03 17:34:06 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 3) posted a new internship: 'UI/UX' at Ktm (Onsite) |
+| 2026-06-03 17:34:37 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 8) applied to job ID 3 |

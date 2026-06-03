@@ -560,3 +560,227 @@
     font-size: 13.5px;
     color: #475569;
 }
+
+/* ── IMPROVISED ATS PREMIUM STYLES ── */
+
+/* Stats metric widgets */
+.ats-stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.ats-stats-bar .stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    transition: all 0.25s ease;
+}
+
+.ats-stats-bar .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
+}
+
+.ats-stats-bar .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.ats-stats-bar .stat-card.total .stat-icon {
+    background: rgba(36, 86, 255, 0.08);
+    color: #2456ff;
+}
+
+.ats-stats-bar .stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.ats-stats-bar .stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.ats-stats-bar .stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+/* Drag and drop enhancements */
+.ats-column {
+    position: relative;
+    transition: all 0.2s ease-in-out;
+}
+.ats-column.dragover {
+    background-color: #f1f5f9;
+    border-color: #2456ff;
+    box-shadow: inset 0 0 0 2px rgba(36, 86, 255, 0.15);
+}
+.ats-cards-list {
+    transition: min-height 0.2s ease;
+}
+
+/* Quick Card Actions styling */
+.btn-card-action.quick-shortlist:hover {
+    background: #ecfdf5;
+    color: #10b981;
+}
+
+.btn-card-action.quick-reject:hover {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+/* Modal Timeline / CV sections */
+.modal-timeline-list {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.modal-timeline-item {
+    position: relative;
+    padding-left: 20px;
+    border-left: 2px solid #cbd5e1;
+}
+
+.modal-timeline-item:last-child {
+    border-left-color: transparent;
+}
+
+.modal-timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -7px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #2456ff;
+    border: 2px solid white;
+}
+
+.timeline-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #0f172a;
+}
+
+.timeline-subtitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin: 2px 0 6px 0;
+}
+
+.timeline-details {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.5;
+}
+
+/* Projects list inside modal */
+.modal-projects-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.modal-project-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.2s;
+}
+
+.modal-project-item:hover {
+    border-color: #cbd5e1;
+}
+
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.project-title {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: #0f172a;
+}
+
+.project-tag {
+    font-size: 10px;
+    font-weight: 700;
+    background: #eff6ff;
+    color: #2456ff;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.project-desc {
+    font-size: 12.5px;
+    color: #475569;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.project-link {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #2456ff;
+    text-decoration: none;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.project-link:hover {
+    text-decoration: underline;
+}
+
+/* Certifications inside modal */
+.modal-certs-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.modal-cert-badge {
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+

@@ -1073,6 +1073,11 @@
             return;
         }
 
+        // 3. Confirm Application
+        if (!confirm(`Are you sure you want to apply for "${opp.title}" at "${opp.company_name}"?`)) {
+            return;
+        }
+
         const applyBtn = document.getElementById('detApplyBtn');
         const applyText = applyBtn.querySelector('span');
         const originalText = applyText ? applyText.innerText : "Apply";

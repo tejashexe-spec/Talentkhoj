@@ -659,6 +659,10 @@ def dashboard_ats():
             exp_tag = cv_data["experience"][0].get("title", "")
         app["experience_tag"] = exp_tag
         
+        # Format datetime to string for JSON serialization
+        if app.get("applied_at"):
+            app["applied_at"] = app["applied_at"].strftime("%Y-%m-%d %H:%M")
+            
         filtered_apps.append(app)
         
     board = {

@@ -4,9 +4,103 @@
 {% block title %}ATS Board | Talent Khoj{% endblock %}
 
 {% block content %}
+<!-- HELPER MACRO FOR CARD RENDERING -->
+{% macro render_card(app) %}
+<div class="ats-card" id="app-card-{{ app.application_id }}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" onclick="openApplicantDetailsDirect({{ app.application_id }})">
+    <div class="ats-card-header">
+        {% if app.avatar %}
+            <img class="ats-card-avatar" src="{{ app.avatar }}" alt="avatar">
+        {% else %}
+            <img class="ats-card-avatar" src="https://ui-avatars.com/api/?name={{ app.full_name }}&size=36&rounded=true&background=2456ff&color=fff" alt="avatar">
+        {% endif %}
+        <div class="ats-card-info">
+            <div class="ats-card-name">{{ app.full_name }}</div>
+            <div class="ats-card-job">{{ app.job_title }}</div>
+        </div>
+    </div>
+    
+    <div class="ats-card-tags">
+        {% if app.location %}
+            <span class="ats-card-tag location">{{ app.location.split(',')[0] }}</span>
+        {% endif %}
+        {% if app.experience_tag %}
+            <span class="ats-card-tag experience">{{ app.experience_tag }}</span>
+        {% endif %}
+        {% for skill in app.skills_list %}
+            <span class="ats-card-tag">{{ skill }}</span>
+        {% endfor %}
+    </div>
+    
+    <div class="ats-card-footer" onclick="event.stopPropagation()">
+        <!-- Fallback dropdown for stage movement accessibility -->
+        <select class="ats-card-select-stage" onchange="changeStageDropdown({{ app.application_id }}, this)">
+            <option value="applied" {% if app.status == 'applied' %}selected{% endif %}>Applied</option>
+            <option value="reviewed" {% if app.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
+            <option value="shortlisted" {% if app.status == 'shortlisted' %}selected{% endif %}>Shortlisted</option>
+            <option value="rejected" {% if app.status == 'rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+        
+        <div class="ats-card-actions">
+            <button class="btn-card-action" onclick="event.stopPropagation(); openApplicantDetailsDirect({{ app.application_id }})" title="View Details">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </button>
+            {% if app.status != 'shortlisted' %}
+            <button class="btn-card-action quick-shortlist" onclick="event.stopPropagation(); changeStageDirect({{ app.application_id }}, 'shortlisted')" title="Quick Shortlist">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+            {% endif %}
+            {% if app.status != 'rejected' %}
+            <button class="btn-card-action quick-reject" onclick="event.stopPropagation(); changeStageDirect({{ app.application_id }}, 'rejected')" title="Quick Reject">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
 <div class="dashboard-header">
     <h1>Applicant Tracking System (ATS)</h1>
     <p>Manage candidate stages, filter by criteria, and select the best talent for your roles.</p>
+</div>
+
+<!-- STATS METRICS BAR -->
+<div class="ats-stats-bar">
+    <div class="stat-card total">
+        <div class="stat-icon">👥</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-total">{{ counts.applied + counts.reviewed + counts.shortlisted + counts.rejected }}</span>
+            <span class="stat-label">Total Applicants</span>
+        </div>
+    </div>
+    <div class="stat-card applied">
+        <div class="stat-icon" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);">●</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-applied">{{ counts.applied }}</span>
+            <span class="stat-label">Applied</span>
+        </div>
+    </div>
+    <div class="stat-card reviewed">
+        <div class="stat-icon" style="color: #eab308; background: rgba(234, 179, 8, 0.1);">●</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-reviewed">{{ counts.reviewed }}</span>
+            <span class="stat-label">Reviewed</span>
+        </div>
+    </div>
+    <div class="stat-card shortlisted">
+        <div class="stat-icon" style="color: #22c55e; background: rgba(34, 197, 94, 0.1);">●</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-shortlisted">{{ counts.shortlisted }}</span>
+            <span class="stat-label">Shortlisted</span>
+        </div>
+    </div>
+    <div class="stat-card rejected">
+        <div class="stat-icon" style="color: #ef4444; background: rgba(239, 68, 68, 0.1);">●</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-rejected">{{ counts.rejected }}</span>
+            <span class="stat-label">Rejected</span>
+        </div>
+    </div>
 </div>
 
 <!-- FILTER BAR -->
@@ -34,6 +128,12 @@
     <div class="ats-filter-group">
         <label for="experienceFilter">Experience Level</label>
         <input type="text" id="experienceFilter" class="ats-filter-input" placeholder="e.g., Entry, Mid" value="{{ filters.experience }}" oninput="debounceFilter()">
+    </div>
+
+    <div class="ats-filter-group" style="flex: 0.5; min-width: 120px; align-self: flex-end;">
+        <button type="button" class="btn-secondary" onclick="resetFilters()" style="padding: 8px 12px; font-size: 13px; height: 38px; width: 100%;">
+            Reset Filters
+        </button>
     </div>
 </div>
 
@@ -118,69 +218,50 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
         </div>
-        <div class="ats-modal-body">
+        <div class="ats-modal-body" style="max-height: 60vh; overflow-y: auto; padding-right: 8px;">
             <div>
                 <h4 class="modal-section-title">Candidate Overview & Skills</h4>
                 <p id="modalBio" style="font-size: 13.5px; color: #334155; margin-bottom: 12px; line-height: 1.6;">No biography provided.</p>
-                <div id="modalSkills" class="ats-card-tags"></div>
+                <div id="modalSkills" class="ats-card-tags" style="margin-bottom: 15px;"></div>
+            </div>
+
+            <!-- Education History -->
+            <div id="modalEducationSection" style="display: none; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Education History</h4>
+                <div id="modalEducation" class="modal-timeline-list"></div>
+            </div>
+
+            <!-- Work Experience -->
+            <div id="modalExperienceSection" style="display: none; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Work Experience</h4>
+                <div id="modalExperience" class="modal-timeline-list"></div>
+            </div>
+
+            <!-- Projects -->
+            <div id="modalProjectsSection" style="display: none; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Projects</h4>
+                <div id="modalProjects" class="modal-projects-list"></div>
+            </div>
+
+            <!-- Certifications -->
+            <div id="modalCertificationsSection" style="display: none; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Certifications</h4>
+                <div id="modalCertifications" class="modal-certs-list"></div>
             </div>
             
-            <div id="modalAnswersSection">
+            <div id="modalAnswersSection" style="margin-bottom: 15px;">
                 <h4 class="modal-section-title">Screening Question Answers</h4>
                 <div id="modalAnswers" class="modal-answers-list"></div>
             </div>
             
-            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 10px;">
-                <a id="modalCVBtn" href="#" target="_blank" class="btn-action" style="padding: 10px 20px;">Open Candidate CV</a>
+            <div style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 10px; position: sticky; bottom: 0; background: white; z-index: 10;">
+                <a id="modalCVBtn" href="#" target="_blank" class="btn-action" style="padding: 10px 20px; background: #2456ff; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 13.5px;">Open Candidate CV</a>
             </div>
         </div>
-    </div>
+</div>
 </div>
 
-<!-- HELPER MACRO FOR CARD RENDERING -->
-{% macro render_card(app) %}
-<div class="ats-card" id="app-card-{{ app.application_id }}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" onclick="openApplicantDetails({{ app|tojson|safe }})">
-    <div class="ats-card-header">
-        {% if app.avatar %}
-            <img class="ats-card-avatar" src="{{ app.avatar }}" alt="avatar">
-        {% else %}
-            <img class="ats-card-avatar" src="https://ui-avatars.com/api/?name={{ app.full_name }}&size=36&rounded=true&background=2456ff&color=fff" alt="avatar">
-        {% endif %}
-        <div class="ats-card-info">
-            <div class="ats-card-name">{{ app.full_name }}</div>
-            <div class="ats-card-job">{{ app.job_title }}</div>
-        </div>
-    </div>
-    
-    <div class="ats-card-tags">
-        {% if app.location %}
-            <span class="ats-card-tag location">{{ app.location.split(',')[0] }}</span>
-        {% endif %}
-        {% if app.experience_tag %}
-            <span class="ats-card-tag experience">{{ app.experience_tag }}</span>
-        {% endif %}
-        {% for skill in app.skills_list %}
-            <span class="ats-card-tag">{{ skill }}</span>
-        {% endfor %}
-    </div>
-    
-    <div class="ats-card-footer" onclick="event.stopPropagation()">
-        <!-- Fallback dropdown for stage movement accessibility -->
-        <select class="ats-card-select-stage" onchange="changeStageDropdown({{ app.application_id }}, this)">
-            <option value="applied" {% if app.status == 'applied' %}selected{% endif %}>Applied</option>
-            <option value="reviewed" {% if app.status == 'reviewed' %}selected{% endif %}>Reviewed</option>
-            <option value="shortlisted" {% if app.status == 'shortlisted' %}selected{% endif %}>Shortlisted</option>
-            <option value="rejected" {% if app.status == 'rejected' %}selected{% endif %}>Rejected</option>
-        </select>
-        
-        <div class="ats-card-actions">
-            <button class="btn-card-action" onclick="openApplicantDetailsDirect({{ app.application_id }})" title="View Details">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            </button>
-        </div>
-    </div>
-</div>
-{% endmacro %}
+<div id="board-data" style="display: none;">{{ board|tojson|safe }}</div>
 
 <script>
     // Keep a cache of all loaded applicants for direct details lookup
@@ -188,11 +269,14 @@
     
     // Cache the initial page load candidates
     document.addEventListener("DOMContentLoaded", () => {
-        {% for group in board.values() %}
-            {% for app in group %}
-                applicantsCache[{{ app.application_id }}] = {{ app|tojson|safe }};
-            {% endfor %}
-        {% endfor %}
+        const boardData = JSON.parse(document.getElementById("board-data").textContent || "{}");
+        Object.values(boardData).forEach(group => {
+            if (Array.isArray(group)) {
+                group.forEach(app => {
+                    applicantsCache[app.application_id] = app;
+                });
+            }
+        });
     });
 
     // --- FILTERS LOGIC ---
@@ -225,6 +309,14 @@
             })
             .catch(err => console.error("Filter error:", err));
     }
+
+    function resetFilters() {
+        document.getElementById("jobFilter").value = "";
+        document.getElementById("skillFilter").value = "";
+        document.getElementById("locationFilter").value = "";
+        document.getElementById("experienceFilter").value = "";
+        applyFilters();
+    }
     
     function rebuildBoard(applicants) {
         // Clear all columns
@@ -252,10 +344,16 @@
             }
         });
         
-        // Update column headers counts
+        // Update column headers counts and stats widget
+        let total = 0;
         Object.keys(counts).forEach(status => {
             document.getElementById(`count-${status}`).innerText = counts[status];
+            const statVal = document.getElementById(`stat-${status}`);
+            if (statVal) statVal.innerText = counts[status];
+            total += counts[status];
         });
+        const totalVal = document.getElementById("stat-total");
+        if (totalVal) totalVal.innerText = total;
     }
     
     function renderCardElement(app) {
@@ -266,9 +364,20 @@
         const skillsTags = (app.skills_list || []).map(sk => `<span class="ats-card-tag">${sk}</span>`).join('');
         
         const escapedApp = JSON.stringify(app).replace(/"/g, '&quot;');
+
+        const quickShortlist = app.status !== 'shortlisted' ? `
+            <button class="btn-card-action quick-shortlist" onclick="event.stopPropagation(); changeStageDirect(${app.application_id}, 'shortlisted')" title="Quick Shortlist">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+        ` : '';
+        const quickReject = app.status !== 'rejected' ? `
+            <button class="btn-card-action quick-reject" onclick="event.stopPropagation(); changeStageDirect(${app.application_id}, 'rejected')" title="Quick Reject">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        ` : '';
         
         return `
-            <div class="ats-card" id="app-card-${app.application_id}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" onclick='openApplicantDetails(${escapedApp})'>
+            <div class="ats-card" id="app-card-${app.application_id}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" onclick="openApplicantDetailsDirect(${app.application_id})">
                 <div class="ats-card-header">
                     <img class="ats-card-avatar" src="${avatar}" alt="avatar">
                     <div class="ats-card-info">
@@ -292,9 +401,11 @@
                     </select>
                     
                     <div class="ats-card-actions">
-                        <button class="btn-card-action" onclick="openApplicantDetailsDirect(${app.application_id})" title="View Details">
+                        <button class="btn-card-action" onclick="event.stopPropagation(); openApplicantDetailsDirect(${app.application_id})" title="View Details">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                         </button>
+                        ${quickShortlist}
+                        ${quickReject}
                     </div>
                 </div>
             </div>
@@ -369,6 +480,16 @@
             updateApplicantStatus(appId, newStatus, card);
         }
     }
+
+    function changeStageDirect(appId, newStatus) {
+        const card = document.getElementById(`app-card-${appId}`);
+        const targetColumn = document.querySelector(`.ats-column[data-status="${newStatus}"]`);
+        if (card && targetColumn) {
+            const listContainer = targetColumn.querySelector(".ats-cards-list");
+            listContainer.appendChild(card);
+            updateApplicantStatus(appId, newStatus, card);
+        }
+    }
     
     function updateApplicantStatus(appId, status, cardEl) {
         // Send updates to backend
@@ -394,6 +515,31 @@
                     applicantsCache[appId].status = status;
                 }
                 
+                // Update action buttons based on new status
+                const actionsContainer = cardEl.querySelector(".ats-card-actions");
+                if (actionsContainer) {
+                    let actionsHtml = `
+                        <button class="btn-card-action" onclick="openApplicantDetailsDirect(${appId})" title="View Details">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </button>
+                    `;
+                    if (status !== 'shortlisted') {
+                        actionsHtml += `
+                            <button class="btn-card-action quick-shortlist" onclick="changeStageDirect(${appId}, 'shortlisted')" title="Quick Shortlist">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            </button>
+                        `;
+                    }
+                    if (status !== 'rejected') {
+                        actionsHtml += `
+                            <button class="btn-card-action quick-reject" onclick="changeStageDirect(${appId}, 'rejected')" title="Quick Reject">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        `;
+                    }
+                    actionsContainer.innerHTML = actionsHtml;
+                }
+
                 // Recalculate column counters
                 recalculateCounters();
             } else {
@@ -410,11 +556,18 @@
     
     function recalculateCounters() {
         const columns = ["applied", "reviewed", "shortlisted", "rejected"];
+        let total = 0;
         columns.forEach(status => {
             const list = document.getElementById(`list-${status}`);
             const count = list.querySelectorAll(".ats-card").length;
             document.getElementById(`count-${status}`).innerText = count;
+            // Update stats bar value
+            const statVal = document.getElementById(`stat-${status}`);
+            if (statVal) statVal.innerText = count;
+            total += count;
         });
+        const totalVal = document.getElementById("stat-total");
+        if (totalVal) totalVal.innerText = total;
     }
 
     // --- MODAL PREVIEW ---
@@ -468,6 +621,88 @@
                 skillsContainer.appendChild(tag);
             }
         });
+
+        // Populate Education
+        const eduContainer = document.getElementById("modalEducation");
+        const eduSection = document.getElementById("modalEducationSection");
+        eduContainer.innerHTML = "";
+        if (cvData.education && cvData.education.length > 0) {
+            eduSection.style.display = "block";
+            cvData.education.forEach(edu => {
+                const item = document.createElement("div");
+                item.className = "modal-timeline-item";
+                item.innerHTML = `
+                    <div class="timeline-title">${edu.degree || "Degree / Qualification"}</div>
+                    <div class="timeline-subtitle">${edu.school || "Institution / University"}</div>
+                    ${edu.details ? `<div class="timeline-details">${edu.details}</div>` : ''}
+                `;
+                eduContainer.appendChild(item);
+            });
+        } else {
+            eduSection.style.display = "none";
+        }
+
+        // Populate Experience
+        const expContainer = document.getElementById("modalExperience");
+        const expSection = document.getElementById("modalExperienceSection");
+        expContainer.innerHTML = "";
+        if (cvData.experience && cvData.experience.length > 0) {
+            expSection.style.display = "block";
+            cvData.experience.forEach(exp => {
+                const item = document.createElement("div");
+                item.className = "modal-timeline-item";
+                item.innerHTML = `
+                    <div class="timeline-title">${exp.title || "Job Title"}</div>
+                    <div class="timeline-subtitle">${exp.company || "Company Name"} ${exp.dates ? `• ${exp.dates}` : ''}</div>
+                    ${exp.description ? `<div class="timeline-details">${exp.description}</div>` : ''}
+                `;
+                expContainer.appendChild(item);
+            });
+        } else {
+            expSection.style.display = "none";
+        }
+
+        // Populate Projects
+        const projContainer = document.getElementById("modalProjects");
+        const projSection = document.getElementById("modalProjectsSection");
+        projContainer.innerHTML = "";
+        if (cvData.projects && cvData.projects.length > 0) {
+            projSection.style.display = "block";
+            cvData.projects.forEach(proj => {
+                const item = document.createElement("div");
+                item.className = "modal-project-item";
+                item.innerHTML = `
+                    <div class="project-header">
+                        <span class="project-title">${proj.title || "Project Title"}</span>
+                        ${proj.tag ? `<span class="project-tag">${proj.tag}</span>` : ''}
+                    </div>
+                    ${proj.description ? `<p class="project-desc">${proj.description}</p>` : ''}
+                    ${proj.link ? `<a href="${proj.link}" target="_blank" class="project-link">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        View Project
+                    </a>` : ''}
+                `;
+                projContainer.appendChild(item);
+            });
+        } else {
+            projSection.style.display = "none";
+        }
+
+        // Populate Certifications
+        const certContainer = document.getElementById("modalCertifications");
+        const certSection = document.getElementById("modalCertificationsSection");
+        certContainer.innerHTML = "";
+        if (cvData.certifications && cvData.certifications.length > 0) {
+            certSection.style.display = "block";
+            cvData.certifications.forEach(cert => {
+                const badge = document.createElement("span");
+                badge.className = "modal-cert-badge";
+                badge.innerText = cert;
+                certContainer.appendChild(badge);
+            });
+        } else {
+            certSection.style.display = "none";
+        }
         
         // Populate screening answers
         const answersContainer = document.getElementById("modalAnswers");

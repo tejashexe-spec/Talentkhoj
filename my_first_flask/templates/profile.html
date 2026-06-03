@@ -16,6 +16,124 @@
             <h2>{{ session['user_name'] }}</h2>
             <p>{{ session.get('user_email', '') }}</p>
         </div>
+
+
+        <!-- PANEL 2: ADDRESS -->
+        <div class="profile-card" id="addressTab">
+            <h2 class="card-title">Address</h2>
+            <p class="card-subtitle">Manage and update your geographic residence details.</p>
+
+            <form onsubmit="saveProfileSection(event, 'address')">
+                <input type="hidden" name="action" value="address">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="provinceInput">Province <span style="color: #ef4444;">*</span></label>
+                        <input type="text" class="form-control" name="province" id="provinceInput" value="{{ profile.province }}" placeholder="e.g. Bagmati Province" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="cityInput">City <span style="color: #ef4444;">*</span></label>
+                        <input type="text" class="form-control" name="city" id="cityInput" value="{{ profile.city }}" placeholder="e.g. Kathmandu" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="postalInput">Postal Code</label>
+                        <input type="text" class="form-control" name="postal_code" id="postalInput" value="{{ profile.postal_code }}" placeholder="e.g. 44600">
+                    </div>
+                    <div class="form-group">
+                        <label for="addressInput">Current Address <span style="color: #ef4444;">*</span></label>
+                        <input type="text" class="form-control" name="current_address" id="addressInput" value="{{ profile.current_address }}" placeholder="e.g. Mid Baneshwor" required>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                    <button type="submit" class="btn-save-profile">Save Address</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- PANEL 3: SOCIAL LINKS -->
+        <div class="profile-card" id="socialsTab">
+            <h2 class="card-title">Social Links</h2>
+            <p class="card-subtitle">Add your portfolio, social profiles, and work links dynamically.</p>
+
+            <form onsubmit="saveProfileSection(event, 'socials')">
+                <input type="hidden" name="action" value="socials">
+
+                <table class="socials-table">
+                    <thead>
+                        <tr>
+                            <th>Link Network</th>
+                            <th>Target URL Link</th>
+                            <th style="width: 50px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="socialsTableBody">
+                        {% if profile.socials %}
+                            {% for social in profile.socials %}
+                                <tr>
+                                    <td>
+                                        <select class="form-control" name="social_type[]" required>
+                                            <option value="LinkedIn" {% if social.type == 'LinkedIn' %}selected{% endif %}>LinkedIn</option>
+                                            <option value="Portfolio" {% if social.type == 'Portfolio' %}selected{% endif %}>Portfolio / Website</option>
+                                            <option value="GitHub" {% if social.type == 'GitHub' %}selected{% endif %}>GitHub</option>
+                                            <option value="Instagram" {% if social.type == 'Instagram' %}selected{% endif %}>Instagram</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="url" class="form-control" name="social_link[]" value="{{ social.link }}" placeholder="https://..." required>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn-delete-row" onclick="this.closest('tr').remove()">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                </table>
+
+                <button type="button" class="btn-add-social" style="margin-bottom: 24px;" onclick="addSocialLinkRow()">
+                    + Add Social Link
+                </button>
+
+                <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                    <button type="submit" class="btn-save-profile">Save Socials</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- PANEL 4: RESUME -->
+        <div class="profile-card" id="resumeTab">
+            <h2 class="card-title">Resume</h2>
+            <p class="card-subtitle">Upload your pre-built resume to share with recruiting partners.</p>
+
+            <!-- Show Active CV Details if any -->
+            <div id="cvActiveStatusContainer" {% if not profile.get('cv_path') %}style="display: none;"{% endif %}>
+                <div class="resume-active-bar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Current active resume uploaded</span>
+                    <a id="cvFileLink" href="{{ profile.get('cv_path') or '#' }}" target="_blank" style="margin-left: auto; color: #047857; text-decoration: underline; font-weight: 700;">View Resume</a>
+                </div>
+            </div>
+
+            <!-- Drag and Drop uploader form -->
+            <form id="cvUploadForm" method="POST" action="/dashboard/cv/upload" enctype="multipart/form-data">
+                <div class="dropzone-container" onclick="document.getElementById('fileUploadInput').click()">
+                    <div class="dropzone-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin: 0 auto;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    </div>
+                    <div class="dropzone-title">Drag & drop your resume file here</div>
+                    <div class="dropzone-desc">Supported formats: PDF, DOC, DOCX, PNG, JPG (Max 5MB)</div>
+                    <input type="file" name="cv_file" id="fileUploadInput" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style="display: none;" onchange="handleResumeFileSelect(this)">
+                </div>
+            </form>
+        </div>
+
+
     </div>
 
     <!-- Profile Picture -->

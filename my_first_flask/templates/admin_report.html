@@ -1,0 +1,195 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Reports - TalentKhoj Admin{% endblock %}
+{% block page_title %}Reports Management{% endblock %}
+
+{% block content %}
+
+<!-- Header Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h3 class="fw-bold">{{ total_reports|default('128') }}</h3>
+                <p class="text-muted mb-0">Total Reports</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h3 class="fw-bold">{{ pending_reports|default('23') }}</h3>
+                <p class="text-muted mb-0">Pending</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h3 class="fw-bold">{{ resolved_reports|default('105') }}</h3>
+                <p class="text-muted mb-0">Resolved</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Table Card -->
+<div class="card border-0 shadow-sm">
+
+    <div class="card-header bg-white border-0 pt-4 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="fw-semibold mb-0">All Reports</h5>
+            <small class="text-muted">Manage user reports</small>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="d-flex gap-2">
+            <button id="markResolvedBtn" class="btn btn-success btn-sm" disabled>
+                Mark Resolved
+            </button>
+            <button id="deleteBtn" class="btn btn-danger btn-sm" disabled>
+                Delete
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body p-0">
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+
+                <thead class="table-light">
+                    <tr>
+                        <!-- SELECT ALL -->
+                        <th width="50">
+                            <input type="checkbox" id="selectAll">
+                        </th>
+                        <th>Type</th>
+                        <th>Content</th>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+
+                <tbody id="reportTable">
+
+                    {% for report in reports %}
+                    <tr data-id="{{ report.id }}">
+
+                        <!-- ROW CHECKBOX -->
+                        <td>
+                            <input type="checkbox" class="row-check" value="{{ report.id }}">
+                        </td>
+
+                        <td class="fw-semibold">{{ report.type }}</td>
+
+                        <td class="text-muted">
+                            {{ report.content|truncate(60) }}
+                        </td>
+
+                        <td>{{ report.user|default('Anonymous') }}</td>
+
+                        <td>
+                            {% if report.status == 'Pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif report.status == 'Resolved' %}
+                                <span class="badge bg-success">Resolved</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ report.status }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-muted small">{{ report.date }}</td>
+
+                        <td class="text-end">
+                            <a href="{{ url_for('view_report', report_id=report.id) }}"
+                               class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const selectAll = document.getElementById("selectAll");
+    const checkboxes = document.querySelectorAll(".row-check");
+
+    const markResolvedBtn = document.getElementById("markResolvedBtn");
+    const deleteBtn = document.getElementById("deleteBtn");
+
+    function updateButtons() {
+        const selected = document.querySelectorAll(".row-check:checked").length;
+        markResolvedBtn.disabled = selected === 0;
+        deleteBtn.disabled = selected === 0;
+    }
+
+    // Select All
+    selectAll.addEventListener("change", function () {
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateButtons();
+    });
+
+    // Individual checkbox change
+    checkboxes.forEach(cb => {
+        cb.addEventListener("change", function () {
+
+            const allChecked = document.querySelectorAll(".row-check:checked").length === checkboxes.length;
+            selectAll.checked = allChecked;
+
+            updateButtons();
+        });
+    });
+
+    // Bulk Resolve Action (frontend demo)
+    markResolvedBtn.addEventListener("click", function () {
+        const selected = Array.from(document.querySelectorAll(".row-check:checked"))
+            .map(cb => cb.value);
+
+        if (selected.length === 0) return;
+
+        if (!confirm(`Mark ${selected.length} reports as resolved?`)) return;
+
+        console.log("Resolve IDs:", selected);
+
+        // TODO: Send to backend via fetch/AJAX
+        alert("Selected reports marked as resolved (demo)");
+    });
+
+    // Bulk Delete Action (frontend demo)
+    deleteBtn.addEventListener("click", function () {
+        const selected = Array.from(document.querySelectorAll(".row-check:checked"))
+            .map(cb => cb.value);
+
+        if (selected.length === 0) return;
+
+        if (!confirm(`Delete ${selected.length} reports? This cannot be undone.`)) return;
+
+        console.log("Delete IDs:", selected);
+
+        // TODO: Send to backend via fetch/AJAX
+        alert("Selected reports deleted (demo)");
+    });
+
+});
+</script>
+
+{% endblock %}

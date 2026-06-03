@@ -544,6 +544,271 @@ def dashboard():
 
 
 
+@app.route("/dashboard/ats")
+@login_required
+def dashboard_ats():
+    if session.get("account_type") != "company":
+        flash("Only company accounts can access the ATS Board.", "error")
+        return redirect(url_for("dashboard"))
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        flash("Please complete your company profile first.", "error")
+        return redirect(url_for("profile"))
+        
+    company_id = company["id"]
+    
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, title FROM jobs WHERE company_id = %s ORDER BY created_at DESC", (company_id,))
+        jobs = cursor.fetchall()
+        
+    selected_job_id = request.args.get("job_id", "").strip()
+    skill_filter = request.args.get("skills", "").strip()
+    location_filter = request.args.get("location", "").strip()
+    experience_filter = request.args.get("experience", "").strip()
+    
+    query = """
+        SELECT a.id as application_id, a.status, a.answers, a.created_at as applied_at,
+               u.id as user_id, u.full_name, u.email, u.avatar, u.location, u.skills, u.cv_path, u.cv_data,
+               j.id as job_id, j.title as job_title
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.id
+        JOIN users u ON a.user_id = u.id
+        WHERE j.company_id = %s
+    """
+    params = [company_id]
+    
+    if selected_job_id:
+        query += " AND a.job_id = %s"
+        params.append(selected_job_id)
+        
+    query += " ORDER BY a.created_at DESC"
+    
+    with conn.cursor() as cursor:
+        cursor.execute(query, tuple(params))
+        all_apps = cursor.fetchall()
+        
+    import json
+    filtered_apps = []
+    
+    for app in all_apps:
+        cv_data = {}
+        if app.get("cv_data"):
+            try:
+                cv_data = json.loads(app["cv_data"])
+            except Exception:
+                pass
+                
+        answers_list = []
+        if app.get("answers"):
+            try:
+                answers_list = json.loads(app["answers"])
+            except Exception:
+                pass
+        app["answers_list"] = answers_list
+        
+        if skill_filter:
+            skill_term = skill_filter.lower()
+            in_db_skills = (app.get("skills") or "").lower()
+            cv_skills = cv_data.get("skills", [])
+            in_cv_skills = " ".join([s.get("category", "") + " " + s.get("list", "") for s in cv_skills]).lower()
+            
+            if skill_term not in in_db_skills and skill_term not in in_cv_skills:
+                continue
+                
+        if location_filter:
+            loc_term = location_filter.lower()
+            in_db_loc = (app.get("location") or "").lower()
+            in_cv_city = cv_data.get("city", "").lower()
+            in_cv_prov = cv_data.get("province", "").lower()
+            
+            if loc_term not in in_db_loc and loc_term not in in_cv_city and loc_term not in in_cv_prov:
+                continue
+                
+        if experience_filter:
+            exp_term = experience_filter.lower()
+            designation = cv_data.get("designation", "").lower()
+            bio = (app.get("bio") or "").lower()
+            cv_exp = cv_data.get("experience", [])
+            exp_details = " ".join([e.get("title", "") + " " + e.get("description", "") for e in cv_exp]).lower()
+            combined_exp_text = f"{designation} {bio} {exp_details}"
+            
+            if exp_term not in combined_exp_text:
+                continue
+
+        app_skills = []
+        if app.get("skills"):
+            app_skills = [s.strip() for s in app["skills"].split(",") if s.strip()]
+        elif cv_data.get("skills"):
+            for category in cv_data["skills"]:
+                if category.get("list"):
+                    app_skills.extend([s.strip() for s in category["list"].split(",") if s.strip()])
+        app["skills_list"] = app_skills[:4]
+        
+        edu_tag = ""
+        if cv_data.get("education"):
+            edu_tag = cv_data["education"][0].get("degree", "")
+        app["education_tag"] = edu_tag
+        
+        exp_tag = ""
+        if cv_data.get("experience"):
+            exp_tag = cv_data["experience"][0].get("title", "")
+        app["experience_tag"] = exp_tag
+        
+        filtered_apps.append(app)
+        
+    board = {
+        "applied": [],
+        "reviewed": [],
+        "shortlisted": [],
+        "rejected": []
+    }
+    
+    for app in filtered_apps:
+        status = app["status"]
+        if status in board:
+            board[status].append(app)
+        else:
+            board["applied"].append(app)
+            
+    counts = {k: len(v) for k, v in board.items()}
+    
+    return render_template(
+        "dashboard_ats.html",
+        board=board,
+        counts=counts,
+        jobs=jobs,
+        selected_job_id=selected_job_id,
+        filters={
+            "skills": skill_filter,
+            "location": location_filter,
+            "experience": experience_filter
+        }
+    )
+
+
+@app.route("/dashboard/ats/filter")
+@login_required
+def dashboard_ats_filter():
+    if session.get("account_type") != "company":
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        return jsonify({"success": False, "message": "Company profile incomplete."})
+        
+    company_id = company["id"]
+    
+    selected_job_id = request.args.get("job_id", "").strip()
+    skill_filter = request.args.get("skills", "").strip()
+    location_filter = request.args.get("location", "").strip()
+    experience_filter = request.args.get("experience", "").strip()
+    
+    query = """
+        SELECT a.id as application_id, a.status, a.answers, a.created_at as applied_at,
+               u.id as user_id, u.full_name, u.email, u.avatar, u.location, u.skills, u.cv_path, u.cv_data,
+               j.id as job_id, j.title as job_title
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.id
+        JOIN users u ON a.user_id = u.id
+        WHERE j.company_id = %s
+    """
+    params = [company_id]
+    
+    if selected_job_id:
+        query += " AND a.job_id = %s"
+        params.append(selected_job_id)
+        
+    query += " ORDER BY a.created_at DESC"
+    
+    with conn.cursor() as cursor:
+        cursor.execute(query, tuple(params))
+        all_apps = cursor.fetchall()
+        
+    import json
+    filtered_apps = []
+    
+    for app in all_apps:
+        cv_data = {}
+        if app.get("cv_data"):
+            try:
+                cv_data = json.loads(app["cv_data"])
+            except Exception:
+                pass
+                
+        answers_list = []
+        if app.get("answers"):
+            try:
+                answers_list = json.loads(app["answers"])
+            except Exception:
+                pass
+        app["answers_list"] = answers_list
+        
+        if skill_filter:
+            skill_term = skill_filter.lower()
+            in_db_skills = (app.get("skills") or "").lower()
+            cv_skills = cv_data.get("skills", [])
+            in_cv_skills = " ".join([s.get("category", "") + " " + s.get("list", "") for s in cv_skills]).lower()
+            
+            if skill_term not in in_db_skills and skill_term not in in_cv_skills:
+                continue
+                
+        if location_filter:
+            loc_term = location_filter.lower()
+            in_db_loc = (app.get("location") or "").lower()
+            in_cv_city = cv_data.get("city", "").lower()
+            in_cv_prov = cv_data.get("province", "").lower()
+            
+            if loc_term not in in_db_loc and loc_term not in in_cv_city and loc_term not in in_cv_prov:
+                continue
+                
+        if experience_filter:
+            exp_term = experience_filter.lower()
+            designation = cv_data.get("designation", "").lower()
+            bio = (app.get("bio") or "").lower()
+            cv_exp = cv_data.get("experience", [])
+            exp_details = " ".join([e.get("title", "") + " " + e.get("description", "") for e in cv_exp]).lower()
+            combined_exp_text = f"{designation} {bio} {exp_details}"
+            
+            if exp_term not in combined_exp_text:
+                continue
+
+        app_skills = []
+        if app.get("skills"):
+            app_skills = [s.strip() for s in app["skills"].split(",") if s.strip()]
+        elif cv_data.get("skills"):
+            for category in cv_data["skills"]:
+                if category.get("list"):
+                    app_skills.extend([s.strip() for s in category["list"].split(",") if s.strip()])
+        app["skills_list"] = app_skills[:4]
+        
+        edu_tag = ""
+        if cv_data.get("education"):
+            edu_tag = cv_data["education"][0].get("degree", "")
+        app["education_tag"] = edu_tag
+        
+        exp_tag = ""
+        if cv_data.get("experience"):
+            exp_tag = cv_data["experience"][0].get("title", "")
+        app["experience_tag"] = exp_tag
+        
+        # Format datetime to string for JSON serialization
+        if app.get("applied_at"):
+            app["applied_at"] = app["applied_at"].strftime("%Y-%m-%d %H:%M")
+        
+        filtered_apps.append(app)
+        
+    return jsonify({"success": True, "applicants": filtered_apps})
+
+
 @app.route("/dashboard/search")
 @login_required
 def dashboard_search():

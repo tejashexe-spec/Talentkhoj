@@ -266,4 +266,32 @@ class Database:
 
 
     def get_connection(self):
+        if self.__connection:
+            try:
+                self.__connection.ping(reconnect=True)
+            except Exception as e:
+                print("Database ping failed, attempting reconnect:", e)
+                try:
+                    self.__connection = pymysql.connect(
+                        host=config.MYSQL_HOST,
+                        user=config.MYSQL_USER,
+                        password=config.MYSQL_PASSWORD,
+                        database=config.MYSQL_DATABASE,
+                        cursorclass=pymysql.cursors.DictCursor,
+                        autocommit=True,
+                    )
+                except Exception as ex:
+                    print("Failed to reconnect database connection:", ex)
+        else:
+            try:
+                self.__connection = pymysql.connect(
+                    host=config.MYSQL_HOST,
+                    user=config.MYSQL_USER,
+                    password=config.MYSQL_PASSWORD,
+                    database=config.MYSQL_DATABASE,
+                    cursorclass=pymysql.cursors.DictCursor,
+                    autocommit=True,
+                )
+            except Exception as ex:
+                print("Failed to create new database connection:", ex)
         return self.__connection

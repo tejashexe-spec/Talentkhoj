@@ -7,6 +7,8 @@
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body class="dashboard-body">
 
@@ -33,6 +35,17 @@
             {% if session.get('account_type') == 'company' %}
 
             <!-- COMPANY SIDEBAR -->
+            <a href="/dashboard/ats" class="sidebar-item {% if active == 'ats' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="9"/>
+                        <rect x="14" y="3" width="7" height="5"/>
+                        <rect x="14" y="12" width="7" height="9"/>
+                        <rect x="3" y="16" width="7" height="5"/>
+                    </svg>
+                </span>
+                ATS Board
+            </a>
             <a href="/dashboard/post-opportunity" class="sidebar-item {% if active == 'post' %}active{% endif %}">
                 <span class="sidebar-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -75,7 +88,7 @@
 
             {% else %}
 
-            <!-- INDIVIDUAL SIDEBAR -->
+            <!-- INDIVIDUAL SIDEBAR (Search Opportunities & CV Builder) -->
             <a href="/dashboard/search" class="sidebar-item {% if active == 'search' %}active{% endif %}">
                 <span class="sidebar-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

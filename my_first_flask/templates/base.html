@@ -6,6 +6,8 @@
     <title>{% block title %}Talent Khoj{% endblock %}</title>
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 </head>
 <body>
 
@@ -14,10 +16,23 @@
     <a class="nav-logo" href="/">Talent Khoj</a>
 
     <ul class="nav-links">
-        <li><a href="/">Home</a></li>
+        <li><a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a></li>
+        <li><a href="/dashboard/search?type=internship" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'internship' %}active{% endif %}">Internships</a></li>
+        <li><a href="/dashboard/search?type=job" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'job' %}active{% endif %}">Jobs</a></li>
+        <li><a href="/dashboard/events" class="{% if request.path == '/dashboard/events' %}active{% endif %}">Events</a></li>
+        <li><a href="#" class="{% if request.path == '/community' %}active{% endif %}">Community</a></li>
     </ul>
 
-    <div>
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="nav-search-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <form action="/dashboard/search" method="GET" style="display: flex; width: 100%;">
+                <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q', '') }}">
+            </form>
+        </div>
+
         {% if session.get('user_id') %}
             <div class="profile-menu">
                 <button class="profile-trigger" onclick="toggleDropdown(event)">

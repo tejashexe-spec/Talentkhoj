@@ -120,6 +120,17 @@ class Database:
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bookmarks (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    job_id INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_user_bookmark (user_id, job_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS reviews (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     reviewer_id INT NOT NULL,
@@ -131,6 +142,7 @@ class Database:
                     FOREIGN KEY (reviewee_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+
 
 
     def _run_migrations(self):
@@ -194,7 +206,7 @@ class Database:
             with self.__connection.cursor() as cursor:
                 cursor.execute("ALTER TABLE jobs ADD COLUMN questions TEXT DEFAULT NULL")
 
-        # Applications table migrations (answers column)
+        # Applications table migrations (answers column & status index)
         with self.__connection.cursor() as cursor:
             cursor.execute(
                 "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
@@ -206,6 +218,18 @@ class Database:
         if "answers" not in existing_apps:
             with self.__connection.cursor() as cursor:
                 cursor.execute("ALTER TABLE applications ADD COLUMN answers TEXT DEFAULT NULL")
+
+        with self.__connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT INDEX_NAME FROM information_schema.STATISTICS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'applications' AND INDEX_NAME = 'idx_status'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing_index = cursor.fetchone()
+
+        if not existing_index:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE applications ADD INDEX idx_status (status)")
 
 
     def get_connection(self):
@@ -231,4 +255,3 @@ class Database:
                         (%s, %s, 5, 'Exceptional experience interviewing with this company. Very transparent and modern tech stack.'),
                         (%s, %s, 4, 'Outstanding candidate with deep problem-solving skills and a solid understanding of web development frameworks.')
                     """, (candidate_id, company_id, company_id, candidate_id))
-                    print("✅ Mock reviews seeded successfully!")

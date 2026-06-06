@@ -414,6 +414,30 @@
         box-shadow: none !important;
     }
 
+    .btn-bookmark-toggle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 6px;
+        color: #94a3b8;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        outline: none;
+    }
+
+    .btn-bookmark-toggle:hover {
+        background: #f1f5f9;
+        color: #eab308;
+        transform: scale(1.1);
+    }
+
+    .btn-bookmark-toggle.active {
+        color: #eab308;
+    }
+
 
     /* Toast Notification styles */
     .toast-notification {
@@ -683,7 +707,7 @@
 </div>
 
 <!-- SPLIT PANE MAIN CONTAINER -->
-<div class="split-container" id="searchDashboard" data-profile-complete="{{ 'true' if profile_complete else 'false' }}">
+<div class="split-container">
 
     <!-- LEFT LIST PANE -->
     <div class="list-pane">
@@ -693,7 +717,19 @@
         <div class="scrollable-list">
             {% if opportunities %}
                 {% for opp in opportunities %}
-                    <div class="compact-card {% if loop.first %}selected{% endif %} opportunity-card" id="card-{{ opp.id }}" data-opp-id="{{ opp.id }}">
+                    <div class="compact-card {% if loop.first %}selected{% endif %}" id="card-{{ opp.id }}" onclick="selectOpportunity({{ opp|tojson|safe }})">
+                        <button class="btn-bookmark-toggle card-bookmark-btn {% if opp.is_bookmarked %}active{% endif %}" 
+                                onclick="toggleBookmark(event, {{ opp.id }})" 
+                                id="bookmark-card-{{ opp.id }}" 
+                                title="Bookmark opportunity" 
+                                style="position: absolute; right: 12px; top: 12px; z-index: 10;">
+                            <svg class="bookmark-star-icon" width="18" height="18" viewBox="0 0 24 24" 
+                                 fill="{% if opp.is_bookmarked %}#eab308{% else %}none{% endif %}" 
+                                 stroke="{% if opp.is_bookmarked %}#eab308{% else %}currentColor{% endif %}" 
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
+                        </button>
                         <div class="compact-header">
                             <div class="compact-logo">
                                 {% if opp.logo %}
@@ -713,7 +749,7 @@
                                     {{ opp.opportunity_type }}
                                 </span>
                             </div>
-                            <span>{{ opp.created_at_formatted }}</span>
+                            <span>{{ opp.created_at.strftime('%b %d') }}</span>
                         </div>
                     </div>
                 {% endfor %}
@@ -742,6 +778,15 @@
                         <div class="detail-company-link" id="detCompany">Company Name</div>
                     </div>
                     <div class="detail-actions">
+                        <button class="btn-bookmark-toggle" 
+                                onclick="toggleBookmark(event, window.currentSelectedOpportunity.id)" 
+                                id="detBookmarkBtn" 
+                                style="border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px;">
+                            <svg class="bookmark-star-icon" width="20" height="20" viewBox="0 0 24 24" 
+                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
+                        </button>
                         <a href="#" target="_blank" class="btn-apply-now" id="detApplyBtn">
                             <span>Apply Now</span>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -874,28 +919,7 @@
     </div>
 </div>
 
-<script id="opportunities-json" type="application/json">
-    {{ opportunities|tojson|safe }}
-</script>
-
 <script>
-    // Parse opportunities safely from the JSON block
-    const oppsElement = document.getElementById('opportunities-json');
-    const globalOpportunities = oppsElement ? JSON.parse(oppsElement.textContent) : [];
-    
-    // Create quick lookup map
-    const opportunitiesMap = {};
-    globalOpportunities.forEach(opp => {
-        opportunitiesMap[opp.id] = opp;
-    });
-
-    function selectOpportunityById(id) {
-        const opp = opportunitiesMap[id];
-        if (opp) {
-            selectOpportunity(opp);
-        }
-    }
-
     // Selected opportunity details state updater
     function selectOpportunity(opp) {
         // Highlight active compact card
@@ -962,6 +986,25 @@
         }
         applyBtn.style.display = 'inline-flex';
 
+        // Update details bookmark button state
+        const detBookmarkBtn = document.getElementById('detBookmarkBtn');
+        if (detBookmarkBtn) {
+            const svg = detBookmarkBtn.querySelector('svg');
+            if (opp.is_bookmarked) {
+                detBookmarkBtn.classList.add('active');
+                if (svg) {
+                    svg.setAttribute('fill', '#eab308');
+                    svg.setAttribute('stroke', '#eab308');
+                }
+            } else {
+                detBookmarkBtn.classList.remove('active');
+                if (svg) {
+                    svg.setAttribute('fill', 'none');
+                    svg.setAttribute('stroke', 'currentColor');
+                }
+            }
+        }
+
         // Keep current selected opportunity globally so Portal Apply can reference it
         window.currentSelectedOpportunity = opp;
 
@@ -969,7 +1012,7 @@
         document.getElementById('detailScroller').scrollTop = 0;
     }
 
-    const isProfileComplete = document.getElementById('searchDashboard').dataset.profileComplete === 'true';
+    const isProfileComplete = {{ 'true' if profile_complete else 'false' }};
 
     function openIncompleteModal() {
         document.getElementById('incompleteModalBackdrop').classList.add('open');
@@ -1094,6 +1137,11 @@
             return;
         }
 
+        // 3. Confirm Application
+        if (!confirm(`Are you sure you want to apply for "${opp.title}" at "${opp.company_name}"?`)) {
+            return;
+        }
+
         const applyBtn = document.getElementById('detApplyBtn');
         const applyText = applyBtn.querySelector('span');
         const originalText = applyText ? applyText.innerText : "Apply";
@@ -1154,25 +1202,88 @@
     }
 
 
-    // Auto-select first opportunity and attach event listeners on load
-    document.addEventListener('DOMContentLoaded', () => {
-        // Event delegation for opportunity card clicks
-        const scrollableList = document.querySelector('.scrollable-list');
-        if (scrollableList) {
-            scrollableList.addEventListener('click', (e) => {
-                const card = e.target.closest('.opportunity-card');
-                if (card) {
-                    const oppId = parseInt(card.dataset.oppId, 10);
-                    if (!isNaN(oppId)) {
-                        selectOpportunityById(oppId);
+    function toggleBookmark(event, jobId) {
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        fetch('/dashboard/jobs/bookmark/' + jobId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert(data.message || "Could not toggle bookmark.");
+                return;
+            }
+                const opp = window.currentSelectedOpportunity;
+                if (opp && opp.id === jobId) {
+                    opp.is_bookmarked = data.bookmarked;
+                }
+                
+                // Update compact card button
+                const cardBtn = document.getElementById('bookmark-card-' + jobId);
+                if (cardBtn) {
+                    const svg = cardBtn.querySelector('svg');
+                    if (data.bookmarked) {
+                        cardBtn.classList.add('active');
+                        if (svg) {
+                            svg.setAttribute('fill', '#eab308');
+                            svg.setAttribute('stroke', '#eab308');
+                        }
+                    } else {
+                        cardBtn.classList.remove('active');
+                        if (svg) {
+                            svg.setAttribute('fill', 'none');
+                            svg.setAttribute('stroke', 'currentColor');
+                        }
                     }
                 }
-            });
-        }
+                
+                // Update details button
+                const detBtn = document.getElementById('detBookmarkBtn');
+                if (detBtn && opp && opp.id === jobId) {
+                    const svg = detBtn.querySelector('svg');
+                    if (data.bookmarked) {
+                        detBtn.classList.add('active');
+                        if (svg) {
+                            svg.setAttribute('fill', '#eab308');
+                            svg.setAttribute('stroke', '#eab308');
+                        }
+                    } else {
+                        detBtn.classList.remove('active');
+                        if (svg) {
+                            svg.setAttribute('fill', 'none');
+                            svg.setAttribute('stroke', 'currentColor');
+                        }
+                    }
+                }
+                
+                // Show Success Toast
+                const toast = document.getElementById('easyApplyToast');
+                document.getElementById('toastMessage').innerText = data.message;
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3000);
+            } else {
+                alert(data.message || "An error occurred.");
+            }
+        })
+        .catch(err => {
+            console.error("Error toggling bookmark:", err);
+        });
+    }
 
-        if (globalOpportunities.length > 0) {
-            selectOpportunity(globalOpportunities[0]);
-        }
+    // Auto-select first opportunity on load if lists aren't empty
+    document.addEventListener('DOMContentLoaded', () => {
+        {% if opportunities %}
+            const firstOpportunity = {{ opportunities[0]|tojson|safe }};
+            selectOpportunity(firstOpportunity);
+        {% endif %}
     });
 </script>
 {% endblock %}

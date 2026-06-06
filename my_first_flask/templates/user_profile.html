@@ -47,7 +47,10 @@
     {% if user.cv_path %}
     <div class="profile-section">
         <h3>CV / Resume</h3>
-        <a href="{{ user.cv_path }}" class="profile-btn" target="_blank">View CV</a>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <a href="/cv/view/{{ user.id }}" class="profile-btn" target="_blank">View CV</a>
+            <a href="/cv/view/{{ user.id }}?download=true" class="profile-btn" style="background: #10b981; color: white;" target="_blank">Download CV</a>
+        </div>
     </div>
     {% endif %}
 

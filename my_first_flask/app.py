@@ -473,7 +473,26 @@ def user_profile(user_id):
     if not user:
         flash("User not found.", "error")
         return redirect(url_for("home"))
-    return render_template("user_profile.html", user=user)
+        
+    # Query reviews and rating stats
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT r.*, u.full_name as reviewer_name, u.avatar as reviewer_avatar, u.account_type as reviewer_type "
+            "FROM reviews r JOIN users u ON r.reviewer_id = u.id "
+            "WHERE r.reviewee_id = %s ORDER BY r.created_at DESC",
+            (user_id,)
+        )
+        reviews = cursor.fetchall()
+        
+        cursor.execute(
+            "SELECT AVG(rating) as avg_rating, COUNT(*) as review_count FROM reviews WHERE reviewee_id = %s",
+            (user_id,)
+        )
+        stats = cursor.fetchone()
+        avg_rating = round(stats["avg_rating"], 1) if stats["avg_rating"] else 0.0
+        review_count = stats["review_count"]
+        
+    return render_template("user_profile.html", user=user, reviews=reviews, avg_rating=avg_rating, review_count=review_count)
 
 
 @app.route("/company/<int:user_id>")

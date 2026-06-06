@@ -1,0 +1,149 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Activity Log - TalentKhoj Admin{% endblock %}
+{% block page_title %}Activity Log{% endblock %}
+
+{% block content %}
+
+<!-- Filter Bar -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" action="{{ url_for('admin_logs') }}" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold mb-1">Filter by Action</label>
+                <select name="action" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Actions</option>
+                    {% for a in actions %}
+                    <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ a|replace('_', ' ')|title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if action_filter %}
+            <div class="col-md-2">
+                <a href="{{ url_for('admin_logs') }}" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+            {% endif %}
+            <div class="col text-end">
+                <span class="text-muted small">{{ total_count }} total log entr{{ 'y' if total_count == 1 else 'ies' }}</span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Logs Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:170px;">Timestamp</th>
+                        <th>Admin</th>
+                        <th>Action</th>
+                        <th>Target</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="text-muted small">{{ log.date }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                                     style="width:32px;height:32px;font-size:.7rem;background:#6366f1;flex-shrink:0;">
+                                    {{ log.admin_name[:2]|upper }}
+                                </div>
+                                <span class="fw-semibold small">{{ log.admin_name }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% set action_colors = {
+                                'delete_user': 'bg-danger',
+                                'ban_user': 'bg-orange',
+                                'unban_user': 'bg-success',
+                                'change_role': 'bg-primary',
+                                'toggle_verify': 'bg-info',
+                                'delete_reports': 'bg-danger',
+                                'resolve_reports': 'bg-success'
+                            } %}
+                            {% set color = action_colors.get(log.action, 'bg-secondary') %}
+                            <span class="badge {{ color }} bg-opacity-10 text-{{ 'danger' if 'delete' in log.action or 'ban' == log.action else ('success' if 'unban' in log.action or 'verify' in log.action or 'resolve' in log.action else ('primary' if 'role' in log.action else ('info' if 'verify' in log.action else 'secondary'))) }} px-2 py-1">
+                                {% if log.action == 'delete_user' %}<i class="fas fa-trash fa-xs me-1"></i>
+                                {% elif log.action == 'ban_user' %}<i class="fas fa-ban fa-xs me-1"></i>
+                                {% elif log.action == 'unban_user' %}<i class="fas fa-unlock fa-xs me-1"></i>
+                                {% elif log.action == 'change_role' %}<i class="fas fa-user-tag fa-xs me-1"></i>
+                                {% elif log.action == 'toggle_verify' %}<i class="fas fa-check-circle fa-xs me-1"></i>
+                                {% elif 'report' in log.action %}<i class="fas fa-flag fa-xs me-1"></i>
+                                {% endif %}
+                                {{ log.action|replace('_', ' ')|title }}
+                            </span>
+                        </td>
+                        <td class="small text-muted">
+                            {% if log.target_type and log.target_id %}
+                                {{ log.target_type|capitalize }} #{{ log.target_id }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td class="small text-muted" style="max-width:300px;">
+                            <span title="{{ log.details }}">{{ log.details[:80] }}{% if log.details|length > 80 %}…{% endif %}</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fas fa-history fa-2x mb-2 d-block opacity-25"></i>
+                            No admin actions logged yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<div class="d-flex justify-content-between align-items-center mt-3">
+    <small class="text-muted">
+        Showing {{ (page - 1) * per_page + 1 }}–{{ [page * per_page, total_count]|min }} of {{ total_count }}
+    </small>
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ page - 1 }}{% if action_filter %}&action={{ action_filter }}{% endif %}">
+                    <i class="fas fa-chevron-left fa-xs"></i>
+                </a>
+            </li>
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ p }}{% if action_filter %}&action={{ action_filter }}{% endif %}">{{ p }}</a>
+                </li>
+                {% elif p == page - 3 or p == page + 3 %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ page + 1 }}{% if action_filter %}&action={{ action_filter }}{% endif %}">
+                    <i class="fas fa-chevron-right fa-xs"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card { border-radius: 16px !important; }
+.badge { font-weight: 500; border-radius: 8px !important; }
+.bg-orange { background-color: rgba(249,115,22,0.12) !important; color: #ea580c !important; }
+</style>
+{% endblock %}

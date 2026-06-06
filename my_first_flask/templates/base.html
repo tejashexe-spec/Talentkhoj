@@ -45,6 +45,9 @@
                     <span style="font-size:10px; color:#888; margin-left:2px;">&#9660;</span>
                 </button>
                 <div class="dropdown" id="profileDropdown">
+                    {% if session.get('account_type') == 'admin' %}
+                        <a href="/admin/dashboard" style="font-weight: bold; color: #ef4444;">Admin Panel</a>
+                    {% endif %}
                     <a href="/dashboard">Dashboard</a>
                     <a href="/profile">My Profile</a>
                     <a href="/reset-password">Reset Password</a>

@@ -2033,25 +2033,59 @@ def admin_dashboard():
         # Total Users
         cursor.execute("SELECT COUNT(*) as count FROM users")
         total_users = cursor.fetchone()["count"]
-        
+
         # Pending Reports
         cursor.execute("SELECT COUNT(*) as count FROM reports WHERE status = 'Pending'")
         pending_reports = cursor.fetchone()["count"]
-        
+
         # Pending Verifications (unverified companies)
         cursor.execute("SELECT COUNT(*) as count FROM users WHERE account_type = 'company' AND verified = 0")
         pending_verifications = cursor.fetchone()["count"]
-        
+
         # Active Projects (Jobs)
         cursor.execute("SELECT COUNT(*) as count FROM jobs")
         active_projects = cursor.fetchone()["count"]
-        
+
+        # Total Applications
+        cursor.execute("SELECT COUNT(*) as count FROM applications")
+        total_applications = cursor.fetchone()["count"]
+
+        # Total Companies
+        cursor.execute("SELECT COUNT(*) as count FROM users WHERE account_type = 'company'")
+        total_companies = cursor.fetchone()["count"]
+
+        # Growth: new users in last 30 days vs previous 30 days
+        cursor.execute("""
+            SELECT
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as current_period,
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL 60 DAY
+                          AND created_at < NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as prev_period
+            FROM users
+        """)
+        row = cursor.fetchone()
+        cur_u = row["current_period"] or 0
+        prev_u = row["prev_period"] or 1
+        user_growth = round(((cur_u - prev_u) / prev_u) * 100) if prev_u else 0
+
+        # Growth: new jobs in last 30 days vs previous 30 days
+        cursor.execute("""
+            SELECT
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as current_period,
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL 60 DAY
+                          AND created_at < NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as prev_period
+            FROM jobs
+        """)
+        row = cursor.fetchone()
+        cur_j = row["current_period"] or 0
+        prev_j = row["prev_period"] or 1
+        job_growth = round(((cur_j - prev_j) / prev_j) * 100) if prev_j else 0
+
         # Recent Reports
         cursor.execute("""
-            SELECT r.id, r.type, r.content, r.status, r.created_at, u.full_name as user 
-            FROM reports r 
-            LEFT JOIN users u ON r.user_id = u.id 
-            ORDER BY r.created_at DESC 
+            SELECT r.id, r.type, r.content, r.status, r.created_at, u.full_name as user
+            FROM reports r
+            LEFT JOIN users u ON r.user_id = u.id
+            ORDER BY r.created_at DESC
             LIMIT 5
         """)
         db_reports = cursor.fetchall()
@@ -2101,18 +2135,37 @@ def admin_dashboard():
             
         recent_activities = sorted(recent_activities, key=lambda x: x["time_ago"], reverse=True)[:6]
 
-    # Render template with variables
+        # Recent Registrations (last 6 signups)
+        cursor.execute("""
+            SELECT id, full_name, email, account_type, verified, created_at
+            FROM users ORDER BY created_at DESC LIMIT 6
+        """)
+        recent_reg_rows = cursor.fetchall()
+        recent_registrations = [{
+            "id": r["id"],
+            "full_name": r["full_name"],
+            "email": r["email"],
+            "account_type": r["account_type"],
+            "verified": r["verified"],
+            "date": r["created_at"].strftime("%b %d, %Y") if r["created_at"] else ""
+        } for r in recent_reg_rows]
+
     class CurrentUserMock:
         username = session.get("user_name", "Admin")
-        
+
     return render_template(
         "admin_dashboard.html",
         total_users=total_users,
         pending_reports=pending_reports,
         pending_verifications=pending_verifications,
         active_projects=active_projects,
+        total_applications=total_applications,
+        total_companies=total_companies,
+        user_growth=user_growth,
+        job_growth=job_growth,
         recent_reports=recent_reports,
         recent_activities=recent_activities,
+        recent_registrations=recent_registrations,
         current_user=CurrentUserMock()
     )
 
@@ -2457,6 +2510,90 @@ def admin_settings():
         success_message=success,
         current_user=CurrentUserMock()
     )
+
+
+# ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
+
+@app.route("/admin/announcement/send", methods=["POST"])
+@admin_required
+def send_announcement():
+    data = request.get_json() or {}
+    title = data.get("title", "").strip()
+    message = data.get("message", "").strip()
+    target = data.get("target", "all")
+
+    if not title or not message:
+        return jsonify({"success": False, "message": "Title and message are required."}), 400
+    if target not in ("all", "verified", "new"):
+        target = "all"
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO announcements (title, message, target, created_by) VALUES (%s, %s, %s, %s)",
+            (title, message, target, session["user_id"])
+        )
+
+    return jsonify({"success": True, "message": "Announcement sent successfully!"})
+
+
+@app.route("/api/announcements")
+@login_required
+def get_announcements():
+    """Return unread announcements for the logged-in user."""
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT a.id, a.title, a.message, a.created_at
+            FROM announcements a
+            WHERE a.id NOT IN (
+                SELECT announcement_id FROM announcement_reads WHERE user_id = %s
+            )
+            ORDER BY a.created_at DESC
+            LIMIT 10
+        """, (user_id,))
+        rows = cursor.fetchall()
+
+    result = []
+    for r in rows:
+        result.append({
+            "id": r["id"],
+            "title": r["title"],
+            "message": r["message"],
+            "time": r["created_at"].strftime("%b %d, %Y") if r["created_at"] else ""
+        })
+
+    return jsonify({"announcements": result, "count": len(result)})
+
+
+@app.route("/api/announcements/read", methods=["POST"])
+@login_required
+def mark_announcement_read():
+    """Mark one or all announcements as read."""
+    data = request.get_json() or {}
+    ann_id = data.get("id")  # None means mark all
+    user_id = session["user_id"]
+    conn = get_db()
+
+    if ann_id:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT IGNORE INTO announcement_reads (user_id, announcement_id) VALUES (%s, %s)",
+                (user_id, ann_id)
+            )
+    else:
+        # Mark all unread as read
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM announcements WHERE id NOT IN (SELECT announcement_id FROM announcement_reads WHERE user_id = %s)", (user_id,))
+            ids = [row["id"] for row in cursor.fetchall()]
+        for aid in ids:
+            with conn.cursor() as cursor:
+                cursor.execute("INSERT IGNORE INTO announcement_reads (user_id, announcement_id) VALUES (%s, %s)", (user_id, aid))
+
+    return jsonify({"success": True})
+
+
 
 
 if __name__ == "__main__":

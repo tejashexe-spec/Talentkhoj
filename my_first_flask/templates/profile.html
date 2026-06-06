@@ -29,10 +29,6 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
             Resume
         </button>
-        <button class="sub-nav-item" onclick="switchSubTab(event, 'security')">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            Security & Verify
-        </button>
     </div>
 
     <!-- RIGHT PANEL CONTENT -->
@@ -261,56 +257,6 @@
                     <input type="file" name="cv_file" id="fileUploadInput" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style="display: none;" onchange="this.form.submit()">
                 </div>
             </form>
-        </div>
-
-        <!-- SECURITY PANEL -->
-        <div class="profile-card tab-panel-content" id="panel-security">
-            <h2 class="card-title">Security & Passwords</h2>
-            <p class="card-subtitle">Update your password or verify your email address.</p>
-            
-            {% if password_message %}
-                <div style="background: #dcfce7; border: 1px solid #bbf7d0; color: #16a34a; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; font-size: 13.5px;">
-                    {{ password_message }}
-                </div>
-            {% endif %}
-            
-            {% if password_errors %}
-                <div style="background: #fee2e2; border: 1px solid #fecaca; color: #dc2626; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 13.5px;">
-                    {% for e in password_errors %}
-                        <p style="margin: 0 0 4px 0; font-weight: 600;">{{ e }}</p>
-                    {% endfor %}
-                </div>
-            {% endif %}
-
-            <form method="POST" action="/profile">
-                <input type="hidden" name="action" value="change_password">
-                
-                <div class="form-group-full" style="margin-bottom: 15px;">
-                    <label>Current Password</label>
-                    <input type="password" class="form-control" name="current_password" required>
-                </div>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>New Password</label>
-                        <input type="password" class="form-control" name="new_password" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Confirm New Password</label>
-                        <input type="password" class="form-control" name="confirm_password" required>
-                    </div>
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; margin-top: 15px;">
-                    <button type="submit" class="btn-save-profile">Update Password</button>
-                </div>
-            </form>
-
-            <div style="margin-top: 30px; padding-top: 25px; border-top: 1.5px solid #f1f5f9;">
-                <h3 style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 5px;">Email Verification Status</h3>
-                <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">Current linked email address: <strong>{{ session.get('user_email', '') }}</strong></p>
-                <a href="/verify-email" class="btn-upload-avatar-trigger" style="text-decoration: none;">Send Verification Link</a>
-            </div>
         </div>
 
     </div>

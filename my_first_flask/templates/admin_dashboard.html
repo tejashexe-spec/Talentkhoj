@@ -1,78 +1,140 @@
 {% extends "admin_base.html" %}
 
 {% block title %}Dashboard - TalentKhoj Admin{% endblock %}
-
 {% block page_title %}Overview{% endblock %}
 
 {% block content %}
 
-<!-- Simple Stats Cards -->
+<!-- Stats Cards Row 1 -->
 <div class="row g-4 mb-4">
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div class="bg-primary bg-opacity-10 rounded p-2">
+                    <div class="stat-icon bg-primary bg-opacity-10 rounded-3 p-3">
                         <i class="fas fa-users text-primary fa-lg"></i>
                     </div>
-                    <span class="badge bg-success bg-opacity-10 text-success">+12%</span>
+                    <span class="badge {{ 'bg-success' if user_growth >= 0 else 'bg-danger' }} bg-opacity-10 {{ 'text-success' if user_growth >= 0 else 'text-danger' }} fs-6 px-2 py-1">
+                        <i class="fas fa-arrow-{{ 'up' if user_growth >= 0 else 'down' }} fa-xs me-1"></i>{{ user_growth|abs }}%
+                    </span>
                 </div>
-                <h3 class="mb-1 fw-bold">{{ total_users|default('1,284') }}</h3>
+                <h3 class="mb-1 fw-bold">{{ total_users }}</h3>
                 <p class="text-muted mb-0 small">Total Users</p>
+                <div class="mt-2"><small class="text-muted">vs last 30 days</small></div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div class="bg-warning bg-opacity-10 rounded p-2">
+                    <div class="stat-icon bg-warning bg-opacity-10 rounded-3 p-3">
                         <i class="fas fa-flag text-warning fa-lg"></i>
                     </div>
-                    <span class="badge bg-danger bg-opacity-10 text-danger">{{ pending_reports|default('23') }}</span>
+                    {% if pending_reports > 0 %}
+                    <span class="badge bg-danger bg-opacity-10 text-danger fs-6 px-2 py-1">
+                        <i class="fas fa-exclamation fa-xs me-1"></i>{{ pending_reports }}
+                    </span>
+                    {% else %}
+                    <span class="badge bg-success bg-opacity-10 text-success fs-6 px-2 py-1">
+                        <i class="fas fa-check fa-xs me-1"></i>Clear
+                    </span>
+                    {% endif %}
                 </div>
-                <h3 class="mb-1 fw-bold">{{ pending_reports|default('23') }}</h3>
+                <h3 class="mb-1 fw-bold">{{ pending_reports }}</h3>
                 <p class="text-muted mb-0 small">Pending Reports</p>
+                <div class="mt-2"><a href="{{ url_for('admin_reports') }}" class="text-decoration-none small text-warning">Review now →</a></div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div class="bg-info bg-opacity-10 rounded p-2">
+                    <div class="stat-icon bg-info bg-opacity-10 rounded-3 p-3">
                         <i class="fas fa-id-card text-info fa-lg"></i>
                     </div>
-                    <span class="badge bg-warning bg-opacity-10 text-warning">{{ pending_verifications|default('147') }}</span>
+                    <span class="badge bg-warning bg-opacity-10 text-warning fs-6 px-2 py-1">
+                        <i class="fas fa-clock fa-xs me-1"></i>{{ pending_verifications }}
+                    </span>
                 </div>
-                <h3 class="mb-1 fw-bold">{{ pending_verifications|default('147') }}</h3>
+                <h3 class="mb-1 fw-bold">{{ pending_verifications }}</h3>
                 <p class="text-muted mb-0 small">Pending Verifications</p>
+                <div class="mt-2"><a href="{{ url_for('admin_verification') }}" class="text-decoration-none small text-info">Verify now →</a></div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm h-100">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card border-0 shadow-sm h-100">
             <div class="card-body">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div class="bg-success bg-opacity-10 rounded p-2">
-                        <i class="fas fa-project-diagram text-success fa-lg"></i>
+                    <div class="stat-icon bg-success bg-opacity-10 rounded-3 p-3">
+                        <i class="fas fa-briefcase text-success fa-lg"></i>
                     </div>
-                    <span class="badge bg-info bg-opacity-10 text-info">+8</span>
+                    <span class="badge {{ 'bg-success' if job_growth >= 0 else 'bg-danger' }} bg-opacity-10 {{ 'text-success' if job_growth >= 0 else 'text-danger' }} fs-6 px-2 py-1">
+                        <i class="fas fa-arrow-{{ 'up' if job_growth >= 0 else 'down' }} fa-xs me-1"></i>{{ job_growth|abs }}%
+                    </span>
                 </div>
-                <h3 class="mb-1 fw-bold">{{ active_projects|default('342') }}</h3>
-                <p class="text-muted mb-0 small">Active Projects</p>
+                <h3 class="mb-1 fw-bold">{{ active_projects }}</h3>
+                <p class="text-muted mb-0 small">Active Jobs</p>
+                <div class="mt-2"><small class="text-muted">vs last 30 days</small></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Quick Actions & Recent Activity Row -->
-<div class="row g-4">
+<!-- Stats Cards Row 2 -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-purple bg-opacity-10 rounded-3 p-3" style="background:rgba(139,92,246,0.1);">
+                        <i class="fas fa-file-alt fa-lg" style="color:#8b5cf6;"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0 fw-bold">{{ total_applications }}</h3>
+                        <p class="text-muted mb-0 small">Total Applications</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon rounded-3 p-3" style="background:rgba(236,72,153,0.1);">
+                        <i class="fas fa-building fa-lg" style="color:#ec4899;"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-0 fw-bold">{{ total_companies }}</h3>
+                        <p class="text-muted mb-0 small">Registered Companies</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6 col-md-12">
+        <div class="card border-0 shadow-sm h-100" style="background:linear-gradient(135deg,#2563eb,#7c3aed);">
+            <div class="card-body d-flex align-items-center justify-content-between text-white">
+                <div>
+                    <h5 class="fw-bold mb-1">Send Announcement</h5>
+                    <p class="mb-0 opacity-75 small">Notify all users or specific groups instantly</p>
+                </div>
+                <button class="btn btn-light fw-semibold px-4" data-bs-toggle="modal" data-bs-target="#announcementModal">
+                    <i class="fas fa-bullhorn me-2"></i>Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <!-- Quick Actions -->
+<!-- Quick Actions & Recent Reports -->
+<div class="row g-4 mb-4">
     <div class="col-md-4">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 pt-4">
@@ -81,135 +143,99 @@
             </div>
             <div class="card-body pt-0">
                 <div class="d-grid gap-2">
-
                     <a href="{{ url_for('admin_reports') }}"
                        class="btn btn-outline-danger text-start d-flex align-items-center gap-2">
                         <i class="fas fa-flag"></i> Review Reports
-                        <span class="badge bg-danger ms-auto">{{ pending_reports|default('23') }}</span>
+                        {% if pending_reports > 0 %}<span class="badge bg-danger ms-auto">{{ pending_reports }}</span>{% endif %}
                     </a>
-
                     <a href="{{ url_for('admin_verification') }}"
                        class="btn btn-outline-warning text-start d-flex align-items-center gap-2">
-                        <i class="fas fa-id-card"></i> Verify Users
-                        <span class="badge bg-warning ms-auto">{{ pending_verifications|default('147') }}</span>
+                        <i class="fas fa-id-card"></i> Verify Companies
+                        {% if pending_verifications > 0 %}<span class="badge bg-warning ms-auto">{{ pending_verifications }}</span>{% endif %}
                     </a>
-
                     <a href="{{ url_for('admin_users') }}"
                        class="btn btn-outline-info text-start d-flex align-items-center gap-2">
                         <i class="fas fa-users"></i> Manage Users
                     </a>
-
+                    <a href="{{ url_for('admin_projects') }}"
+                       class="btn btn-outline-success text-start d-flex align-items-center gap-2">
+                        <i class="fas fa-briefcase"></i> View Jobs
+                    </a>
+                    <a href="{{ url_for('admin_logs') }}"
+                       class="btn btn-outline-secondary text-start d-flex align-items-center gap-2">
+                        <i class="fas fa-history"></i> Activity Log
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Reports -->
     <div class="col-md-8">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 pt-4">
                 <h5 class="fw-semibold mb-0">Recent Reports</h5>
                 <small class="text-muted">Latest flagged content</small>
             </div>
-
             <div class="card-body p-0">
                 <div class="list-group list-group-flush">
-
                     {% if recent_reports %}
                         {% for report in recent_reports[:5] %}
                         <div class="list-group-item bg-transparent d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-3">
-                                <i class="fas fa-flag text-danger fa-sm"></i>
+                                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#fef2f2;flex-shrink:0;">
+                                    <i class="fas fa-flag text-danger fa-sm"></i>
+                                </div>
                                 <div>
-                                    <strong>{{ report.type }}</strong>
-                                    <p class="mb-0 small text-muted">{{ report.content|truncate(50) }}</p>
+                                    <strong class="d-block" style="font-size:.9rem;">{{ report.type }}</strong>
+                                    <p class="mb-0 small text-muted">{{ report.content[:50] }}{% if report.content|length > 50 %}…{% endif %}</p>
                                 </div>
                             </div>
-                            <div class="text-end">
-                                <small class="text-muted">{{ report.date }}</small><br>
-                                <span class="badge bg-warning bg-opacity-10 text-warning">
-                                    {{ report.status|default('Pending') }}
-                                </span>
+                            <div class="text-end ms-3 flex-shrink-0">
+                                <small class="text-muted d-block">{{ report.date }}</small>
+                                <span class="badge {{ 'bg-warning' if report.status == 'Pending' else 'bg-success' }} bg-opacity-10 {{ 'text-warning' if report.status == 'Pending' else 'text-success' }}">{{ report.status }}</span>
                             </div>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="list-group-item bg-transparent d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-3">
-                                <i class="fas fa-flag text-danger"></i>
-                                <div>
-                                    <strong>Comment Report</strong>
-                                    <p class="mb-0 small text-muted">Inappropriate language in discussion</p>
-                                </div>
-                            </div>
-                            <div class="text-end">
-                                <small class="text-muted">Dec 1, 2024</small><br>
-                                <span class="badge bg-warning bg-opacity-10 text-warning">Pending</span>
-                            </div>
+                        <div class="list-group-item text-center py-4 text-muted">
+                            <i class="fas fa-check-circle text-success fa-2x mb-2 d-block"></i>
+                            No pending reports — all clear!
                         </div>
                     {% endif %}
-
                 </div>
             </div>
-
             <div class="card-footer bg-white border-0 pt-0 pb-3">
-                <a href="{{ url_for('admin_reports') }}"
-                   class="text-decoration-none small">View all reports →</a>
+                <a href="{{ url_for('admin_reports') }}" class="text-decoration-none small">View all reports →</a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Recent Activity -->
-<div class="row mt-4">
-    <div class="col-12">
+<!-- Recent Registrations & Activity -->
+<div class="row g-4 mb-4">
+    <div class="col-md-12">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 pt-4">
                 <h5 class="fw-semibold mb-0">Recent Activity</h5>
                 <small class="text-muted">Latest system updates</small>
             </div>
-
             <div class="card-body">
-                <div class="row g-3">
-
-                    {% if recent_activities %}
-                        {% for activity in recent_activities[:4] %}
-                        <div class="col-md-6">
-                            <div class="d-flex align-items-start gap-3">
-                                <div class="rounded-circle p-2 bg-{{ activity.color }}-opacity-10">
-                                    <i class="fas fa-{{ activity.icon }} text-{{ activity.color }} fa-sm"></i>
-                                </div>
-                                <div>
-                                    <p class="mb-0">
-                                        <strong>{{ activity.user }}</strong> {{ activity.action }}
-                                    </p>
-                                    <small class="text-muted">
-                                        {{ activity.details }} • {{ activity.time_ago }}
-                                    </small>
-                                </div>
-                            </div>
+                {% if recent_activities %}
+                    {% for activity in recent_activities[:5] %}
+                    <div class="d-flex align-items-start gap-3 mb-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                             style="width:36px;height:36px;background:{{ 'rgba(59,130,246,0.1)' if activity.color == 'primary' else 'rgba(16,185,129,0.1)' }};">
+                            <i class="fas fa-{{ activity.icon }} fa-sm" style="color:{{ '#3b82f6' if activity.color == 'primary' else '#10b981' }};"></i>
                         </div>
-                        {% endfor %}
-                    {% endif %}
-
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Announcement Button -->
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card border-0 shadow-sm bg-primary bg-opacity-5">
-            <div class="card-body text-center py-4">
-                <i class="fas fa-bullhorn fa-2x text-primary mb-2"></i>
-                <h6 class="mb-2">Need to inform users?</h6>
-                <button class="btn btn-primary btn-sm"
-                        data-bs-toggle="modal"
-                        data-bs-target="#announcementModal">
-                    Send Announcement
-                </button>
+                        <div class="flex-grow-1">
+                            <p class="mb-0 small"><strong>{{ activity.user }}</strong> {{ activity.action }}</p>
+                            <small class="text-muted">{{ activity.time_ago }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No recent activity.</p>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -219,44 +245,36 @@
 <div class="modal fade" id="announcementModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
-
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-semibold">Send Announcement</h5>
+                <h5 class="modal-title fw-semibold"><i class="fas fa-bullhorn text-primary me-2"></i>Send Announcement</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-
             <div class="modal-body">
                 <form id="announcementForm">
-
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Title</label>
-                        <input type="text" class="form-control form-control-sm" required>
+                        <input type="text" id="ann_title" class="form-control" placeholder="Announcement title…" required>
                     </div>
-
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Message</label>
-                        <textarea class="form-control form-control-sm" rows="3" required></textarea>
+                        <textarea id="ann_message" class="form-control" rows="3" placeholder="Write your message here…" required></textarea>
                     </div>
-
                     <div class="mb-3">
                         <label class="form-label small fw-semibold">Send to</label>
-                        <select class="form-select form-select-sm">
-                            <option>All Users</option>
-                            <option>Verified Users Only</option>
-                            <option>New Users</option>
+                        <select id="ann_target" class="form-select">
+                            <option value="all">All Users</option>
+                            <option value="verified">Verified Users Only</option>
+                            <option value="new">New Users</option>
                         </select>
                     </div>
-
                 </form>
             </div>
-
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-sm btn-primary" onclick="sendAnnouncement()">
-                    Send
+                    <i class="fas fa-paper-plane me-1"></i>Send
                 </button>
             </div>
-
         </div>
     </div>
 </div>
@@ -264,34 +282,67 @@
 {% endblock %}
 
 {% block extra_js %}
+
 <script>
-function sendAnnouncement() {
-    const title = document.querySelector('#announcementForm input').value;
-    const message = document.querySelector('#announcementForm textarea').value;
+// ── Announcement Sender ─────────────────────────────────────────────────────
+async function sendAnnouncement() {
+    const title = document.getElementById('ann_title').value.trim();
+    const message = document.getElementById('ann_message').value.trim();
+    const target = document.getElementById('ann_target').value;
 
-    if (!title || !message) {
-        alert('Please fill in both title and message');
-        return;
+    if (!title || !message) { showToast('Please fill in both title and message.', 'error'); return; }
+
+    const sendBtn = document.querySelector('#announcementModal .btn-primary');
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Sending…';
+
+    try {
+        const res = await fetch('/admin/announcement/send', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({title, message, target})
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Announcement sent successfully!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('announcementModal')).hide();
+            document.getElementById('announcementForm').reset();
+        } else {
+            showToast(data.message || 'Failed to send.', 'error');
+        }
+    } catch(e) {
+        showToast('Network error. Please try again.', 'error');
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Send';
     }
+}
 
-    alert('✓ Announcement sent successfully!');
-    bootstrap.Modal.getInstance(document.getElementById('announcementModal')).hide();
-    document.getElementById('announcementForm').reset();
+function showToast(msg, type) {
+    let t = document.getElementById('adminToast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'adminToast';
+        t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,0.15);transition:opacity 0.3s;';
+        document.body.appendChild(t);
+    }
+    t.innerHTML = msg;
+    t.style.background = type === 'success' ? '#10b981' : '#ef4444';
+    t.style.color = '#fff';
+    t.style.opacity = '1';
+    setTimeout(() => { t.style.opacity = '0'; }, 3500);
 }
 </script>
 
 <style>
-.card { border-radius: 16px !important; transition: all 0.2s ease; }
-.card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08) !important; }
-
-.btn-outline-danger:hover,
-.btn-outline-warning:hover,
-.btn-outline-info:hover {
-    transform: translateX(5px);
-}
-
-.list-group-item:hover { background-color: #f9fafb; }
-.bg-opacity-5 { background-color: rgba(37, 99, 235, 0.05) !important; }
+.stat-card { border-radius: 16px !important; transition: all 0.2s ease; }
+.stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.09) !important; }
+.stat-icon { transition: transform 0.2s; }
+.stat-card:hover .stat-icon { transform: scale(1.08); }
+.card { border-radius: 16px !important; }
+.list-group-item:hover { background-color: #f9fafb !important; }
+.btn-outline-danger:hover, .btn-outline-warning:hover,
+.btn-outline-info:hover, .btn-outline-success:hover,
+.btn-outline-secondary:hover { transform: translateX(5px); }
 </style>
-
 {% endblock %}

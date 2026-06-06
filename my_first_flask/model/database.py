@@ -129,6 +129,41 @@ class Database:
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS announcements (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    message TEXT NOT NULL,
+                    target ENUM('all', 'verified', 'new') NOT NULL DEFAULT 'all',
+                    created_by INT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS announcement_reads (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    announcement_id INT NOT NULL,
+                    read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY unique_user_ann (user_id, announcement_id),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (announcement_id) REFERENCES announcements(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS admin_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    admin_id INT DEFAULT NULL,
+                    admin_name VARCHAR(255) DEFAULT NULL,
+                    action VARCHAR(100) NOT NULL,
+                    target_type VARCHAR(50) DEFAULT NULL,
+                    target_id INT DEFAULT NULL,
+                    details TEXT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
 
 
 

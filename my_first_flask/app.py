@@ -72,6 +72,20 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def log_admin_action(action, target_type=None, target_id=None, details=None):
+    """Insert a record into admin_logs for audit trail (Commit 5)."""
+    try:
+        conn = get_db()
+        admin_id = session.get("user_id")
+        admin_name = session.get("user_name", "System")
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO admin_logs (admin_id, admin_name, action, target_type, target_id, details)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (admin_id, admin_name, action, target_type, target_id, details))
+    except Exception as e:
+        print("Failed to log admin action:", e)
+
 
 # ─── HOME ────────────────────────────────────────────────────────────────────
 
@@ -2342,7 +2356,8 @@ def delete_reports():
     with conn.cursor() as cursor:
         format_strings = ','.join(['%s'] * len(report_ids))
         cursor.execute(f"DELETE FROM reports WHERE id IN ({format_strings})", tuple(report_ids))
-        
+    
+    log_admin_action("delete_reports", "report", 0, f"Deleted report IDs: {report_ids}")
     return jsonify({"success": True, "message": "Selected reports deleted successfully."})
 
 
@@ -2566,6 +2581,69 @@ def admin_logs():
         actions=actions,
         current_user=CurrentUserMock()
     )
+
+
+# ─── ADMIN LOGS PAGE (Commit 5) ───────────────────────────────────────────────
+
+@app.route("/admin/logs")
+@admin_required
+def admin_logs():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 30
+    action_filter = request.args.get("action", "").strip()
+
+    conn = get_db()
+    base = "FROM admin_logs"
+    params = []
+    if action_filter:
+        base += " WHERE action = %s"
+        params.append(action_filter)
+
+    with conn.cursor() as cursor:
+        cursor.execute(f"SELECT COUNT(*) as cnt {base}", tuple(params))
+        total_count = cursor.fetchone()["cnt"]
+
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            f"SELECT id, admin_name, action, target_type, target_id, details, created_at {base} ORDER BY created_at DESC LIMIT %s OFFSET %s",
+            tuple(params) + (per_page, offset)
+        )
+        logs_raw = cursor.fetchall()
+
+    logs = [{
+        "id": r["id"],
+        "admin_name": r["admin_name"] or "System",
+        "action": r["action"],
+        "target_type": r["target_type"] or "-",
+        "target_id": r["target_id"],
+        "details": r["details"] or "-",
+        "date": r["created_at"].strftime("%b %d, %Y %H:%M") if r["created_at"] else ""
+    } for r in logs_raw]
+
+    # Distinct actions for filter dropdown
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT action FROM admin_logs ORDER BY action")
+        actions = [r["action"] for r in cursor.fetchall()]
+
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+
+    return render_template(
+        "admin_logs.html",
+        logs=logs,
+        page=page,
+        total_pages=total_pages,
+        total_count=total_count,
+        per_page=per_page,
+        action_filter=action_filter,
+        actions=actions,
+        current_user=CurrentUserMock()
+    )
+
 
 
 # ─── CSV EXPORT (Commit 6) ────────────────────────────────────────────────────

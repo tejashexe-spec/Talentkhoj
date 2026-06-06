@@ -247,7 +247,42 @@
 
 <!-- Recent Registrations & Activity -->
 <div class="row g-4 mb-4">
-    <div class="col-md-12">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-semibold mb-0">Recent Registrations</h5>
+                    <small class="text-muted">Latest 6 new accounts</small>
+                </div>
+                <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for reg in recent_registrations %}
+                    <div class="list-group-item bg-transparent d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                             style="width:38px;height:38px;flex-shrink:0;font-size:.75rem;
+                                    background:{{ '#3b82f6' if reg.account_type == 'individual' else ('#10b981' if reg.account_type == 'company' else '#ef4444') }};">
+                            {{ reg.full_name[:2]|upper }}
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="fw-semibold text-truncate" style="font-size:.9rem;">{{ reg.full_name }}</div>
+                            <small class="text-muted text-truncate d-block">{{ reg.email }}</small>
+                        </div>
+                        <div class="text-end flex-shrink-0">
+                            <span class="badge {{ 'bg-primary' if reg.account_type == 'individual' else ('bg-success' if reg.account_type == 'company' else 'bg-danger') }} bg-opacity-10 {{ 'text-primary' if reg.account_type == 'individual' else ('text-success' if reg.account_type == 'company' else 'text-danger') }} d-block mb-1">{{ reg.account_type|capitalize }}</span>
+                            <small class="text-muted">{{ reg.date }}</small>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="list-group-item text-center py-4 text-muted">No registrations yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white border-0 pt-4">
                 <h5 class="fw-semibold mb-0">Recent Activity</h5>

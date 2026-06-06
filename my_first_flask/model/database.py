@@ -182,7 +182,7 @@ class Database:
             with self.__connection.cursor() as cursor:
                 cursor.execute("ALTER TABLE jobs ADD COLUMN questions TEXT DEFAULT NULL")
 
-        # Applications table migrations (answers column)
+        # Applications table migrations (answers column & status index)
         with self.__connection.cursor() as cursor:
             cursor.execute(
                 "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
@@ -194,6 +194,18 @@ class Database:
         if "answers" not in existing_apps:
             with self.__connection.cursor() as cursor:
                 cursor.execute("ALTER TABLE applications ADD COLUMN answers TEXT DEFAULT NULL")
+
+        with self.__connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT INDEX_NAME FROM information_schema.STATISTICS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'applications' AND INDEX_NAME = 'idx_status'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing_index = cursor.fetchone()
+
+        if not existing_index:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE applications ADD INDEX idx_status (status)")
 
 
     def get_connection(self):

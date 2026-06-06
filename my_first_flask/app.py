@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import Flask, render_template, session, redirect, url_for, request, flash, jsonify
+from flask import Flask, render_template, session, redirect, url_for, request, flash, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail, Message
@@ -68,6 +68,12 @@ def login_required(f):
 @app.route("/")
 def home():
     return render_template("home.html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_file(os.path.join(BASE_DIR, "static", "favicon.png"), mimetype="image/png")
+
 
 
 # ─── REGISTER ────────────────────────────────────────────────────────────────
@@ -370,192 +376,214 @@ def logout():
 
 # ─── PROFILE ─────────────────────────────────────────────────────────────────
 
-@app.route("/profile", methods=["GET"])
-@login_required
+@app.route("/profile", methods=["GET", "POST"])
 def profile():
-    conn = get_db()
-    user_id = session["user_id"]
-    
-    # Load user data
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-        user = cursor.fetchone()
-        
-    import json
-    try:
-        cv_data = json.loads(user["cv_data"]) if (user and user.get("cv_data")) else {}
-    except Exception:
-        cv_data = {}
-        
-    # Standardize loaded fields
-    profile_data = {
-        "first_name": cv_data.get("first_name", ""),
-        "last_name": cv_data.get("last_name", ""),
-        "gender": cv_data.get("gender", ""),
-        "dob": cv_data.get("dob", ""),
-        "sectors": cv_data.get("sectors", ""),
-        "designation": cv_data.get("designation", ""),
-        "bio": user.get("bio", "") or "",
-        "province": cv_data.get("province", ""),
-        "city": cv_data.get("city", ""),
-        "postal_code": cv_data.get("postal_code", ""),
-        "current_address": cv_data.get("current_address", ""),
-        "socials": cv_data.get("socials", []),
-        "cv_path": user.get("cv_path", ""),
-        "avatar": user.get("avatar", "")
-    }
-    
-    # Try parsing first name from full_name if empty
-    if not profile_data["first_name"] and user.get("full_name"):
-        parts = user["full_name"].split(" ", 1)
-        profile_data["first_name"] = parts[0]
-        if len(parts) > 1:
-            profile_data["last_name"] = parts[1]
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
 
-    return render_template("profile.html", profile=profile_data)
+    name_message = None
+    password_message = None
+    password_errors = []
 
+    if request.method == "POST":
+        action = request.form.get("action")
 
-@app.route("/profile/update", methods=["POST"])
-@login_required
-def profile_update():
-    conn = get_db()
-    action = request.form.get("action")
-    user_id = session["user_id"]
-    
-    # Fetch existing cv_data to merge keys
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT cv_data FROM users WHERE id = %s", (user_id,))
-        row = cursor.fetchone()
-        import json
-        try:
-            cv_data = json.loads(row["cv_data"]) if (row and row.get("cv_data")) else {}
-        except Exception:
-            cv_data = {}
-
-    if action == "about":
-        first_name = request.form.get("first_name", "").strip()
-        last_name = request.form.get("last_name", "").strip()
-        gender = request.form.get("gender", "").strip()
-        dob = request.form.get("dob", "").strip()
-        sectors = request.form.get("sectors", "").strip()
-        designation = request.form.get("designation", "").strip()
-        bio = request.form.get("bio", "").strip()
-        
-        # Save first + last as full_name
-        full_name = f"{first_name} {last_name}".strip() or session["user_name"]
-        
-        # Merge in cv_data
-        cv_data["first_name"] = first_name
-        cv_data["last_name"] = last_name
-        cv_data["gender"] = gender
-        cv_data["dob"] = dob
-        cv_data["sectors"] = sectors
-        cv_data["designation"] = designation
-        
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "UPDATE users SET full_name = %s, bio = %s, cv_data = %s WHERE id = %s",
-                (full_name, bio, json.dumps(cv_data), user_id)
-            )
-        session["user_name"] = full_name
-        session.modified = True
-        
-        # Log to file
-        try:
-            from my_first_flask.utils.logger import log_activity
-            log_activity("Profile Update", f"User '{full_name}' updated 'About Yourself' profile section.")
-        except Exception:
-            pass
+        # ── About Details ───────────────────────────────────────────────────
+        if action == "about":
+            first_name = request.form.get("first_name", "").strip()
+            last_name = request.form.get("last_name", "").strip()
+            gender = request.form.get("gender", "").strip()
+            dob = request.form.get("dob", "").strip()
+            sectors = request.form.get("sectors", "").strip()
+            designation = request.form.get("designation", "").strip()
+            bio = request.form.get("bio", "").strip()
             
-        return jsonify({"success": True, "message": "About details updated successfully!"})
-        
-    elif action == "address":
-        province = request.form.get("province", "").strip()
-        city = request.form.get("city", "").strip()
-        postal_code = request.form.get("postal_code", "").strip()
-        current_address = request.form.get("current_address", "").strip()
-        
-        # Merge
-        cv_data["province"] = province
-        cv_data["city"] = city
-        cv_data["postal_code"] = postal_code
-        cv_data["current_address"] = current_address
-        
-        location = f"{current_address}, {city}, {province}".strip(", ")
-        
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "UPDATE users SET location = %s, cv_data = %s WHERE id = %s",
-                (location, json.dumps(cv_data), user_id)
-            )
+            full_name = f"{first_name} {last_name}".strip()
             
-        # Log
-        try:
-            from my_first_flask.utils.logger import log_activity
-            log_activity("Profile Update", f"User '{session['user_name']}' updated 'Address' profile section.")
-        except Exception:
-            pass
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT cv_data FROM users WHERE id = %s", (session["user_id"],))
+                row = cursor.fetchone()
             
-        return jsonify({"success": True, "message": "Address updated successfully!"})
-        
-    elif action == "socials":
-        # Capture lists
-        types = request.form.getlist("social_type[]")
-        links = request.form.getlist("social_link[]")
-        
-        socials_list = []
-        for t, l in zip(types, links):
-            if t.strip() or l.strip():
-                socials_list.append({"type": t.strip(), "link": l.strip()})
+            import json
+            try:
+                cv_data = json.loads(row["cv_data"]) if row and row.get("cv_data") else {}
+            except Exception:
+                cv_data = {}
                 
-        cv_data["socials"] = socials_list
-        
-        with conn.cursor() as cursor:
-            cursor.execute(
-                "UPDATE users SET cv_data = %s WHERE id = %s",
-                (json.dumps(cv_data), user_id)
-            )
+            cv_data["first_name"] = first_name
+            cv_data["last_name"] = last_name
+            cv_data["gender"] = gender
+            cv_data["dob"] = dob
+            cv_data["sectors"] = sectors
+            cv_data["designation"] = designation
+            cv_data["bio"] = bio
+            cv_data["full_name"] = full_name
             
-        # Log
-        try:
-            from my_first_flask.utils.logger import log_activity
-            log_activity("Profile Update", f"User '{session['user_name']}' updated 'Social Links' profile section.")
-        except Exception:
-            pass
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET full_name = %s, bio = %s, cv_data = %s WHERE id = %s",
+                    (full_name, bio, json.dumps(cv_data), session["user_id"])
+                )
+            session["user_name"] = full_name
+            session.modified = True
+            name_message = "About details updated successfully."
+
+        # ── Address Details ──────────────────────────────────────────────────
+        elif action == "address":
+            province = request.form.get("province", "").strip()
+            city = request.form.get("city", "").strip()
+            postal_code = request.form.get("postal_code", "").strip()
+            current_address = request.form.get("current_address", "").strip()
             
-        return jsonify({"success": True, "message": "Social links updated successfully!"})
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT cv_data FROM users WHERE id = %s", (session["user_id"],))
+                row = cursor.fetchone()
+            
+            import json
+            try:
+                cv_data = json.loads(row["cv_data"]) if row and row.get("cv_data") else {}
+            except Exception:
+                cv_data = {}
+                
+            cv_data["province"] = province
+            cv_data["city"] = city
+            cv_data["postal_code"] = postal_code
+            cv_data["current_address"] = current_address
+            cv_data["location"] = f"{city}, {province}"
+            
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET location = %s, cv_data = %s WHERE id = %s",
+                    (f"{city}, {province}", json.dumps(cv_data), session["user_id"])
+                )
+            name_message = "Address details updated successfully."
 
-    elif action == "upload_avatar":
-        avatar = request.files.get("avatar")
-        allowed = {"png", "jpg", "jpeg", "gif", "webp"}
-        if avatar and avatar.filename:
-            ext = avatar.filename.rsplit(".", 1)[-1].lower()
-            if ext in allowed:
-                filename = f"user_{user_id}_{int(time.time())}.{ext}"
-                upload_path = os.path.join(BASE_DIR, "static", "uploads", filename)
-                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
-                avatar.save(upload_path)
-                avatar_url = f"/static/uploads/{filename}"
+        # ── Social Links ─────────────────────────────────────────────────────
+        elif action == "socials":
+            social_types = request.form.getlist("social_type[]")
+            social_links = request.form.getlist("social_link[]")
+            
+            socials_list = []
+            portfolio_link = ""
+            github_link = ""
+            linkedin_link = ""
+            
+            for i in range(len(social_types)):
+                t = social_types[i].strip()
+                l = social_links[i].strip()
+                if t and l:
+                    socials_list.append({"type": t, "link": l})
+                    if t.lower() == "portfolio":
+                        portfolio_link = l
+                    elif t.lower() == "github":
+                        github_link = l
+                    elif t.lower() == "linkedin":
+                        linkedin_link = l
+            
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT cv_data FROM users WHERE id = %s", (session["user_id"],))
+                row = cursor.fetchone()
+            
+            import json
+            try:
+                cv_data = json.loads(row["cv_data"]) if row and row.get("cv_data") else {}
+            except Exception:
+                cv_data = {}
+                
+            cv_data["socials"] = socials_list
+            if portfolio_link:
+                cv_data["portfolio"] = portfolio_link
+            if github_link:
+                cv_data["github"] = github_link
+            if linkedin_link:
+                cv_data["linkedin"] = linkedin_link
+                
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET cv_data = %s WHERE id = %s",
+                    (json.dumps(cv_data), session["user_id"])
+                )
+            name_message = "Social links updated successfully."
 
+        # ── Change Password ──────────────────────────────────────────────────
+        elif action == "change_password":
+            current_password = request.form.get("current_password", "")
+            new_password = request.form.get("new_password", "")
+            confirm_password = request.form.get("confirm_password", "")
+
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "SELECT password_hash FROM users WHERE id = %s",
+                    (session["user_id"],)
+                )
+                user = cursor.fetchone()
+
+            if not user or not check_password_hash(user["password_hash"], current_password):
+                password_errors.append("Current password is incorrect.")
+            if len(new_password) < 8:
+                password_errors.append("New password must be at least 8 characters.")
+            if new_password != confirm_password:
+                password_errors.append("Passwords do not match.")
+
+            if not password_errors:
+                new_hash = generate_password_hash(new_password)
+                conn = get_db()
                 with conn.cursor() as cursor:
                     cursor.execute(
-                        "UPDATE users SET avatar = %s WHERE id = %s",
-                        (avatar_url, user_id)
+                        "UPDATE users SET password_hash = %s WHERE id = %s",
+                        (new_hash, session["user_id"])
                     )
-                session["user_avatar"] = avatar_url
-                session.modified = True
-                
-                # Log
-                try:
-                    from my_first_flask.utils.logger import log_activity
-                    log_activity("Profile Update", f"User '{session['user_name']}' uploaded a new profile picture.")
-                except Exception:
-                    pass
-                    
-                return jsonify({"success": True, "message": "Avatar uploaded successfully!", "avatar_url": avatar_url})
-        return jsonify({"success": False, "message": "Invalid file format or upload failed."}), 400
+                password_message = "Password updated successfully."
 
-    return jsonify({"success": False, "message": "Invalid action."}), 400
+        # ── Upload Avatar ────────────────────────────────────────────────────
+        elif action == "upload_avatar":
+            avatar = request.files.get("avatar")
+            allowed = {"png", "jpg", "jpeg", "gif", "webp"}
+            if avatar and avatar.filename:
+                ext = avatar.filename.rsplit(".", 1)[-1].lower()
+                if ext in allowed:
+                    filename = f"user_{session['user_id']}_{int(time.time())}.{ext}"
+                    upload_path = os.path.join(BASE_DIR, "static", "uploads", filename)
+                    avatar.save(upload_path)
+                    avatar_url = f"/static/uploads/{filename}"
+
+                    conn = get_db()
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "UPDATE users SET avatar = %s WHERE id = %s",
+                            (avatar_url, session["user_id"])
+                        )
+                    session["user_avatar"] = avatar_url
+                    session.modified = True
+                else:
+                    name_message = "Invalid file type. Use PNG, JPG, GIF or WEBP."
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM users WHERE id = %s", (session["user_id"],))
+        user_profile = cursor.fetchone()
+
+    if user_profile and user_profile.get("cv_data"):
+        import json
+        try:
+            cv_data = json.loads(user_profile["cv_data"])
+            if isinstance(cv_data, dict):
+                for k, v in cv_data.items():
+                    if k not in user_profile or user_profile[k] is None:
+                        user_profile[k] = v
+        except Exception:
+            pass
+
+    return render_template("profile.html",
+        profile=user_profile,
+        name_message=name_message,
+        password_message=password_message,
+        password_errors=password_errors
+    )
 
 
 # ─── PUBLIC PROFILES ─────────────────────────────────────────────────────────
@@ -635,68 +663,402 @@ def dashboard():
     else:
         # Candidate metrics
         with conn.cursor() as cursor:
+            # 1. Has CV
             cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
             user = cursor.fetchone()
             stats["has_cv"] = bool(user and user["cv_path"])
             
-            # Applied count
+            # 2. Applied Count
             cursor.execute("SELECT COUNT(*) as count FROM applications WHERE user_id = %s", (session["user_id"],))
             stats["applied_count"] = cursor.fetchone()["count"]
             
-            # Rejected count
+            # 3. Rejected Count
             cursor.execute("SELECT COUNT(*) as count FROM applications WHERE user_id = %s AND status = 'rejected'", (session["user_id"],))
             stats["rejected_count"] = cursor.fetchone()["count"]
             
-            stats["alerts_count"] = 0
+            # 4. Total Jobs (Alerts)
+            cursor.execute("SELECT COUNT(*) as count FROM jobs")
+            stats["alerts_count"] = cursor.fetchone()["count"]
+            
+            # 5. Bookmarks
             stats["bookmarks_count"] = 0
             
-            # Fetch applied jobs recently
+            # 6. Recent Applications
             cursor.execute("""
-                SELECT a.id as app_id, a.status, a.created_at as applied_at, j.title, j.location, j.opportunity_type, c.company_name, c.logo
+                SELECT j.id as job_id, j.title, j.location, j.opportunity_type, a.status, a.created_at
                 FROM applications a
                 JOIN jobs j ON a.job_id = j.id
-                JOIN companies c ON j.company_id = c.id
                 WHERE a.user_id = %s
                 ORDER BY a.created_at DESC
                 LIMIT 5
             """, (session["user_id"],))
-            applied_recently = cursor.fetchall()
+            recent_applications = cursor.fetchall()
             
-            # Build recent activities dynamically from DB
-            recent_activities = []
-            if stats["has_cv"]:
-                recent_activities.append({
-                    "title": "Resume uploaded",
-                    "detail": f"{session['user_name']} | {session.get('user_email', '')}",
-                    "time": "Active"
+            # 7. Activities
+            cursor.execute("SELECT cv_path, cv_data FROM users WHERE id = %s", (session["user_id"],))
+            ud = cursor.fetchone()
+            activities = []
+            if ud:
+                activities.append({
+                    "title": "Account created",
+                    "description": f"{session['user_name']} | {session.get('user_email', '')}",
+                    "time": "Joined"
                 })
-            for app in applied_recently:
-                recent_activities.append({
+                if ud.get("cv_path"):
+                    activities.append({
+                        "title": "Resume active",
+                        "description": "Professional CV is online and ready for recruitment",
+                        "time": "Active"
+                    })
+                
+            cursor.execute("""
+                SELECT j.title, a.status, a.created_at
+                FROM applications a
+                JOIN jobs j ON a.job_id = j.id
+                WHERE a.user_id = %s
+                ORDER BY a.created_at DESC
+                LIMIT 6
+            """, (session["user_id"],))
+            user_apps = cursor.fetchall()
+            for app in user_apps:
+                activities.append({
                     "title": f"Applied to {app['title']}",
-                    "detail": f"at {app['company_name']}",
-                    "time": app["applied_at"].strftime("%b %d, %H:%M")
+                    "description": f"{session['user_name']} | {session.get('user_email', '')}",
+                    "time": app["created_at"].strftime("%Y-%m-%d %H:%M")
                 })
-                if app["status"] == "rejected":
-                    recent_activities.append({
-                        "title": "Application status changed to REJECTED",
-                        "detail": f"for {app['title']} at {app['company_name']}",
+                if app["status"] != "applied":
+                    activities.append({
+                        "title": f"Application status changed to {app['status'].upper()}",
+                        "description": f"Update on role: {app['title']}",
                         "time": "Recent"
                     })
-            if not recent_activities:
-                recent_activities.append({
-                    "title": "Account created",
-                    "detail": f"Welcome to TalentKhoj, {session['user_name']}!",
-                    "time": "Recent"
-                })
             
+        return render_template("dashboard.html", 
+                               stats=stats, 
+                               recent_applications=recent_applications, 
+                               activities=activities)
+
+
+
+@app.route("/dashboard/ats")
+@login_required
+def dashboard_ats():
+    if session.get("account_type") != "company":
+        flash("Only company accounts can access the ATS Board.", "error")
+        return redirect(url_for("dashboard"))
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        flash("Please complete your company profile first.", "error")
+        return redirect(url_for("profile"))
+        
+    company_id = company["id"]
+    
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, title FROM jobs WHERE company_id = %s ORDER BY created_at DESC", (company_id,))
+        jobs = cursor.fetchall()
+        
+    selected_job_id = request.args.get("job_id", "").strip()
+    skill_filter = request.args.get("skills", "").strip()
+    location_filter = request.args.get("location", "").strip()
+    experience_filter = request.args.get("experience", "").strip()
+    
+    query = """
+        SELECT a.id as application_id, a.status, a.answers, a.created_at as applied_at,
+               u.id as user_id, u.full_name, u.email, u.avatar, u.location, u.skills, u.cv_path, u.cv_data,
+               j.id as job_id, j.title as job_title
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.id
+        JOIN users u ON a.user_id = u.id
+        WHERE j.company_id = %s
+    """
+    params = [company_id]
+    
+    if selected_job_id:
+        query += " AND a.job_id = %s"
+        params.append(selected_job_id)
+        
+    query += " ORDER BY a.created_at DESC"
+    
+    with conn.cursor() as cursor:
+        cursor.execute(query, tuple(params))
+        all_apps = cursor.fetchall()
+        
+    import json
+    filtered_apps = []
+    
+    for app in all_apps:
+        cv_data = {}
+        if app.get("cv_data"):
+            try:
+                cv_data = json.loads(app["cv_data"])
+            except Exception:
+                pass
+                
+        answers_list = []
+        if app.get("answers"):
+            try:
+                answers_list = json.loads(app["answers"])
+            except Exception:
+                pass
+        app["answers_list"] = answers_list
+        
+        if skill_filter:
+            skill_term = skill_filter.lower()
+            in_db_skills = (app.get("skills") or "").lower()
+            cv_skills = cv_data.get("skills", [])
+            in_cv_skills = " ".join([s.get("category", "") + " " + s.get("list", "") for s in cv_skills]).lower()
+            
+            if skill_term not in in_db_skills and skill_term not in in_cv_skills:
+                continue
+                
+        if location_filter:
+            loc_term = location_filter.lower()
+            in_db_loc = (app.get("location") or "").lower()
+            in_cv_city = cv_data.get("city", "").lower()
+            in_cv_prov = cv_data.get("province", "").lower()
+            
+            if loc_term not in in_db_loc and loc_term not in in_cv_city and loc_term not in in_cv_prov:
+                continue
+                
+        if experience_filter:
+            exp_term = experience_filter.lower()
+            designation = cv_data.get("designation", "").lower()
+            bio = (app.get("bio") or "").lower()
+            cv_exp = cv_data.get("experience", [])
+            exp_details = " ".join([e.get("title", "") + " " + e.get("description", "") for e in cv_exp]).lower()
+            combined_exp_text = f"{designation} {bio} {exp_details}"
+            
+            if exp_term not in combined_exp_text:
+                continue
+
+        app_skills = []
+        if app.get("skills"):
+            app_skills = [s.strip() for s in app["skills"].split(",") if s.strip()]
+        elif cv_data.get("skills"):
+            for category in cv_data["skills"]:
+                if category.get("list"):
+                    app_skills.extend([s.strip() for s in category["list"].split(",") if s.strip()])
+        app["skills_list"] = app_skills[:4]
+        
+        edu_tag = ""
+        if cv_data.get("education"):
+            edu_tag = cv_data["education"][0].get("degree", "")
+        app["education_tag"] = edu_tag
+        
+        exp_tag = ""
+        if cv_data.get("experience"):
+            exp_tag = cv_data["experience"][0].get("title", "")
+        app["experience_tag"] = exp_tag
+        
+        # Format datetime to string for JSON serialization
+        if app.get("applied_at"):
+            app["applied_at"] = app["applied_at"].strftime("%Y-%m-%d %H:%M")
+            
+        filtered_apps.append(app)
+        
+    board = {
+        "applied": [],
+        "reviewed": [],
+        "shortlisted": [],
+        "rejected": []
+    }
+    
+    for app in filtered_apps:
+        status = app["status"]
+        if status in board:
+            board[status].append(app)
+        else:
+            board["applied"].append(app)
+            
+    counts = {k: len(v) for k, v in board.items()}
+    
     return render_template(
-        "dashboard.html", 
-        stats=stats, 
-        opportunities=my_opportunities,
-        applied_recently=applied_recently if session.get("account_type") != "company" else [],
-        recent_activities=recent_activities if session.get("account_type") != "company" else []
+        "dashboard_ats.html",
+        board=board,
+        counts=counts,
+        jobs=jobs,
+        selected_job_id=selected_job_id,
+        filters={
+            "skills": skill_filter,
+            "location": location_filter,
+            "experience": experience_filter
+        }
     )
 
+
+@app.route("/dashboard/ats/filter")
+@login_required
+def dashboard_ats_filter():
+    if session.get("account_type") != "company":
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        return jsonify({"success": False, "message": "Company profile incomplete."})
+        
+    company_id = company["id"]
+    
+    selected_job_id = request.args.get("job_id", "").strip()
+    skill_filter = request.args.get("skills", "").strip()
+    location_filter = request.args.get("location", "").strip()
+    experience_filter = request.args.get("experience", "").strip()
+    
+    query = """
+        SELECT a.id as application_id, a.status, a.answers, a.created_at as applied_at,
+               u.id as user_id, u.full_name, u.email, u.avatar, u.location, u.skills, u.cv_path, u.cv_data,
+               j.id as job_id, j.title as job_title
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.id
+        JOIN users u ON a.user_id = u.id
+        WHERE j.company_id = %s
+    """
+    params = [company_id]
+    
+    if selected_job_id:
+        query += " AND a.job_id = %s"
+        params.append(selected_job_id)
+        
+    query += " ORDER BY a.created_at DESC"
+    
+    with conn.cursor() as cursor:
+        cursor.execute(query, tuple(params))
+        all_apps = cursor.fetchall()
+        
+    import json
+    filtered_apps = []
+    
+    for app in all_apps:
+        cv_data = {}
+        if app.get("cv_data"):
+            try:
+                cv_data = json.loads(app["cv_data"])
+            except Exception:
+                pass
+                
+        answers_list = []
+        if app.get("answers"):
+            try:
+                answers_list = json.loads(app["answers"])
+            except Exception:
+                pass
+        app["answers_list"] = answers_list
+        
+        if skill_filter:
+            skill_term = skill_filter.lower()
+            in_db_skills = (app.get("skills") or "").lower()
+            cv_skills = cv_data.get("skills", [])
+            in_cv_skills = " ".join([s.get("category", "") + " " + s.get("list", "") for s in cv_skills]).lower()
+            
+            if skill_term not in in_db_skills and skill_term not in in_cv_skills:
+                continue
+                
+        if location_filter:
+            loc_term = location_filter.lower()
+            in_db_loc = (app.get("location") or "").lower()
+            in_cv_city = cv_data.get("city", "").lower()
+            in_cv_prov = cv_data.get("province", "").lower()
+            
+            if loc_term not in in_db_loc and loc_term not in in_cv_city and loc_term not in in_cv_prov:
+                continue
+                
+        if experience_filter:
+            exp_term = experience_filter.lower()
+            designation = cv_data.get("designation", "").lower()
+            bio = (app.get("bio") or "").lower()
+            cv_exp = cv_data.get("experience", [])
+            exp_details = " ".join([e.get("title", "") + " " + e.get("description", "") for e in cv_exp]).lower()
+            combined_exp_text = f"{designation} {bio} {exp_details}"
+            
+            if exp_term not in combined_exp_text:
+                continue
+
+        app_skills = []
+        if app.get("skills"):
+            app_skills = [s.strip() for s in app["skills"].split(",") if s.strip()]
+        elif cv_data.get("skills"):
+            for category in cv_data["skills"]:
+                if category.get("list"):
+                    app_skills.extend([s.strip() for s in category["list"].split(",") if s.strip()])
+        app["skills_list"] = app_skills[:4]
+        
+        edu_tag = ""
+        if cv_data.get("education"):
+            edu_tag = cv_data["education"][0].get("degree", "")
+        app["education_tag"] = edu_tag
+        
+        exp_tag = ""
+        if cv_data.get("experience"):
+            exp_tag = cv_data["experience"][0].get("title", "")
+        app["experience_tag"] = exp_tag
+        
+        # Format datetime to string for JSON serialization
+        if app.get("applied_at"):
+            app["applied_at"] = app["applied_at"].strftime("%Y-%m-%d %H:%M")
+        
+        filtered_apps.append(app)
+        
+    return jsonify({"success": True, "applicants": filtered_apps})
+
+
+@app.route("/dashboard/ats/update-status", methods=["POST"])
+@login_required
+def dashboard_ats_update_status():
+    if session.get("account_type") != "company":
+        return jsonify({"success": False, "message": "Unauthorized access."}), 403
+        
+    data = request.get_json() or {}
+    app_id = data.get("application_id")
+    new_status = data.get("status")
+    
+    if not app_id or not new_status:
+        return jsonify({"success": False, "message": "Missing application_id or status."}), 400
+        
+    allowed_statuses = {"applied", "reviewed", "shortlisted", "rejected"}
+    if new_status not in allowed_statuses:
+        return jsonify({"success": False, "message": "Invalid status value."}), 400
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        return jsonify({"success": False, "message": "Complete your company profile first."}), 400
+        
+    company_id = company["id"]
+    
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT a.id, a.user_id, u.full_name, j.title as job_title 
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.id
+            JOIN users u ON a.user_id = u.id
+            WHERE a.id = %s AND j.company_id = %s
+        """, (app_id, company_id))
+        application = cursor.fetchone()
+        
+    if not application:
+        return jsonify({"success": False, "message": "Application not found or unauthorized."}), 404
+        
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE applications SET status = %s WHERE id = %s", (new_status, app_id))
+        
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("ATS Update", f"Applicant '{application['full_name']}' (ID: {application['user_id']}) moved to '{new_status}' for job '{application['job_title']}' by Company (ID: {company_id})")
+    except Exception as e:
+        print(f"Failed to log activity: {e}")
+        
+    return jsonify({"success": True, "message": f"Applicant moved to {new_status} successfully."})
 
 
 @app.route("/dashboard/search")
@@ -776,13 +1138,6 @@ def dashboard_search():
                 opp["questions_list"] = []
         else:
             opp["questions_list"] = []
-
-        if opp.get("created_at"):
-            opp["created_at_formatted"] = opp["created_at"].strftime("%b %d")
-            opp["created_at"] = opp["created_at"].strftime("%Y-%m-%d %H:%M:%S")
-        else:
-            opp["created_at_formatted"] = ""
-            opp["created_at"] = ""
             
     return render_template(
         "dashboard_search.html",
@@ -1131,10 +1486,49 @@ def generate_cv_html(data):
             .entry {{
                 margin-bottom: 8px;
             }}
+            .print-bar {{
+                display: none !important;
+            }}
+        }}
+        
+        .print-bar {{
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }}
+        
+        .print-btn {{
+            background: #2456ff;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(36, 86, 255, 0.3);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            text-decoration: none;
+        }}
+        
+        .print-btn:hover {{
+            background: #1848d8;
+            transform: translateY(-1px);
         }}
     </style>
 </head>
 <body>
+    <div class="print-bar">
+        <button onclick="window.print()" class="print-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+        </button>
+    </div>
+
     <div class="header">
         <h1>{full_name}</h1>
         <div class="links">{links_html}</div>
@@ -1145,6 +1539,14 @@ def generate_cv_html(data):
     {proj_html}
     {skills_html}
     {certs_html}
+    
+    <script>
+        if (window.location.search.includes('print=true')) {{
+            window.onload = function() {{
+                window.print();
+            }}
+        }}
+    </script>
 </body>
 </html>"""
     return html_template
@@ -1177,6 +1579,56 @@ def dashboard_cv():
         cv_data=cv_data,
         cv_data_raw=cv_data_str
     )
+
+
+@app.route("/cv/view/<int:user_id>", methods=["GET"])
+def view_cv(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT cv_path, cv_data, account_type FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        
+    if not user or user["account_type"] != "individual":
+        flash("CV not found.", "error")
+        return redirect(url_for("home"))
+        
+    cv_path = user.get("cv_path")
+    cv_data_str = user.get("cv_data")
+    
+    # If they uploaded a static file (PDF/PNG/etc.)
+    if cv_path and not cv_path.lower().endswith(".html"):
+        full_path = os.path.join(BASE_DIR, cv_path.lstrip("/"))
+        if os.path.exists(full_path):
+            # If download or print parameter is requested, serve as a downloadable attachment
+            if request.args.get("download") == "true" or request.args.get("print") == "true":
+                from flask import send_file
+                filename = os.path.basename(full_path)
+                return send_file(full_path, as_attachment=True, download_name=filename)
+            return redirect(cv_path)
+            
+    # Try dynamic HTML generation on the fly if CV JSON data is available
+    if cv_data_str:
+        import json
+        try:
+            cv_data = json.loads(cv_data_str)
+            if cv_data:
+                html_content = generate_cv_html(cv_data)
+                return html_content
+        except Exception:
+            pass
+            
+    # Fallback to static HTML file if exists on disk
+    if cv_path:
+        full_path = os.path.join(BASE_DIR, cv_path.lstrip("/"))
+        if os.path.exists(full_path):
+            if request.args.get("download") == "true":
+                from flask import send_file
+                filename = os.path.basename(full_path)
+                return send_file(full_path, as_attachment=True, download_name=filename)
+            return redirect(cv_path)
+            
+    flash("This candidate does not have a valid active CV on the server.", "error")
+    return redirect(url_for("home"))
 
 
 @app.route("/dashboard/cv/build", methods=["POST"])

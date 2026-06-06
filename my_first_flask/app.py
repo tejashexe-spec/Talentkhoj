@@ -537,7 +537,29 @@ def dashboard_settings():
 @app.route("/dashboard/events")
 @login_required
 def dashboard_events():
-    return render_template("dashboard_events.html")
+    conn = get_db()
+    account_type = session.get("account_type")
+    
+    with conn.cursor() as cursor:
+        if account_type == "company":
+            cursor.execute(
+                "SELECT e.*, c.company_name, c.logo "
+                "FROM events e "
+                "JOIN companies c ON e.company_id = c.id "
+                "WHERE c.user_id = %s "
+                "ORDER BY e.event_date ASC",
+                (session["user_id"],)
+            )
+        else:
+            cursor.execute(
+                "SELECT e.*, c.company_name, c.logo "
+                "FROM events e "
+                "JOIN companies c ON e.company_id = c.id "
+                "ORDER BY e.event_date ASC"
+            )
+        events = cursor.fetchall()
+        
+    return render_template("dashboard_events.html", events=events)
 
 
 @app.route("/dashboard/events/create", methods=["GET", "POST"])

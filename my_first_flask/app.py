@@ -681,7 +681,8 @@ def dashboard():
             stats["alerts_count"] = cursor.fetchone()["count"]
             
             # 5. Bookmarks
-            stats["bookmarks_count"] = 0
+            cursor.execute("SELECT COUNT(*) as count FROM bookmarks WHERE user_id = %s", (session["user_id"],))
+            stats["bookmarks_count"] = cursor.fetchone()["count"]
             
             # 6. Recent Applications
             cursor.execute("""
@@ -693,8 +694,34 @@ def dashboard():
                 LIMIT 5
             """, (session["user_id"],))
             recent_applications = cursor.fetchall()
+
+            # 7. Detailed Applications (with job/company details) for Tracker
+            cursor.execute("""
+                SELECT a.id as application_id, a.status, a.created_at as applied_at,
+                       j.id as job_id, j.title, j.opportunity_type, j.location, j.salary,
+                       c.company_name, c.logo as company_logo
+                FROM applications a
+                JOIN jobs j ON a.job_id = j.id
+                JOIN companies c ON j.company_id = c.id
+                WHERE a.user_id = %s
+                ORDER BY a.created_at DESC
+            """, (session["user_id"],))
+            applications = cursor.fetchall()
+
+            # 8. Bookmarks (with job/company details)
+            cursor.execute("""
+                SELECT b.id as bookmark_id, b.created_at as bookmarked_at,
+                       j.id as job_id, j.title, j.opportunity_type, j.location, j.salary,
+                       c.company_name, c.logo as company_logo
+                FROM bookmarks b
+                JOIN jobs j ON b.job_id = j.id
+                JOIN companies c ON j.company_id = c.id
+                WHERE b.user_id = %s
+                ORDER BY b.created_at DESC
+            """, (session["user_id"],))
+            bookmarks = cursor.fetchall()
             
-            # 7. Activities
+            # 9. Activities
             cursor.execute("SELECT cv_path, cv_data FROM users WHERE id = %s", (session["user_id"],))
             ud = cursor.fetchone()
             activities = []
@@ -736,7 +763,9 @@ def dashboard():
         return render_template("dashboard.html", 
                                stats=stats, 
                                recent_applications=recent_applications, 
-                               activities=activities)
+                               activities=activities,
+                               applications=applications,
+                               bookmarks=bookmarks)
 
 
 

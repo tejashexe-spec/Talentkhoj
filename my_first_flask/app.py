@@ -2170,6 +2170,51 @@ def admin_dashboard():
     )
 
 
+# ─── ADMIN CHART APIS (Commit 2) ─────────────────────────────────────────────
+
+@app.route("/admin/api/stats/registrations")
+@admin_required
+def admin_stats_registrations():
+    """Return daily new-user counts for the last 30 days."""
+    from datetime import date, timedelta
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT DATE(created_at) as day, COUNT(*) as count
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL 30 DAY
+            GROUP BY DATE(created_at)
+            ORDER BY day ASC
+        """)
+        rows = cursor.fetchall()
+
+    today = date.today()
+    data_map = {str(r["day"]): r["count"] for r in rows}
+    labels, counts = [], []
+    for i in range(30):
+        d = today - timedelta(days=29 - i)
+        labels.append(d.strftime("%b %d"))
+        counts.append(data_map.get(str(d), 0))
+    return jsonify({"labels": labels, "counts": counts})
+
+
+@app.route("/admin/api/stats/roles")
+@admin_required
+def admin_stats_roles():
+    """Return count of users by account_type for the donut chart."""
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT account_type, COUNT(*) as count FROM users GROUP BY account_type")
+        rows = cursor.fetchall()
+    role_map = {r["account_type"]: r["count"] for r in rows}
+    return jsonify({
+        "individual": role_map.get("individual", 0),
+        "company": role_map.get("company", 0),
+        "admin": role_map.get("admin", 0)
+    })
+
+
+
 @app.route("/admin/reports")
 @admin_required
 def admin_reports():

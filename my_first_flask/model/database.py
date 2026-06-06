@@ -157,6 +157,8 @@ class Database:
             ("reset_password_token_expires_at", "ALTER TABLE users ADD COLUMN reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
             ("verified",     "ALTER TABLE users ADD COLUMN verified TINYINT(1) NOT NULL DEFAULT 0"),
             ("created_at",   "ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+            ("is_banned",    "ALTER TABLE users ADD COLUMN is_banned TINYINT(1) NOT NULL DEFAULT 0"),
+            ("ban_reason",   "ALTER TABLE users ADD COLUMN ban_reason VARCHAR(255) DEFAULT NULL"),
         ]
         with self.__connection.cursor() as cursor:
             cursor.execute(

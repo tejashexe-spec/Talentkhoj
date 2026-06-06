@@ -209,18 +209,22 @@ def login():
             conn = get_db()
             with conn.cursor() as cursor:
                 cursor.execute(
-                    "SELECT id, full_name, email, password_hash, avatar, account_type FROM users WHERE email = %s",
+                    "SELECT id, full_name, email, password_hash, avatar, account_type, is_banned, ban_reason FROM users WHERE email = %s",
                     (email,)
                 )
                 user = cursor.fetchone()
 
             if user and check_password_hash(user["password_hash"], password):
-                session["user_id"] = user["id"]
-                session["user_name"] = user["full_name"]
-                session["user_email"] = user["email"]
-                session["user_avatar"] = user["avatar"]
-                session["account_type"] = user["account_type"]
-                return redirect(url_for("home"))
+                if user.get("is_banned"):
+                    reason = user.get("ban_reason") or "Contact support for more information."
+                    error = f"Your account has been suspended. Reason: {reason}"
+                else:
+                    session["user_id"] = user["id"]
+                    session["user_name"] = user["full_name"]
+                    session["user_email"] = user["email"]
+                    session["user_avatar"] = user["avatar"]
+                    session["account_type"] = user["account_type"]
+                    return redirect(url_for("home"))
             else:
                 error = "Invalid email or password."
 
@@ -2408,6 +2412,75 @@ def delete_user(user_id):
         cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
         
     return jsonify({"success": True, "message": "User account permanently deleted."})
+
+
+@app.route("/admin/user/change-role/<int:user_id>", methods=["POST"])
+@admin_required
+def change_user_role(user_id):
+    if user_id == session.get("user_id"):
+        return jsonify({"success": False, "message": "You cannot change your own role!"}), 400
+
+    data = request.get_json() or {}
+    new_role = data.get("role", "").strip().lower()
+
+    allowed_roles = ("individual", "company", "admin")
+    if new_role not in allowed_roles:
+        return jsonify({"success": False, "message": f"Invalid role. Choose from: {', '.join(allowed_roles)}."}), 400
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, account_type FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "message": "User not found."}), 404
+
+        cursor.execute("UPDATE users SET account_type = %s WHERE id = %s", (new_role, user_id))
+
+    
+    return jsonify({"success": True, "message": f"User role updated to '{new_role.capitalize()}' successfully."})
+
+
+# ─── BAN / UNBAN USERS (Commit 3) ────────────────────────────────────────────
+
+@app.route("/admin/user/ban/<int:user_id>", methods=["POST"])
+@admin_required
+def ban_user(user_id):
+    if user_id == session.get("user_id"):
+        return jsonify({"success": False, "message": "You cannot ban yourself!"}), 400
+
+    data = request.get_json() or {}
+    reason = data.get("reason", "").strip() or "Violation of platform terms."
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, full_name FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "message": "User not found."}), 404
+        cursor.execute(
+            "UPDATE users SET is_banned = 1, ban_reason = %s WHERE id = %s",
+            (reason, user_id)
+        )
+    
+    return jsonify({"success": True, "message": f"User '{user['full_name']}' has been suspended."})
+
+
+@app.route("/admin/user/unban/<int:user_id>", methods=["POST"])
+@admin_required
+def unban_user(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, full_name FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "message": "User not found."}), 404
+        cursor.execute(
+            "UPDATE users SET is_banned = 0, ban_reason = NULL WHERE id = %s",
+            (user_id,)
+        )
+    
+    return jsonify({"success": True, "message": f"User '{user['full_name']}' has been reinstated."})
+
 
 
 @app.route("/admin/verification")

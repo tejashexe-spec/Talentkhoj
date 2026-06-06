@@ -56,6 +56,42 @@
         </div>
     </div>
 </div>
+
+<!-- Pagination (Commit 4) -->
+{% if total_pages > 1 %}
+<div class="d-flex justify-content-between align-items-center mt-3 px-1">
+    <small class="text-muted">
+        Showing {{ (page - 1) * per_page + 1 }}–{{ [page * per_page, total_count]|min }} of {{ total_count }} listings
+    </small>
+    <nav>
+        <ul class="pagination pagination-sm mb-0 gap-1">
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link rounded" href="?page={{ page - 1 }}">
+                    <i class="fas fa-chevron-left fa-xs"></i>
+                </a>
+            </li>
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <li class="page-item active">
+                    <span class="page-link rounded">{{ p }}</span>
+                </li>
+                {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                <li class="page-item">
+                    <a class="page-link rounded" href="?page={{ p }}">{{ p }}</a>
+                </li>
+                {% elif p == page - 3 or p == page + 3 %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                <a class="page-link rounded" href="?page={{ page + 1 }}">
+                    <i class="fas fa-chevron-right fa-xs"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

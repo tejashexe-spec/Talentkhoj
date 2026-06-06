@@ -2222,6 +2222,9 @@ def admin_stats_roles():
 @app.route("/admin/reports")
 @admin_required
 def admin_reports():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 20
+    
     conn = get_db()
     with conn.cursor() as cursor:
         cursor.execute("SELECT COUNT(*) as count FROM reports")
@@ -2233,13 +2236,16 @@ def admin_reports():
         cursor.execute("SELECT COUNT(*) as count FROM reports WHERE status = 'Resolved'")
         resolved_reports = cursor.fetchone()["count"]
         
+        offset = (page - 1) * per_page
         cursor.execute("""
             SELECT r.id, r.type, r.content, r.status, r.created_at, u.full_name as user 
             FROM reports r 
             LEFT JOIN users u ON r.user_id = u.id 
             ORDER BY r.created_at DESC
-        """)
+            LIMIT %s OFFSET %s
+        """, (per_page, offset))
         db_reports = cursor.fetchall()
+        
         reports_list = []
         for r in db_reports:
             reports_list.append({
@@ -2251,6 +2257,8 @@ def admin_reports():
                 "date": r["created_at"].strftime("%b %d, %Y") if r["created_at"] else ""
             })
             
+    total_pages = max(1, (total_reports + per_page - 1) // per_page)
+            
     class CurrentUserMock:
         username = session.get("user_name", "Admin")
         
@@ -2260,7 +2268,11 @@ def admin_reports():
         pending_reports=pending_reports,
         resolved_reports=resolved_reports,
         reports=reports_list,
-        current_user=CurrentUserMock()
+        current_user=CurrentUserMock(),
+        page=page,
+        total_pages=total_pages,
+        total_count=total_reports,
+        per_page=per_page
     )
 
 
@@ -2339,11 +2351,12 @@ def delete_reports():
 def admin_users():
     search = request.args.get("search", "").strip()
     role_filter = request.args.get("role", "").strip()
-    
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 20
+
     conn = get_db()
-    query = "SELECT id, full_name, email, account_type, verified, created_at FROM users"
+    base_query = "FROM users"
     params = []
-    
     conditions = []
     if search:
         conditions.append("(full_name LIKE %s OR email LIKE %s)")
@@ -2351,35 +2364,43 @@ def admin_users():
     if role_filter:
         conditions.append("account_type = %s")
         params.append(role_filter)
-        
     if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-        
-    query += " ORDER BY created_at DESC"
-    
+        base_query += " WHERE " + " AND ".join(conditions)
+
     with conn.cursor() as cursor:
-        cursor.execute(query, tuple(params))
+        cursor.execute(f"SELECT COUNT(*) as cnt {base_query}", tuple(params))
+        total_count = cursor.fetchone()["cnt"]
+
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            f"SELECT id, full_name, email, account_type, verified, is_banned, ban_reason, created_at {base_query} ORDER BY created_at DESC LIMIT %s OFFSET %s",
+            tuple(params) + (per_page, offset)
+        )
         db_users = cursor.fetchall()
-        
-    users_list = []
-    for u in db_users:
-        users_list.append({
-            "id": u["id"],
-            "full_name": u["full_name"],
-            "email": u["email"],
-            "account_type": u["account_type"],
-            "verified": u["verified"],
-            "date": u["created_at"].strftime("%b %d, %Y") if u["created_at"] else ""
-        })
-        
+
+    users_list = [{
+        "id": u["id"], "full_name": u["full_name"], "email": u["email"],
+        "account_type": u["account_type"], "verified": u["verified"],
+        "is_banned": u.get("is_banned", 0), "ban_reason": u.get("ban_reason", ""),
+        "date": u["created_at"].strftime("%b %d, %Y") if u["created_at"] else ""
+    } for u in db_users]
+
     class CurrentUserMock:
         username = session.get("user_name", "Admin")
-        
+
     return render_template(
         "admin_users.html",
         users=users_list,
         search=search,
         selected_role=role_filter,
+        page=page,
+        total_pages=total_pages,
+        total_count=total_count,
+        per_page=per_page,
         current_user=CurrentUserMock()
     )
 
@@ -2409,8 +2430,11 @@ def delete_user(user_id):
         
     conn = get_db()
     with conn.cursor() as cursor:
+        cursor.execute("SELECT full_name FROM users WHERE id = %s", (user_id,))
+        target = cursor.fetchone()
         cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
-        
+
+    log_admin_action("delete_user", "user", user_id, f"Deleted user: {target['full_name'] if target else user_id}")
     return jsonify({"success": True, "message": "User account permanently deleted."})
 
 
@@ -2436,7 +2460,7 @@ def change_user_role(user_id):
 
         cursor.execute("UPDATE users SET account_type = %s WHERE id = %s", (new_role, user_id))
 
-    
+    log_admin_action("change_role", "user", user_id, f"Changed role to {new_role}")
     return jsonify({"success": True, "message": f"User role updated to '{new_role.capitalize()}' successfully."})
 
 
@@ -2461,7 +2485,7 @@ def ban_user(user_id):
             "UPDATE users SET is_banned = 1, ban_reason = %s WHERE id = %s",
             (reason, user_id)
         )
-    
+    log_admin_action("ban_user", "user", user_id, f"Suspended: {user['full_name']} — {reason}")
     return jsonify({"success": True, "message": f"User '{user['full_name']}' has been suspended."})
 
 
@@ -2478,9 +2502,111 @@ def unban_user(user_id):
             "UPDATE users SET is_banned = 0, ban_reason = NULL WHERE id = %s",
             (user_id,)
         )
-    
+    log_admin_action("unban_user", "user", user_id, f"Reinstated: {user['full_name']}")
     return jsonify({"success": True, "message": f"User '{user['full_name']}' has been reinstated."})
 
+
+# ─── ADMIN LOGS PAGE (Commit 5) ───────────────────────────────────────────────
+
+@app.route("/admin/logs")
+@admin_required
+def admin_logs():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 30
+    action_filter = request.args.get("action", "").strip()
+
+    conn = get_db()
+    base = "FROM admin_logs"
+    params = []
+    if action_filter:
+        base += " WHERE action = %s"
+        params.append(action_filter)
+
+    with conn.cursor() as cursor:
+        cursor.execute(f"SELECT COUNT(*) as cnt {base}", tuple(params))
+        total_count = cursor.fetchone()["cnt"]
+
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            f"SELECT id, admin_name, action, target_type, target_id, details, created_at {base} ORDER BY created_at DESC LIMIT %s OFFSET %s",
+            tuple(params) + (per_page, offset)
+        )
+        logs_raw = cursor.fetchall()
+
+    logs = [{
+        "id": r["id"],
+        "admin_name": r["admin_name"] or "System",
+        "action": r["action"],
+        "target_type": r["target_type"] or "-",
+        "target_id": r["target_id"],
+        "details": r["details"] or "-",
+        "date": r["created_at"].strftime("%b %d, %Y %H:%M") if r["created_at"] else ""
+    } for r in logs_raw]
+
+    # Distinct actions for filter dropdown
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT action FROM admin_logs ORDER BY action")
+        actions = [r["action"] for r in cursor.fetchall()]
+
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+
+    return render_template(
+        "admin_logs.html",
+        logs=logs,
+        page=page,
+        total_pages=total_pages,
+        total_count=total_count,
+        per_page=per_page,
+        action_filter=action_filter,
+        actions=actions,
+        current_user=CurrentUserMock()
+    )
+
+
+# ─── CSV EXPORT (Commit 6) ────────────────────────────────────────────────────
+
+@app.route("/admin/users/export")
+@admin_required
+def export_users_csv():
+    import csv, io
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, full_name, email, account_type, verified, is_banned, ban_reason, created_at
+            FROM users ORDER BY created_at DESC
+        """)
+        users = cursor.fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Full Name", "Email", "Role", "Verified", "Banned", "Ban Reason", "Joined Date"])
+    for u in users:
+        writer.writerow([
+            u["id"],
+            u["full_name"],
+            u["email"],
+            u["account_type"],
+            "Yes" if u.get("verified") else "No",
+            "Yes" if u.get("is_banned") else "No",
+            u.get("ban_reason") or "",
+            u["created_at"].strftime("%Y-%m-%d %H:%M") if u["created_at"] else ""
+        ])
+
+    output.seek(0)
+    from flask import Response
+    from datetime import date
+    filename = f"talentkhoj_users_{date.today()}.csv"
+    log_admin_action("export_csv", "users", None, f"Exported {len(users)} users to CSV")
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 
 @app.route("/admin/verification")
@@ -2521,14 +2647,22 @@ def admin_verification():
 @app.route("/admin/projects")
 @admin_required
 def admin_projects():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 20
+    
     conn = get_db()
     with conn.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) as count FROM jobs")
+        total_count = cursor.fetchone()["count"]
+        
+        offset = (page - 1) * per_page
         cursor.execute("""
             SELECT j.id, j.title, j.opportunity_type, j.location, j.salary, j.created_at, c.company_name
             FROM jobs j
             JOIN companies c ON j.company_id = c.id
             ORDER BY j.created_at DESC
-        """)
+            LIMIT %s OFFSET %s
+        """, (per_page, offset))
         jobs = cursor.fetchall()
         
     projects_list = []
@@ -2543,13 +2677,19 @@ def admin_projects():
             "date": j["created_at"].strftime("%b %d, %Y") if j["created_at"] else ""
         })
         
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+        
     class CurrentUserMock:
         username = session.get("user_name", "Admin")
         
     return render_template(
         "admin_projects.html",
         projects=projects_list,
-        current_user=CurrentUserMock()
+        current_user=CurrentUserMock(),
+        page=page,
+        total_pages=total_pages,
+        total_count=total_count,
+        per_page=per_page
     )
 
 
@@ -2628,6 +2768,7 @@ def admin_settings():
         success_message=success,
         current_user=CurrentUserMock()
     )
+
 
 
 # ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
@@ -2712,7 +2853,6 @@ def mark_announcement_read():
     return jsonify({"success": True})
 
 
-
-
 if __name__ == "__main__":
     app.run(debug=True)
+

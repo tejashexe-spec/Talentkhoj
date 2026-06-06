@@ -1110,13 +1110,17 @@ def dashboard_search():
         cursor.execute(query, tuple(params))
         opportunities = cursor.fetchall()
         
-    # Get applied job IDs for current candidate
-    applied_job_ids = []
+    # Get applied and bookmarked job IDs for current candidate
+    applied_job_ids = set()
+    bookmarked_job_ids = set()
     profile_complete = False
     if session.get("account_type") == "individual":
         with conn.cursor() as cursor:
             cursor.execute("SELECT job_id FROM applications WHERE user_id = %s", (session["user_id"],))
             applied_job_ids = {row["job_id"] for row in cursor.fetchall()}
+            
+            cursor.execute("SELECT job_id FROM bookmarks WHERE user_id = %s", (session["user_id"],))
+            bookmarked_job_ids = {row["job_id"] for row in cursor.fetchall()}
             
             cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
             user_profile = cursor.fetchone()
@@ -1126,6 +1130,7 @@ def dashboard_search():
     import json
     for opp in opportunities:
         opp["already_applied"] = opp["id"] in applied_job_ids
+        opp["is_bookmarked"] = opp["id"] in bookmarked_job_ids
         if opp.get("skills_required"):
             opp["skills_list"] = [s.strip() for s in opp["skills_required"].split(",") if s.strip()]
         else:

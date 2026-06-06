@@ -540,6 +540,14 @@ def dashboard_events():
     return render_template("dashboard_events.html")
 
 
+@app.route("/dashboard/events/create", methods=["GET", "POST"])
+@login_required
+def dashboard_create_event():
+    if session.get("account_type") != "company":
+        return redirect(url_for("dashboard_events"))
+    return render_template("dashboard_create_event.html")
+
+
 @app.route("/dashboard/post-opportunity")
 @login_required
 def dashboard_post_opportunity():

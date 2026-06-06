@@ -1,0 +1,134 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Report #{{ report.id }} Details - TalentKhoj Admin{% endblock %}
+{% block page_title %}Report Details{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 pt-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="fw-semibold mb-0">Report #{{ report.id }}</h5>
+                    <small class="text-muted">Submitted on {{ report.date }}</small>
+                </div>
+                <div>
+                    {% if report.status == 'Pending' %}
+                        <span class="badge bg-warning text-dark fs-6">Pending</span>
+                    {% elif report.status == 'Resolved' %}
+                        <span class="badge bg-success fs-6">Resolved</span>
+                    {% else %}
+                        <span class="badge bg-secondary fs-6">{{ report.status }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6 class="fw-bold small text-uppercase text-muted">Report Type</h6>
+                    <p class="fs-5 fw-semibold">{{ report.type }}</p>
+                </div>
+                
+                <div class="mb-4">
+                    <h6 class="fw-bold small text-uppercase text-muted">Reported Content / Reason</h6>
+                    <div class="bg-light p-3 rounded">
+                        <p class="mb-0 text-dark">{{ report.content }}</p>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button onclick="resolveSingle({{ report.id }})" class="btn btn-success" {% if report.status == 'Resolved' %}disabled{% endif %}>
+                        <i class="fas fa-check"></i> Mark Resolved
+                    </button>
+                    <button onclick="deleteSingle({{ report.id }})" class="btn btn-outline-danger">
+                        <i class="fas fa-trash-alt"></i> Delete Report
+                    </button>
+                    <a href="{{ url_for('admin_reports') }}" class="btn btn-outline-secondary">Back to Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- User Information -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0 pt-4">
+                <h5 class="fw-semibold mb-0">Flagged User Details</h5>
+                <small class="text-muted">Entity associated with the report</small>
+            </div>
+            <div class="card-body">
+                {% if report.user_id %}
+                <div class="mb-3">
+                    <label class="small text-muted d-block">Full Name</label>
+                    <span class="fw-semibold">{{ report.user_name }}</span>
+                </div>
+                <div class="mb-3">
+                    <label class="small text-muted d-block">Email Address</label>
+                    <span>{{ report.user_email }}</span>
+                </div>
+                <div class="d-grid mt-4">
+                    <a href="{{ url_for('admin_users', search=report.user_email) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-user-edit"></i> View Profile & Actions
+                    </a>
+                </div>
+                {% else %}
+                <div class="text-center py-3 text-muted">
+                    <i class="fas fa-user-secret fa-2x mb-2 d-block"></i>
+                    Anonymous report or user no longer exists.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function resolveSingle(reportId) {
+    if (!confirm("Mark this report as resolved?")) return;
+    
+    fetch("/admin/report/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [reportId] })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(err => {
+        console.error("Error:", err);
+        alert("Failed to resolve report.");
+    });
+}
+
+function deleteSingle(reportId) {
+    if (!confirm("Are you sure you want to delete this report? This cannot be undone.")) return;
+    
+    fetch("/admin/report/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [reportId] })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.href = "{{ url_for('admin_reports') }}";
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(err => {
+        console.error("Error:", err);
+        alert("Failed to delete report.");
+    });
+}
+</script>
+{% endblock %}

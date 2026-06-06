@@ -118,11 +118,29 @@ class Database:
                     UNIQUE KEY unique_user_job (user_id, job_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS reports (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    type VARCHAR(255) NOT NULL,
+                    content TEXT NOT NULL,
+                    user_id INT DEFAULT NULL,
+                    status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
 
 
 
     def _run_migrations(self):
         """Add any missing columns to existing tables."""
+        # Unconditionally alter account_type enum to include 'admin'
+        try:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE users MODIFY COLUMN account_type ENUM('individual','company','admin') NOT NULL DEFAULT 'individual'")
+        except Exception as e:
+            print("Failed to alter account_type column:", e)
+
         # Users table migrations
         user_migrations = [
             ("avatar",       "ALTER TABLE users ADD COLUMN avatar VARCHAR(255) DEFAULT NULL"),
@@ -131,12 +149,14 @@ class Database:
             ("skills",       "ALTER TABLE users ADD COLUMN skills TEXT DEFAULT NULL"),
             ("cv_path",      "ALTER TABLE users ADD COLUMN cv_path VARCHAR(255) DEFAULT NULL"),
             ("cv_data",      "ALTER TABLE users ADD COLUMN cv_data TEXT DEFAULT NULL"),
-            ("account_type", "ALTER TABLE users ADD COLUMN account_type ENUM('individual','company') NOT NULL DEFAULT 'individual'"),
+            ("account_type", "ALTER TABLE users ADD COLUMN account_type ENUM('individual','company','admin') NOT NULL DEFAULT 'individual'"),
             ("email_verified", "ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0"),
             ("verification_token", "ALTER TABLE users ADD COLUMN verification_token VARCHAR(255) DEFAULT NULL"),
             ("verification_token_expires_at", "ALTER TABLE users ADD COLUMN verification_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
             ("reset_password_token", "ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(255) DEFAULT NULL"),
             ("reset_password_token_expires_at", "ALTER TABLE users ADD COLUMN reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
+            ("verified",     "ALTER TABLE users ADD COLUMN verified TINYINT(1) NOT NULL DEFAULT 0"),
+            ("created_at",   "ALTER TABLE users ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
         ]
         with self.__connection.cursor() as cursor:
             cursor.execute(

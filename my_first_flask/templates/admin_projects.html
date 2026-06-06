@@ -1,0 +1,84 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Manage Projects - TalentKhoj Admin{% endblock %}
+{% block page_title %}Active Opportunities & Projects{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 pt-4">
+        <h5 class="fw-semibold mb-0">Active Listings</h5>
+        <small class="text-muted">Manage all active jobs, internships, and events published on the portal</small>
+    </div>
+    
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Company Name</th>
+                        <th>Listing Type</th>
+                        <th>Location</th>
+                        <th>Compensation</th>
+                        <th>Date Published</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in projects %}
+                    <tr id="project-row-{{ p.id }}">
+                        <td class="fw-semibold">{{ p.title }}</td>
+                        <td>{{ p.company }}</td>
+                        <td>
+                            <span class="badge {% if p.type == 'job' %}bg-primary{% elif p.type == 'internship' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                {{ p.type|capitalize }}
+                            </span>
+                        </td>
+                        <td>{{ p.location }}</td>
+                        <td>{{ p.salary }}</td>
+                        <td class="text-muted small">{{ p.date }}</td>
+                        <td class="text-end">
+                            <button onclick="deleteProject({{ p.id }})" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="fas fa-briefcase fa-2x mb-2 d-block"></i>
+                            No listings published.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteProject(jobId) {
+    if (!confirm("Are you sure you want to delete this listing? It will remove it from search listings and applicants' dashboards. This action is irreversible.")) return;
+    
+    fetch(`/admin/project/delete/${jobId}`, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            document.getElementById(`project-row-${jobId}`).remove();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(err => {
+        console.error("Error:", err);
+        alert("Failed to delete listing.");
+    });
+}
+</script>
+{% endblock %}

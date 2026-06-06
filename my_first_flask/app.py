@@ -2093,6 +2093,10 @@ def admin_dashboard():
         cursor.execute("SELECT COUNT(*) as count FROM users")
         total_users = cursor.fetchone()["count"]
 
+        # Suspended Users
+        cursor.execute("SELECT COUNT(*) as count FROM users WHERE is_banned = 1")
+        suspended_users = cursor.fetchone()["count"]
+
         # Pending Reports
         cursor.execute("SELECT COUNT(*) as count FROM reports WHERE status = 'Pending'")
         pending_reports = cursor.fetchone()["count"]
@@ -2220,6 +2224,7 @@ def admin_dashboard():
         active_projects=active_projects,
         total_applications=total_applications,
         total_companies=total_companies,
+        suspended_users=suspended_users,
         user_growth=user_growth,
         job_growth=job_growth,
         recent_reports=recent_reports,
@@ -2406,6 +2411,7 @@ def delete_reports():
 def admin_users():
     search = request.args.get("search", "").strip()
     role_filter = request.args.get("role", "").strip()
+    status_filter = request.args.get("status", "").strip()
     page = max(1, int(request.args.get("page", 1)))
     per_page = 20
 
@@ -2419,6 +2425,10 @@ def admin_users():
     if role_filter:
         conditions.append("account_type = %s")
         params.append(role_filter)
+    if status_filter == "suspended":
+        conditions.append("is_banned = 1")
+    elif status_filter == "active":
+        conditions.append("is_banned = 0")
     if conditions:
         base_query += " WHERE " + " AND ".join(conditions)
 
@@ -2452,6 +2462,7 @@ def admin_users():
         users=users_list,
         search=search,
         selected_role=role_filter,
+        selected_status=status_filter,
         page=page,
         total_pages=total_pages,
         total_count=total_count,

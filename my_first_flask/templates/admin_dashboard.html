@@ -191,6 +191,11 @@
                        class="btn btn-outline-info text-start d-flex align-items-center gap-2">
                         <i class="fas fa-users"></i> Manage Users
                     </a>
+                    <a href="{{ url_for('admin_users', status='suspended') }}"
+                       class="btn btn-outline-danger text-start d-flex align-items-center gap-2">
+                        <i class="fas fa-user-shield"></i> Suspended Users
+                        {% if suspended_users > 0 %}<span class="badge bg-danger ms-auto">{{ suspended_users }}</span>{% endif %}
+                    </a>
                     <a href="{{ url_for('admin_projects') }}"
                        class="btn btn-outline-success text-start d-flex align-items-center gap-2">
                         <i class="fas fa-briefcase"></i> View Jobs

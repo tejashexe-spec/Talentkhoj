@@ -572,7 +572,26 @@ def user_profile(user_id):
     if not user:
         flash("User not found.", "error")
         return redirect(url_for("home"))
-    return render_template("user_profile.html", user=user)
+        
+    # Query reviews and rating stats
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT r.*, u.full_name as reviewer_name, u.avatar as reviewer_avatar, u.account_type as reviewer_type "
+            "FROM reviews r JOIN users u ON r.reviewer_id = u.id "
+            "WHERE r.reviewee_id = %s ORDER BY r.created_at DESC",
+            (user_id,)
+        )
+        reviews = cursor.fetchall()
+        
+        cursor.execute(
+            "SELECT AVG(rating) as avg_rating, COUNT(*) as review_count FROM reviews WHERE reviewee_id = %s",
+            (user_id,)
+        )
+        stats = cursor.fetchone()
+        avg_rating = round(stats["avg_rating"], 1) if stats["avg_rating"] else 0.0
+        review_count = stats["review_count"]
+        
+    return render_template("user_profile.html", user=user, reviews=reviews, avg_rating=avg_rating, review_count=review_count)
 
 
 @app.route("/company/<int:user_id>")
@@ -587,7 +606,26 @@ def company_profile(user_id):
     if not company:
         flash("Company not found.", "error")
         return redirect(url_for("home"))
-    return render_template("company_profile.html", company=company)
+        
+    # Query reviews and rating stats
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT r.*, u.full_name as reviewer_name, u.avatar as reviewer_avatar, u.account_type as reviewer_type "
+            "FROM reviews r JOIN users u ON r.reviewer_id = u.id "
+            "WHERE r.reviewee_id = %s ORDER BY r.created_at DESC",
+            (user_id,)
+        )
+        reviews = cursor.fetchall()
+        
+        cursor.execute(
+            "SELECT AVG(rating) as avg_rating, COUNT(*) as review_count FROM reviews WHERE reviewee_id = %s",
+            (user_id,)
+        )
+        stats = cursor.fetchone()
+        avg_rating = round(stats["avg_rating"], 1) if stats["avg_rating"] else 0.0
+        review_count = stats["review_count"]
+        
+    return render_template("company_profile.html", company=company, reviews=reviews, avg_rating=avg_rating, review_count=review_count)
 
 
 # ─── STATIC PAGES ────────────────────────────────────────────────────────────
@@ -1559,6 +1597,79 @@ def select_account_type():
             return redirect(url_for("home"))
 
     return render_template("select_account_type.html", errors=errors)
+
+
+@app.route("/reviews/submit", methods=["POST"])
+@login_required
+def submit_review():
+    reviewer_id = session.get("user_id")
+    reviewer_type = session.get("account_type")
+    
+    reviewee_id = request.form.get("reviewee_id")
+    rating_str = request.form.get("rating")
+    comment = request.form.get("comment", "").strip()
+    
+    if not reviewee_id or not rating_str or not comment:
+        flash("All fields are required.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    try:
+        reviewee_id = int(reviewee_id)
+        rating = int(rating_str)
+    except ValueError:
+        flash("Invalid input data.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    if reviewer_id == reviewee_id:
+        flash("You cannot review yourself.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    if rating < 1 or rating > 5:
+        flash("Rating must be between 1 and 5.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT account_type FROM users WHERE id = %s", (reviewee_id,))
+        reviewee = cursor.fetchone()
+        
+    if not reviewee:
+        flash("User not found.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    reviewee_type = reviewee["account_type"]
+    
+    if reviewer_type == "company" and reviewee_type != "individual":
+        flash("Companies can only review individual candidates.", "error")
+        return redirect(request.referrer or url_for("home"))
+    elif reviewer_type == "individual" and reviewee_type != "company":
+        flash("Candidates can only review companies.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM reviews WHERE reviewer_id = %s AND reviewee_id = %s",
+            (reviewer_id, reviewee_id)
+        )
+        existing_review = cursor.fetchone()
+        
+        if existing_review:
+            cursor.execute(
+                "UPDATE reviews SET rating = %s, comment = %s, created_at = CURRENT_TIMESTAMP WHERE id = %s",
+                (rating, comment, existing_review["id"])
+            )
+            flash("Your review has been updated.", "success")
+        else:
+            cursor.execute(
+                "INSERT INTO reviews (reviewer_id, reviewee_id, rating, comment) VALUES (%s, %s, %s, %s)",
+                (reviewer_id, reviewee_id, rating, comment)
+            )
+            flash("Review submitted successfully.", "success")
+            
+    if reviewee_type == "company":
+        return redirect(url_for("company_profile", user_id=reviewee_id))
+    else:
+        return redirect(url_for("user_profile", user_id=reviewee_id))
 
 
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ class Database:
             )
             self._init_tables()
             self._run_migrations()
+            self._seed_mock_reviews()
             print("Database connected successfully!")
 
         except pymysql.MySQLError as e:
@@ -168,3 +169,25 @@ class Database:
 
     def get_connection(self):
         return self.__connection
+
+    def _seed_mock_reviews(self):
+        """Seed mock reviews if the reviews table is empty."""
+        with self.__connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) as cnt FROM reviews")
+            if cursor.fetchone()["cnt"] == 0:
+                cursor.execute("SELECT id FROM users WHERE account_type = 'individual' LIMIT 1")
+                candidate = cursor.fetchone()
+                cursor.execute("SELECT id FROM users WHERE account_type = 'company' LIMIT 1")
+                company = cursor.fetchone()
+                
+                if candidate and company:
+                    candidate_id = candidate["id"]
+                    company_id = company["id"]
+                    
+                    cursor.execute("""
+                        INSERT INTO reviews (reviewer_id, reviewee_id, rating, comment)
+                        VALUES 
+                        (%s, %s, 5, 'Exceptional experience interviewing with this company. Very transparent and modern tech stack.'),
+                        (%s, %s, 4, 'Outstanding candidate with deep problem-solving skills and a solid understanding of web development frameworks.')
+                    """, (candidate_id, company_id, company_id, candidate_id))
+                    print("✅ Mock reviews seeded successfully!")

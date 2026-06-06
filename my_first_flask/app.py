@@ -1192,17 +1192,58 @@ def dashboard_apply(job_id):
     return jsonify({"success": True, "message": "Your application has been successfully submitted!"})
 
 
+@app.route("/dashboard/jobs/bookmark/<int:job_id>", methods=["POST"])
+@login_required
+def dashboard_bookmark_toggle(job_id):
+    if session.get("account_type") != "individual":
+        return jsonify({"success": False, "message": "Only candidate accounts can bookmark opportunities."}), 403
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        # Check if job exists
+        cursor.execute("SELECT id FROM jobs WHERE id = %s", (job_id,))
+        job = cursor.fetchone()
+        if not job:
+            return jsonify({"success": False, "message": "Opportunity not found."}), 404
+            
+        # Check existing bookmark
+        cursor.execute("SELECT id FROM bookmarks WHERE user_id = %s AND job_id = %s", (session["user_id"], job_id))
+        bookmark = cursor.fetchone()
+        
+        if bookmark:
+            # Remove bookmark
+            cursor.execute("DELETE FROM bookmarks WHERE user_id = %s AND job_id = %s", (session["user_id"], job_id))
+            bookmarked = False
+            message = "Bookmark removed."
+            try:
+                from my_first_flask.utils.logger import log_activity
+                log_activity("Remove Bookmark", f"Candidate {session['user_name']} removed bookmark from job ID {job_id}")
+            except Exception:
+                pass
+        else:
+            # Add bookmark
+            cursor.execute("INSERT INTO bookmarks (user_id, job_id) VALUES (%s, %s)", (session["user_id"], job_id))
+            bookmarked = True
+            message = "Opportunity saved successfully."
+            try:
+                from my_first_flask.utils.logger import log_activity
+                log_activity("Add Bookmark", f"Candidate {session['user_name']} bookmarked job ID {job_id}")
+            except Exception:
+                pass
+                
+    return jsonify({"success": True, "bookmarked": bookmarked, "message": message})
+
 
 @app.route("/dashboard/applications")
 @login_required
 def dashboard_applications():
-    return render_template("dashboard_applications.html")
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/dashboard/saved")
 @login_required
 def dashboard_saved():
-    return render_template("dashboard_saved.html")
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/dashboard/inbox")

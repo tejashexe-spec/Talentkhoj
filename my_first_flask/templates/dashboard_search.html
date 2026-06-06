@@ -1213,15 +1213,12 @@
                 'Content-Type': 'application/json'
             }
         })
-        .then(response => {
-            if (response.status === 403) {
-                alert("Only candidates can bookmark opportunities.");
-                throw new Error("Unauthorized");
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            if (data.success) {
+            if (!data.success) {
+                alert(data.message || "Could not toggle bookmark.");
+                return;
+            }
                 const opp = window.currentSelectedOpportunity;
                 if (opp && opp.id === jobId) {
                     opp.is_bookmarked = data.bookmarked;

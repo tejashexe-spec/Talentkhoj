@@ -1229,8 +1229,7 @@ def dashboard_apply(job_id):
 @app.route("/dashboard/jobs/bookmark/<int:job_id>", methods=["POST"])
 @login_required
 def dashboard_bookmark_toggle(job_id):
-    if session.get("account_type") != "individual":
-        return jsonify({"success": False, "message": "Only candidate accounts can bookmark opportunities."}), 403
+    # Allow any authenticated user to bookmark opportunities (not limited to 'individual' account type)
         
     conn = get_db()
     with conn.cursor() as cursor:

@@ -495,3 +495,138 @@ main { flex: 1; }
     font-size: 12px;
     border-top: 1px solid #0d2060;
 }
+
+/* ── REVIEW SYSTEM ── */
+.reviews-section {
+    margin-top: 40px;
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+}
+
+.reviews-section h3 {
+    font-size: 18px;
+    margin-bottom: 20px;
+    color: #0f172a;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.rating-badge {
+    background: #fef3c7;
+    color: #d97706;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 30px;
+}
+
+.review-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.review-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.reviewer-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.reviewer-info img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.reviewer-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.reviewer-role {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.review-date {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.stars-display {
+    color: #fbbf24;
+    font-size: 14px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 2px;
+}
+
+.review-comment {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.5;
+}
+
+/* Review Submission Form */
+.review-form-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 30px;
+}
+
+.review-form-card h4 {
+    font-size: 16px;
+    color: #1e293b;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.rating-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.rating-select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
+    font-family: inherit;
+    font-size: 14px;
+    background: white;
+    outline: none;
+    cursor: pointer;
+}
+
+.rating-select:focus {
+    border-color: #2456ff;
+}

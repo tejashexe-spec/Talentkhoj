@@ -11,3 +11,13 @@
 
 | 2026-06-03 17:34:06 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 3) posted a new internship: 'UI/UX' at Ktm (Onsite) |
 | 2026-06-03 17:34:37 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 8) applied to job ID 3 |
+| 2026-06-03 17:48:02 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'shortlisted' for job 'UI/UX' by Company (ID: 3) |
+| 2026-06-03 17:48:04 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'rejected' for job 'UI/UX' by Company (ID: 3) |
+| 2026-06-03 17:48:05 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'shortlisted' for job 'UI/UX' by Company (ID: 3) |
+| 2026-06-03 17:48:08 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'reviewed' for job 'UI/UX' by Company (ID: 3) |
+| 2026-06-03 17:48:10 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'shortlisted' for job 'UI/UX' by Company (ID: 3) |
+| 2026-06-03 19:06:02 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'reviewed' for job 'UI/UX' by Company (ID: 3) |
+| 2026-06-03 21:17:39 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 1) posted a new internship: 'UI/UX' at ktm (Onsite) |
+| 2026-06-03 21:18:11 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 8) applied to job ID 4 |
+| 2026-06-03 21:18:35 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'reviewed' for job 'UI/UX' by Company (ID: 1) |
+| 2026-06-03 21:18:37 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'rejected' for job 'UI/UX' by Company (ID: 1) |

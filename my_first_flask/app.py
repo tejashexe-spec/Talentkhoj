@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import Flask, render_template, session, redirect, url_for, request, flash, jsonify
+from flask import Flask, render_template, session, redirect, url_for, request, flash, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
 from flask_mail import Mail, Message
@@ -68,6 +68,12 @@ def login_required(f):
 @app.route("/")
 def home():
     return render_template("home.html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_file(os.path.join(BASE_DIR, "static", "favicon.png"), mimetype="image/png")
+
 
 
 # ─── REGISTER ────────────────────────────────────────────────────────────────
@@ -382,21 +388,125 @@ def profile():
     if request.method == "POST":
         action = request.form.get("action")
 
-        # ── Change Name ──────────────────────────────────────────────────────
-        if action == "change_name":
-            full_name = request.form.get("full_name", "").strip()
-            if not full_name:
-                name_message = "Name cannot be empty."
-            else:
-                conn = get_db()
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        "UPDATE users SET full_name = %s WHERE id = %s",
-                        (full_name, session["user_id"])
-                    )
-                session["user_name"] = full_name
-                session.modified = True
-                name_message = "Name updated successfully."
+        # ── About Details ───────────────────────────────────────────────────
+        if action == "about":
+            first_name = request.form.get("first_name", "").strip()
+            last_name = request.form.get("last_name", "").strip()
+            gender = request.form.get("gender", "").strip()
+            dob = request.form.get("dob", "").strip()
+            sectors = request.form.get("sectors", "").strip()
+            designation = request.form.get("designation", "").strip()
+            bio = request.form.get("bio", "").strip()
+            
+            full_name = f"{first_name} {last_name}".strip()
+            
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT cv_data FROM users WHERE id = %s", (session["user_id"],))
+                row = cursor.fetchone()
+            
+            import json
+            try:
+                cv_data = json.loads(row["cv_data"]) if row and row.get("cv_data") else {}
+            except Exception:
+                cv_data = {}
+                
+            cv_data["first_name"] = first_name
+            cv_data["last_name"] = last_name
+            cv_data["gender"] = gender
+            cv_data["dob"] = dob
+            cv_data["sectors"] = sectors
+            cv_data["designation"] = designation
+            cv_data["bio"] = bio
+            cv_data["full_name"] = full_name
+            
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET full_name = %s, bio = %s, cv_data = %s WHERE id = %s",
+                    (full_name, bio, json.dumps(cv_data), session["user_id"])
+                )
+            session["user_name"] = full_name
+            session.modified = True
+            name_message = "About details updated successfully."
+
+        # ── Address Details ──────────────────────────────────────────────────
+        elif action == "address":
+            province = request.form.get("province", "").strip()
+            city = request.form.get("city", "").strip()
+            postal_code = request.form.get("postal_code", "").strip()
+            current_address = request.form.get("current_address", "").strip()
+            
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT cv_data FROM users WHERE id = %s", (session["user_id"],))
+                row = cursor.fetchone()
+            
+            import json
+            try:
+                cv_data = json.loads(row["cv_data"]) if row and row.get("cv_data") else {}
+            except Exception:
+                cv_data = {}
+                
+            cv_data["province"] = province
+            cv_data["city"] = city
+            cv_data["postal_code"] = postal_code
+            cv_data["current_address"] = current_address
+            cv_data["location"] = f"{city}, {province}"
+            
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET location = %s, cv_data = %s WHERE id = %s",
+                    (f"{city}, {province}", json.dumps(cv_data), session["user_id"])
+                )
+            name_message = "Address details updated successfully."
+
+        # ── Social Links ─────────────────────────────────────────────────────
+        elif action == "socials":
+            social_types = request.form.getlist("social_type[]")
+            social_links = request.form.getlist("social_link[]")
+            
+            socials_list = []
+            portfolio_link = ""
+            github_link = ""
+            linkedin_link = ""
+            
+            for i in range(len(social_types)):
+                t = social_types[i].strip()
+                l = social_links[i].strip()
+                if t and l:
+                    socials_list.append({"type": t, "link": l})
+                    if t.lower() == "portfolio":
+                        portfolio_link = l
+                    elif t.lower() == "github":
+                        github_link = l
+                    elif t.lower() == "linkedin":
+                        linkedin_link = l
+            
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT cv_data FROM users WHERE id = %s", (session["user_id"],))
+                row = cursor.fetchone()
+            
+            import json
+            try:
+                cv_data = json.loads(row["cv_data"]) if row and row.get("cv_data") else {}
+            except Exception:
+                cv_data = {}
+                
+            cv_data["socials"] = socials_list
+            if portfolio_link:
+                cv_data["portfolio"] = portfolio_link
+            if github_link:
+                cv_data["github"] = github_link
+            if linkedin_link:
+                cv_data["linkedin"] = linkedin_link
+                
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET cv_data = %s WHERE id = %s",
+                    (json.dumps(cv_data), session["user_id"])
+                )
+            name_message = "Social links updated successfully."
 
         # ── Change Password ──────────────────────────────────────────────────
         elif action == "change_password":
@@ -452,7 +562,24 @@ def profile():
                 else:
                     name_message = "Invalid file type. Use PNG, JPG, GIF or WEBP."
 
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM users WHERE id = %s", (session["user_id"],))
+        user_profile = cursor.fetchone()
+
+    if user_profile and user_profile.get("cv_data"):
+        import json
+        try:
+            cv_data = json.loads(user_profile["cv_data"])
+            if isinstance(cv_data, dict):
+                for k, v in cv_data.items():
+                    if k not in user_profile or user_profile[k] is None:
+                        user_profile[k] = v
+        except Exception:
+            pass
+
     return render_template("profile.html",
+        profile=user_profile,
         name_message=name_message,
         password_message=password_message,
         password_errors=password_errors
@@ -536,11 +663,80 @@ def dashboard():
     else:
         # Candidate metrics
         with conn.cursor() as cursor:
+            # 1. Has CV
             cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
             user = cursor.fetchone()
             stats["has_cv"] = bool(user and user["cv_path"])
             
-    return render_template("dashboard.html", stats=stats, opportunities=my_opportunities)
+            # 2. Applied Count
+            cursor.execute("SELECT COUNT(*) as count FROM applications WHERE user_id = %s", (session["user_id"],))
+            stats["applied_count"] = cursor.fetchone()["count"]
+            
+            # 3. Rejected Count
+            cursor.execute("SELECT COUNT(*) as count FROM applications WHERE user_id = %s AND status = 'rejected'", (session["user_id"],))
+            stats["rejected_count"] = cursor.fetchone()["count"]
+            
+            # 4. Total Jobs (Alerts)
+            cursor.execute("SELECT COUNT(*) as count FROM jobs")
+            stats["alerts_count"] = cursor.fetchone()["count"]
+            
+            # 5. Bookmarks
+            stats["bookmarks_count"] = 0
+            
+            # 6. Recent Applications
+            cursor.execute("""
+                SELECT j.id as job_id, j.title, j.location, j.opportunity_type, a.status, a.created_at
+                FROM applications a
+                JOIN jobs j ON a.job_id = j.id
+                WHERE a.user_id = %s
+                ORDER BY a.created_at DESC
+                LIMIT 5
+            """, (session["user_id"],))
+            recent_applications = cursor.fetchall()
+            
+            # 7. Activities
+            cursor.execute("SELECT cv_path, cv_data FROM users WHERE id = %s", (session["user_id"],))
+            ud = cursor.fetchone()
+            activities = []
+            if ud:
+                activities.append({
+                    "title": "Account created",
+                    "description": f"{session['user_name']} | {session.get('user_email', '')}",
+                    "time": "Joined"
+                })
+                if ud.get("cv_path"):
+                    activities.append({
+                        "title": "Resume active",
+                        "description": "Professional CV is online and ready for recruitment",
+                        "time": "Active"
+                    })
+                
+            cursor.execute("""
+                SELECT j.title, a.status, a.created_at
+                FROM applications a
+                JOIN jobs j ON a.job_id = j.id
+                WHERE a.user_id = %s
+                ORDER BY a.created_at DESC
+                LIMIT 6
+            """, (session["user_id"],))
+            user_apps = cursor.fetchall()
+            for app in user_apps:
+                activities.append({
+                    "title": f"Applied to {app['title']}",
+                    "description": f"{session['user_name']} | {session.get('user_email', '')}",
+                    "time": app["created_at"].strftime("%Y-%m-%d %H:%M")
+                })
+                if app["status"] != "applied":
+                    activities.append({
+                        "title": f"Application status changed to {app['status'].upper()}",
+                        "description": f"Update on role: {app['title']}",
+                        "time": "Recent"
+                    })
+            
+        return render_template("dashboard.html", 
+                               stats=stats, 
+                               recent_applications=recent_applications, 
+                               activities=activities)
 
 
 
@@ -1290,10 +1486,49 @@ def generate_cv_html(data):
             .entry {{
                 margin-bottom: 8px;
             }}
+            .print-bar {{
+                display: none !important;
+            }}
+        }}
+        
+        .print-bar {{
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }}
+        
+        .print-btn {{
+            background: #2456ff;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(36, 86, 255, 0.3);
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            text-decoration: none;
+        }}
+        
+        .print-btn:hover {{
+            background: #1848d8;
+            transform: translateY(-1px);
         }}
     </style>
 </head>
 <body>
+    <div class="print-bar">
+        <button onclick="window.print()" class="print-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 6px; display: inline-block; vertical-align: middle;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+        </button>
+    </div>
+
     <div class="header">
         <h1>{full_name}</h1>
         <div class="links">{links_html}</div>
@@ -1304,6 +1539,14 @@ def generate_cv_html(data):
     {proj_html}
     {skills_html}
     {certs_html}
+    
+    <script>
+        if (window.location.search.includes('print=true')) {{
+            window.onload = function() {{
+                window.print();
+            }}
+        }}
+    </script>
 </body>
 </html>"""
     return html_template
@@ -1336,6 +1579,56 @@ def dashboard_cv():
         cv_data=cv_data,
         cv_data_raw=cv_data_str
     )
+
+
+@app.route("/cv/view/<int:user_id>", methods=["GET"])
+def view_cv(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT cv_path, cv_data, account_type FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        
+    if not user or user["account_type"] != "individual":
+        flash("CV not found.", "error")
+        return redirect(url_for("home"))
+        
+    cv_path = user.get("cv_path")
+    cv_data_str = user.get("cv_data")
+    
+    # If they uploaded a static file (PDF/PNG/etc.)
+    if cv_path and not cv_path.lower().endswith(".html"):
+        full_path = os.path.join(BASE_DIR, cv_path.lstrip("/"))
+        if os.path.exists(full_path):
+            # If download or print parameter is requested, serve as a downloadable attachment
+            if request.args.get("download") == "true" or request.args.get("print") == "true":
+                from flask import send_file
+                filename = os.path.basename(full_path)
+                return send_file(full_path, as_attachment=True, download_name=filename)
+            return redirect(cv_path)
+            
+    # Try dynamic HTML generation on the fly if CV JSON data is available
+    if cv_data_str:
+        import json
+        try:
+            cv_data = json.loads(cv_data_str)
+            if cv_data:
+                html_content = generate_cv_html(cv_data)
+                return html_content
+        except Exception:
+            pass
+            
+    # Fallback to static HTML file if exists on disk
+    if cv_path:
+        full_path = os.path.join(BASE_DIR, cv_path.lstrip("/"))
+        if os.path.exists(full_path):
+            if request.args.get("download") == "true":
+                from flask import send_file
+                filename = os.path.basename(full_path)
+                return send_file(full_path, as_attachment=True, download_name=filename)
+            return redirect(cv_path)
+            
+    flash("This candidate does not have a valid active CV on the server.", "error")
+    return redirect(url_for("home"))
 
 
 @app.route("/dashboard/cv/build", methods=["POST"])

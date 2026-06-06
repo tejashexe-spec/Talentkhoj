@@ -545,7 +545,59 @@ def dashboard_events():
 def dashboard_create_event():
     if session.get("account_type") != "company":
         return redirect(url_for("dashboard_events"))
-    return render_template("dashboard_create_event.html")
+        
+    error = None
+    form_data = {}
+    
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        event_date_str = request.form.get("event_date", "").strip()
+        location = request.form.get("location", "").strip()
+        registration_link = request.form.get("registration_link", "").strip() or None
+        
+        form_data = {
+            "title": title,
+            "description": description,
+            "event_date": event_date_str,
+            "location": location,
+            "registration_link": registration_link
+        }
+        
+        if not title:
+            error = "Event title is required."
+        elif not description:
+            error = "Event description is required."
+        elif not event_date_str:
+            error = "Event date and time is required."
+        elif not location:
+            error = "Event location is required."
+        else:
+            try:
+                event_date = datetime.strptime(event_date_str, "%Y-%m-%dT%H:%M")
+                conn = get_db()
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+                    company = cursor.fetchone()
+                
+                if not company:
+                    error = "Company profile not found. Please register as a company first."
+                else:
+                    company_id = company["id"]
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "INSERT INTO events (company_id, title, description, event_date, location, registration_link) "
+                            "VALUES (%s, %s, %s, %s, %s, %s)",
+                            (company_id, title, description, event_date, location, registration_link)
+                        )
+                    flash("Event created successfully!", "success")
+                    return redirect(url_for("dashboard_events"))
+            except ValueError:
+                error = "Invalid date and time format."
+            except Exception as e:
+                error = f"An error occurred: {str(e)}"
+                
+    return render_template("dashboard_create_event.html", form_data=form_data, error=error)
 
 
 @app.route("/dashboard/post-opportunity")

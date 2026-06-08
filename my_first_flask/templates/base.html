@@ -20,7 +20,7 @@
         <li><a href="/dashboard/search?type=internship" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'internship' %}active{% endif %}">Internships</a></li>
         <li><a href="/dashboard/search?type=job" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'job' %}active{% endif %}">Jobs</a></li>
         <li><a href="/dashboard/events" class="{% if request.path == '/dashboard/events' %}active{% endif %}">Events</a></li>
-        <li><a href="#" class="{% if request.path == '/community' %}active{% endif %}">Community</a></li>
+        <li><a href="/feed" class="{% if request.path == '/feed' %}active{% endif %}">Community</a></li>
     </ul>
 
     <div style="display: flex; align-items: center; gap: 16px;">

@@ -416,8 +416,12 @@
 </div>
 
 <script>
+    let currentPage = 1;
+    let loadingPosts = false;
+    let hasMorePosts = true;
+
     document.addEventListener("DOMContentLoaded", function() {
-        loadFeed();
+        loadFeed(true);
         
         const postForm = document.getElementById("create-post-form");
         if (postForm) {
@@ -426,6 +430,15 @@
                 submitPost(this);
             });
         }
+
+        // Infinite Scroll Event Listener
+        window.addEventListener("scroll", () => {
+            if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 100) {
+                if (!loadingPosts && hasMorePosts) {
+                    loadFeed(false);
+                }
+            }
+        });
     });
 
     function previewImage(input) {
@@ -445,19 +458,44 @@
         document.getElementById('image-preview').src = "";
     }
 
-    function loadFeed() {
-        fetch("/feed?ajax=1")
+    function loadFeed(reset = false) {
+        if (reset) {
+            currentPage = 1;
+            hasMorePosts = true;
+            const timeline = document.getElementById("feed-timeline");
+            timeline.innerHTML = '<div style="text-align: center; padding: 20px;" id="loading-spinner">Loading posts...</div>';
+        }
+        
+        loadingPosts = true;
+        
+        fetch(`/feed?ajax=1&page=${currentPage}`)
             .then(res => res.json())
             .then(data => {
                 const timeline = document.getElementById("feed-timeline");
-                timeline.innerHTML = "";
-                if (data.posts && data.posts.length > 0) {
-                    data.posts.forEach(post => {
-                        timeline.appendChild(createPostHTML(post));
-                    });
-                } else {
+                const spinner = document.getElementById("loading-spinner");
+                if (spinner) spinner.remove();
+
+                if (reset && (!data.posts || data.posts.length === 0)) {
                     timeline.innerHTML = `<div style="text-align: center; padding: 40px; color: #64748b; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">No posts in the feed yet. Be the first to share!</div>`;
+                    hasMorePosts = false;
+                } else if (data.posts && data.posts.length > 0) {
+                    data.posts.forEach(post => {
+                        // Check if post already exists to prevent duplication
+                        if (!document.getElementById(`post-${post.id}`)) {
+                            timeline.appendChild(createPostHTML(post));
+                        }
+                    });
+                    currentPage++;
+                    if (data.posts.length < 10) {
+                        hasMorePosts = false;
+                    }
+                } else {
+                    hasMorePosts = false;
                 }
+                loadingPosts = false;
+            })
+            .catch(() => {
+                loadingPosts = false;
             });
     }
 
@@ -548,7 +586,7 @@
             if (data.success) {
                 form.reset();
                 removeImagePreview();
-                loadFeed();
+                loadFeed(true);
             } else {
                 alert(data.error || "Failed to create post.");
             }
@@ -639,7 +677,7 @@
     function submitComment(e, postId) {
         e.preventDefault();
         const input = document.getElementById(`comment-input-${postId}`);
-        const text = input.value.strip ? input.value.strip() : input.value;
+        const text = input.value.trim ? input.value.trim() : input.value;
         
         fetch(`/post/${postId}/comment`, {
             method: "POST",
@@ -663,7 +701,7 @@
     function submitReply(e, postId, parentId) {
         e.preventDefault();
         const input = document.getElementById(`reply-input-${parentId}`);
-        const text = input.value.strip ? input.value.strip() : input.value;
+        const text = input.value.trim ? input.value.trim() : input.value;
         
         fetch(`/post/${postId}/comment`, {
             method: "POST",

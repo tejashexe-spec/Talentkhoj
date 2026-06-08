@@ -143,6 +143,34 @@ def create_post():
     return jsonify({"success": True, "message": "Post published!"})
 
 
+@app.route("/post/react", methods=["POST"])
+@login_required
+def toggle_reaction():
+    data = request.get_json() or {}
+    post_id = data.get("post_id")
+    if not post_id:
+        return jsonify({"success": False, "error": "Missing post_id"}), 400
+
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM reactions WHERE user_id = %s AND post_id = %s", (user_id, post_id))
+        existing = cursor.fetchone()
+        
+        if existing:
+            cursor.execute("DELETE FROM reactions WHERE user_id = %s AND post_id = %s", (user_id, post_id))
+            action = "unliked"
+        else:
+            cursor.execute("INSERT INTO reactions (user_id, post_id, reaction_type) VALUES (%s, %s, 'like')", (user_id, post_id))
+            action = "liked"
+            
+        cursor.execute("SELECT COUNT(*) as cnt FROM reactions WHERE post_id = %s", (post_id,))
+        like_count = cursor.fetchone()["cnt"]
+
+    return jsonify({"success": True, "action": action, "like_count": like_count})
+
+
+
 
 @app.route("/favicon.ico")
 def favicon():

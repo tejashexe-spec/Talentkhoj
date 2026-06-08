@@ -70,6 +70,44 @@ def home():
     return render_template("home.html")
 
 
+@app.route("/feed", methods=["GET"])
+@login_required
+def get_feed():
+    user_id = session.get("user_id", 0)
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1":
+        conn = get_db()
+        SQL_QUERY = """
+            SELECT p.id, p.content, p.image_path, p.created_at,
+                   u.full_name, u.avatar, u.account_type,
+                   COUNT(DISTINCT r.id) AS like_count,
+                   COUNT(DISTINCT c.id) AS comment_count,
+                   EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = %s) AS has_liked
+            FROM posts p
+            JOIN users u ON p.user_id = u.id
+            LEFT JOIN reactions r ON p.id = r.post_id AND r.reaction_type = 'like'
+            LEFT JOIN comments c ON p.id = c.post_id
+            GROUP BY p.id, u.id
+            ORDER BY p.created_at DESC
+            LIMIT %s OFFSET %s
+        """
+        with conn.cursor() as cursor:
+            cursor.execute(SQL_QUERY, (user_id, per_page, offset))
+            posts = cursor.fetchall()
+            
+        # Format datetimes
+        for post in posts:
+            if post.get("created_at"):
+                post["created_at"] = post["created_at"].strftime("%Y-%m-%d %H:%M")
+
+        return jsonify({"posts": posts})
+
+    return render_template("feed.html")
+
+
 @app.route("/favicon.ico")
 def favicon():
     return send_file(os.path.join(BASE_DIR, "static", "favicon.png"), mimetype="image/png")

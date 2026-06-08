@@ -1464,7 +1464,20 @@ def dashboard_bookmark_toggle(job_id):
 @app.route("/dashboard/applications")
 @login_required
 def dashboard_applications():
-    return redirect(url_for("dashboard"))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.id as application_id, a.status, a.created_at as applied_at,
+               j.id as job_id, j.title, j.opportunity_type, j.location, j.salary,
+               c.company_name, c.logo as company_logo
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.id
+        JOIN companies c ON j.company_id = c.id
+        WHERE a.user_id = %s
+        ORDER BY a.created_at DESC
+    """, (session["user_id"],))
+    applications = cursor.fetchall()
+    return render_template("dashboard_applications.html", applications=applications)
 
 
 @app.route("/dashboard/saved")

@@ -1483,7 +1483,20 @@ def dashboard_applications():
 @app.route("/dashboard/saved")
 @login_required
 def dashboard_saved():
-    return redirect(url_for("dashboard"))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT b.id as bookmark_id, b.created_at as bookmarked_at,
+               j.id as job_id, j.title, j.opportunity_type, j.location, j.salary,
+               c.company_name, c.logo as company_logo
+        FROM bookmarks b
+        JOIN jobs j ON b.job_id = j.id
+        JOIN companies c ON j.company_id = c.id
+        WHERE b.user_id = %s
+        ORDER BY b.created_at DESC
+    """, (session["user_id"],))
+    bookmarks = cursor.fetchall()
+    return render_template("dashboard_saved.html", bookmarks=bookmarks)
 
 
 @app.route("/dashboard/inbox")

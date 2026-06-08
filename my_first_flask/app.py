@@ -170,6 +170,60 @@ def toggle_reaction():
     return jsonify({"success": True, "action": action, "like_count": like_count})
 
 
+@app.route("/post/<int:post_id>/comments", methods=["GET"])
+@login_required
+def get_post_comments(post_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT c.*, u.full_name, u.avatar, u.account_type
+            FROM comments c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.post_id = %s
+            ORDER BY c.created_at ASC
+        """, (post_id,))
+        flat_comments = cursor.fetchall()
+
+    comment_map = {c["id"]: c for c in flat_comments}
+    roots = []
+    
+    for c in flat_comments:
+        if c.get("created_at"):
+            c["created_at"] = c["created_at"].strftime("%Y-%m-%d %H:%M")
+        c["replies"] = []
+        parent_id = c["parent_comment_id"]
+        if parent_id is None:
+            roots.append(c)
+        else:
+            if parent_id in comment_map:
+                if "replies" not in comment_map[parent_id]:
+                    comment_map[parent_id]["replies"] = []
+                comment_map[parent_id]["replies"].append(c)
+                
+    return jsonify({"comments": roots})
+
+
+@app.route("/post/<int:post_id>/comment", methods=["POST"])
+@login_required
+def post_comment(post_id):
+    data = request.get_json() or {}
+    comment_text = data.get("comment_text", "").strip()
+    parent_comment_id = data.get("parent_comment_id")
+
+    if not comment_text:
+        return jsonify({"success": False, "error": "Comment text cannot be empty"}), 400
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO comments (user_id, post_id, parent_comment_id, comment_text)
+            VALUES (%s, %s, %s, %s)
+        """, (session["user_id"], post_id, parent_comment_id, comment_text))
+        
+    return jsonify({"success": True, "message": "Comment posted successfully!"})
+
+
+
 
 
 @app.route("/favicon.ico")

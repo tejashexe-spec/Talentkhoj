@@ -108,6 +108,42 @@ def get_feed():
     return render_template("feed.html")
 
 
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in {"png", "jpg", "jpeg", "gif", "webp"}
+
+
+@app.route("/post/create", methods=["POST"])
+@login_required
+def create_post():
+    content = request.form.get("content", "").strip()
+    if not content:
+        return jsonify({"success": False, "error": "Post content cannot be empty"}), 400
+
+    image_path = None
+    file = request.files.get("image")
+    if file and file.filename and allowed_file(file.filename):
+        from werkzeug.utils import secure_filename
+        import uuid
+        filename = secure_filename(file.filename)
+        unique_name = f"{uuid.uuid4().hex}_{filename}"
+        
+        # Ensure upload folder exists
+        upload_folder = os.path.join(BASE_DIR, "static", "uploads", "posts")
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        file.save(os.path.join(upload_folder, unique_name))
+        image_path = f"uploads/posts/{unique_name}"
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO posts (user_id, content, image_path) VALUES (%s, %s, %s)",
+            (session["user_id"], content, image_path)
+        )
+    return jsonify({"success": True, "message": "Post published!"})
+
+
+
 @app.route("/favicon.ico")
 def favicon():
     return send_file(os.path.join(BASE_DIR, "static", "favicon.png"), mimetype="image/png")

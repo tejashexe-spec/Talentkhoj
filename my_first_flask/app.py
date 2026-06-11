@@ -1295,11 +1295,6 @@ def dashboard_saved():
     return redirect(url_for("dashboard"))
 
 
-@app.route("/dashboard/inbox")
-@login_required
-def dashboard_inbox():
-    return render_template("dashboard_inbox.html")
-
 
 @app.route("/dashboard/settings")
 @login_required

@@ -2141,6 +2141,62 @@ def dashboard_inbox():
     return render_template("dashboard_inbox.html", conversations=conversations)
 
 
+@app.route("/dashboard/headhunt", methods=["GET"])
+@login_required
+def dashboard_headhunt():
+    if session.get("account_type") != "company":
+        flash("Access denied. The headhunting directory is only accessible by recruiters.", "error")
+        return redirect(url_for("dashboard"))
+
+    query_param = request.args.get("q", "").strip()
+    status_param = request.args.get("status", "").strip()
+    location_param = request.args.get("location", "").strip()
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        sql = """
+            SELECT id, full_name, avatar, bio, location, skills, active_status 
+            FROM users 
+            WHERE account_type = 'individual' AND headhunting_mode = 1
+        """
+        params = []
+
+        if query_param:
+            sql += " AND (full_name LIKE %s OR bio LIKE %s OR skills LIKE %s)"
+            like_val = f"%{query_param}%"
+            params.extend([like_val, like_val, like_val])
+
+        if status_param:
+            sql += " AND active_status = %s"
+            params.append(status_param)
+
+        if location_param:
+            sql += " AND location LIKE %s"
+            params.append(f"%{location_param}%")
+
+        sql += " ORDER BY full_name ASC"
+        cursor.execute(sql, tuple(params))
+        candidates = cursor.fetchall()
+
+        # Get distinct locations for filter dropdown
+        cursor.execute("""
+            SELECT DISTINCT location 
+            FROM users 
+            WHERE account_type = 'individual' AND headhunting_mode = 1 AND location IS NOT NULL AND location != ''
+            ORDER BY location ASC
+        """)
+        locations = [row["location"] for row in cursor.fetchall()]
+
+    return render_template(
+        "dashboard_headhunt.html",
+        candidates=candidates,
+        locations=locations,
+        query=query_param,
+        status=status_param,
+        selected_location=location_param
+    )
+
+
 # ─── MESSAGING API ───────────────────────────────────────────────────────────
 
 @app.route("/api/messages/send", methods=["POST"])

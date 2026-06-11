@@ -83,11 +83,139 @@
 
 </div>
 
+<!-- Message Modal -->
+{% if session.get('account_type') == 'company' and user.headhunting_mode == 1 %}
+<div id="message-modal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: white; border-radius: 16px; width: 90%; max-width: 500px; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); position: relative; animation: slide-up 0.25s ease-out;">
+        <button id="close-modal-btn" style="position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8; transition: color 0.2s; line-height: 1;">&times;</button>
+        <h3 style="margin-top: 0; margin-bottom: 8px; font-size: 18px; font-weight: 700; color: #0f172a;">Message {{ user.full_name }}</h3>
+        <p style="color: #64748b; font-size: 13.5px; margin-bottom: 16px;">Send a direct message to start a conversation with this candidate.</p>
+        
+        <textarea id="modal-message-text" placeholder="Write your message..." style="width: 100%; min-height: 120px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14.5px; font-family: inherit; outline: none; transition: border-color 0.2s, box-shadow 0.2s; resize: vertical;" required></textarea>
+        
+        <div id="modal-status-msg" style="margin-top: 12px; font-size: 13.5px; display: none; padding: 8px 12px; border-radius: 8px;"></div>
+        
+        <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
+            <button id="cancel-modal-btn" class="profile-btn" style="background: #f1f5f9; color: #475569;">Cancel</button>
+            <button id="send-modal-btn" class="profile-btn" style="background: #10b981; color: white;">Send Message</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const openBtn = document.getElementById('open-message-modal-btn');
+        const modal = document.getElementById('message-modal');
+        const closeBtn = document.getElementById('close-modal-btn');
+        const cancelBtn = document.getElementById('cancel-modal-btn');
+        const sendBtn = document.getElementById('send-modal-btn');
+        const messageTextarea = document.getElementById('modal-message-text');
+        const statusMsg = document.getElementById('modal-status-msg');
+
+        if (openBtn && modal) {
+            openBtn.addEventListener('click', function() {
+                modal.style.display = 'flex';
+                messageTextarea.focus();
+            });
+
+            const closeModal = function() {
+                modal.style.display = 'none';
+                messageTextarea.value = '';
+                statusMsg.style.display = 'none';
+                statusMsg.innerText = '';
+            };
+
+            closeBtn.addEventListener('click', closeModal);
+            cancelBtn.addEventListener('click', closeModal);
+
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            messageTextarea.addEventListener('focus', function() {
+                messageTextarea.style.borderColor = '#2456ff';
+                messageTextarea.style.boxShadow = '0 0 0 3px rgba(36, 86, 255, 0.1)';
+            });
+            messageTextarea.addEventListener('blur', function() {
+                messageTextarea.style.borderColor = '#e2e8f0';
+                messageTextarea.style.boxShadow = 'none';
+            });
+
+            sendBtn.addEventListener('click', function() {
+                const text = messageTextarea.value.trim();
+                if (!text) {
+                    statusMsg.innerText = 'Please enter a message.';
+                    statusMsg.style.background = '#fef2f2';
+                    statusMsg.style.color = '#ef4444';
+                    statusMsg.style.display = 'block';
+                    return;
+                }
+
+                sendBtn.disabled = true;
+                sendBtn.innerText = 'Sending...';
+
+                fetch('/api/messages/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        receiver_id: {{ user.id }},
+                        message_text: text
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        statusMsg.innerHTML = 'Message sent! <a href="/dashboard/inbox" style="color:#10b981; font-weight:600; text-decoration:underline;">Go to Inbox</a>';
+                        statusMsg.style.background = '#eaf8ef';
+                        statusMsg.style.color = '#10b981';
+                        statusMsg.style.display = 'block';
+                        messageTextarea.value = '';
+                        setTimeout(() => {
+                            closeModal();
+                        }, 2500);
+                    } else {
+                        statusMsg.innerText = data.error || 'Failed to send message.';
+                        statusMsg.style.background = '#fef2f2';
+                        statusMsg.style.color = '#ef4444';
+                        statusMsg.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    statusMsg.innerText = 'An error occurred. Please try again.';
+                    statusMsg.style.background = '#fef2f2';
+                    statusMsg.style.color = '#ef4444';
+                    statusMsg.style.display = 'block';
+                })
+                .finally(() => {
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = 'Send Message';
+                });
+            });
+        }
+    });
+</script>
+{% endif %}
+
 <style>
 @keyframes pulse-green {
     0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
     70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
     100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+@keyframes slide-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+#close-modal-btn:hover {
+    color: #475569 !important;
+}
+#cancel-modal-btn:hover {
+    background: #e2e8f0 !important;
 }
 </style>
 {% endblock %}

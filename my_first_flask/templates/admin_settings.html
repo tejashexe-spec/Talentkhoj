@@ -1,0 +1,90 @@
+{% extends "admin_base.html" %}
+
+{% block title %}System Settings - TalentKhoj Admin{% endblock %}
+{% block page_title %}Settings & Administration{% endblock %}
+
+{% block content %}
+{% if success_message %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle"></i> {{ success_message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+{% if errors %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <ul class="mb-0">
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<div class="row g-4">
+    <!-- Change Password Form -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 pt-4">
+                <h5 class="fw-semibold mb-0">Update Password</h5>
+                <small class="text-muted">Change your personal admin account credentials</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_settings') }}">
+                    <input type="hidden" name="action" value="change_password">
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Current Password</label>
+                        <input type="password" name="current_password" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">New Password</label>
+                        <input type="password" name="new_password" class="form-control" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Confirm Password</label>
+                        <input type="password" name="confirm_password" class="form-control" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-sm">Update Password</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Admin Form -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-0 pt-4">
+                <h5 class="fw-semibold mb-0">Add Administrator</h5>
+                <small class="text-muted">Register a new administrator to help moderate the portal</small>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_settings') }}">
+                    <input type="hidden" name="action" value="create_admin">
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Full Name</label>
+                        <input type="text" name="admin_name" class="form-control" placeholder="e.g. John Doe" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Email Address</label>
+                        <input type="email" name="admin_email" class="form-control" placeholder="admin@domain.com" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Temporary Password</label>
+                        <input type="password" name="admin_password" class="form-control" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-danger btn-sm">Create Admin Account</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

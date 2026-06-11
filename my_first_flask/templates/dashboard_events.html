@@ -1,9 +1,109 @@
 {% extends "dashboard_base.html" %}
 {% set active = "events" %}
+
 {% block title %}Events | Talent Khoj{% endblock %}
+
 {% block content %}
-<div class="dashboard-header">
-    <h1>Events</h1>
-    <p>Upcoming career events, workshops and networking sessions.</p>
+<div class="dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px;">
+    <div>
+        <h1 style="font-size: 26px; color: #0f172a; margin-bottom: 6px;">Events</h1>
+        <p style="color: #64748b; font-size: 14px;">Discover career events, networking workshops, and direct hiring sessions.</p>
+    </div>
+    {% if session.get('account_type') == 'company' %}
+        <a href="/dashboard/events/create" class="submit-btn" style="text-decoration: none; padding: 12px 24px; font-weight: 600; font-size: 14px; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; width: auto; margin-top: 0; background: #2456ff; color: white;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Create Event
+        </a>
+    {% endif %}
 </div>
+
+{% if not events %}
+    <div style="background: white; border-radius: 16px; padding: 60px 40px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.05); max-width: 600px; margin: 40px auto;">
+        <div style="width: 80px; height: 80px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2456ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+        </div>
+        <h3 style="font-size: 20px; color: #1e293b; margin-bottom: 8px;">No Events Found</h3>
+        <p style="color: #64748b; font-size: 14px; margin-bottom: 24px; line-height: 1.5;">
+            {% if session.get('account_type') == 'company' %}
+                You haven't scheduled any career events yet. Start hosting to attract elite talent.
+            {% else %}
+                There are no upcoming events listed right now. Check back soon for workshops or networking sessions!
+            {% endif %}
+        </p>
+        {% if session.get('account_type') == 'company' %}
+            <a href="/dashboard/events/create" class="submit-btn" style="text-decoration: none; padding: 12px 24px; font-weight: 600; font-size: 14px; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; width: auto; margin-top: 0; background: #2456ff; color: white;">
+                Schedule Your First Event
+            </a>
+        {% endif %}
+    </div>
+{% else %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; margin-bottom: 40px;">
+        {% for event in events %}
+            <div style="background: white; border-radius: 16px; border: 1px solid #f1f5f9; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s; position: relative;" 
+                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 12px 30px rgba(0,0,0,0.08)';" 
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.04)';">
+                
+                <div>
+                    <!-- Company Info -->
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        {% if event.logo %}
+                            <img src="{{ event.logo }}" alt="{{ event.company_name }} Logo" style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover; border: 1px solid #e2e8f0;">
+                        {% else %}
+                            <div style="width: 40px; height: 40px; background: #eff6ff; color: #2456ff; font-weight: 700; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid #dbeafe;">
+                                {{ event.company_name[:2] | upper }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h4 style="font-size: 14px; color: #0f172a; font-weight: 600; margin: 0;">{{ event.company_name }}</h4>
+                            <span style="font-size: 11px; color: #94a3b8;">Host Organizer</span>
+                        </div>
+                        {% if session.get('account_type') == 'company' %}
+                            <span style="position: absolute; top: 24px; right: 24px; background: #f0fdf4; color: #16a34a; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px;">Active</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Event Title & Desc -->
+                    <h3 style="font-size: 18px; color: #0f172a; font-weight: 700; margin: 0 0 10px 0; line-height: 1.4;">{{ event.title }}</h3>
+                    <p style="color: #64748b; font-size: 13.5px; line-height: 1.6; margin: 0 0 20px 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; white-space: normal;">
+                        {{ event.description }}
+                    </p>
+                </div>
+
+                <!-- Event details footer card -->
+                <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: auto;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: #475569; font-size: 13px; margin-bottom: 8px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span>{{ event.event_date.strftime('%b %d, %Y - %I:%M %p') if event.event_date else '' }}</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px; color: #475569; font-size: 13px; margin-bottom: 16px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                        </svg>
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">{{ event.location }}</span>
+                    </div>
+
+                    {% if event.registration_link %}
+                        <a href="{{ event.registration_link }}" target="_blank" class="submit-btn" style="text-decoration: none; display: block; text-align: center; padding: 10px; font-size: 13.5px; font-weight: 600; border-radius: 8px; background: #2456ff; color: white;">
+                            Register / Join Event
+                        </a>
+                    {% else %}
+                        <div style="background: #f8fafc; color: #94a3b8; font-size: 13px; font-weight: 500; text-align: center; padding: 10px; border-radius: 8px;">
+                            No Registration Required
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
 {% endblock %}

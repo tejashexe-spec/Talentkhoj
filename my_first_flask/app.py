@@ -70,6 +70,169 @@ def home():
     return render_template("home.html")
 
 
+@app.route("/feed", methods=["GET"])
+@login_required
+def get_feed():
+    user_id = session.get("user_id", 0)
+    page = int(request.args.get("page", 1))
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1":
+        conn = get_db()
+        SQL_QUERY = """
+            SELECT p.id, p.content, p.image_path, p.created_at,
+                   u.full_name, u.avatar, u.account_type,
+                   COUNT(DISTINCT r.id) AS like_count,
+                   COUNT(DISTINCT c.id) AS comment_count,
+                   EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = %s) AS has_liked
+            FROM posts p
+            JOIN users u ON p.user_id = u.id
+            LEFT JOIN reactions r ON p.id = r.post_id AND r.reaction_type = 'like'
+            LEFT JOIN comments c ON p.id = c.post_id
+            GROUP BY p.id, u.id
+            ORDER BY p.created_at DESC
+            LIMIT %s OFFSET %s
+        """
+        with conn.cursor() as cursor:
+            cursor.execute(SQL_QUERY, (user_id, per_page, offset))
+            posts = cursor.fetchall()
+            
+        # Format datetimes
+        for post in posts:
+            if post.get("created_at"):
+                post["created_at"] = post["created_at"].strftime("%Y-%m-%d %H:%M")
+
+        return jsonify({"posts": posts})
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id = %s", (user_id,))
+        user_profile = cursor.fetchone()
+        
+        cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id != %s ORDER BY RAND() LIMIT 3", (user_id,))
+        suggestions = cursor.fetchall()
+    return render_template("feed.html", user_profile=user_profile, suggestions=suggestions)
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in {"png", "jpg", "jpeg", "gif", "webp"}
+
+
+@app.route("/post/create", methods=["POST"])
+@login_required
+def create_post():
+    content = request.form.get("content", "").strip()
+    if not content:
+        return jsonify({"success": False, "error": "Post content cannot be empty"}), 400
+
+    image_path = None
+    file = request.files.get("image")
+    if file and file.filename and allowed_file(file.filename):
+        from werkzeug.utils import secure_filename
+        import uuid
+        filename = secure_filename(file.filename)
+        unique_name = f"{uuid.uuid4().hex}_{filename}"
+        
+        # Ensure upload folder exists
+        upload_folder = os.path.join(BASE_DIR, "static", "uploads", "posts")
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        file.save(os.path.join(upload_folder, unique_name))
+        image_path = f"uploads/posts/{unique_name}"
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO posts (user_id, content, image_path) VALUES (%s, %s, %s)",
+            (session["user_id"], content, image_path)
+        )
+    return jsonify({"success": True, "message": "Post published!"})
+
+
+@app.route("/post/react", methods=["POST"])
+@login_required
+def toggle_reaction():
+    data = request.get_json() or {}
+    post_id = data.get("post_id")
+    if not post_id:
+        return jsonify({"success": False, "error": "Missing post_id"}), 400
+
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM reactions WHERE user_id = %s AND post_id = %s", (user_id, post_id))
+        existing = cursor.fetchone()
+        
+        if existing:
+            cursor.execute("DELETE FROM reactions WHERE user_id = %s AND post_id = %s", (user_id, post_id))
+            action = "unliked"
+        else:
+            cursor.execute("INSERT INTO reactions (user_id, post_id, reaction_type) VALUES (%s, %s, 'like')", (user_id, post_id))
+            action = "liked"
+            
+        cursor.execute("SELECT COUNT(*) as cnt FROM reactions WHERE post_id = %s", (post_id,))
+        like_count = cursor.fetchone()["cnt"]
+
+    return jsonify({"success": True, "action": action, "like_count": like_count})
+
+
+@app.route("/post/<int:post_id>/comments", methods=["GET"])
+@login_required
+def get_post_comments(post_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT c.*, u.full_name, u.avatar, u.account_type
+            FROM comments c
+            JOIN users u ON c.user_id = u.id
+            WHERE c.post_id = %s
+            ORDER BY c.created_at ASC
+        """, (post_id,))
+        flat_comments = cursor.fetchall()
+
+    comment_map = {c["id"]: c for c in flat_comments}
+    roots = []
+    
+    for c in flat_comments:
+        if c.get("created_at"):
+            c["created_at"] = c["created_at"].strftime("%Y-%m-%d %H:%M")
+        c["replies"] = []
+        parent_id = c["parent_comment_id"]
+        if parent_id is None:
+            roots.append(c)
+        else:
+            if parent_id in comment_map:
+                if "replies" not in comment_map[parent_id]:
+                    comment_map[parent_id]["replies"] = []
+                comment_map[parent_id]["replies"].append(c)
+                
+    return jsonify({"comments": roots})
+
+
+@app.route("/post/<int:post_id>/comment", methods=["POST"])
+@login_required
+def post_comment(post_id):
+    data = request.get_json() or {}
+    comment_text = data.get("comment_text", "").strip()
+    parent_comment_id = data.get("parent_comment_id")
+
+    if not comment_text:
+        return jsonify({"success": False, "error": "Comment text cannot be empty"}), 400
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO comments (user_id, post_id, parent_comment_id, comment_text)
+            VALUES (%s, %s, %s, %s)
+        """, (session["user_id"], post_id, parent_comment_id, comment_text))
+        
+    return jsonify({"success": True, "message": "Comment posted successfully!"})
+
+
+
+
+
 @app.route("/favicon.ico")
 def favicon():
     return send_file(os.path.join(BASE_DIR, "static", "favicon.png"), mimetype="image/png")
@@ -616,7 +779,26 @@ def user_profile(user_id):
     if not user:
         flash("User not found.", "error")
         return redirect(url_for("home"))
-    return render_template("user_profile.html", user=user)
+        
+    # Query reviews and rating stats
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT r.*, u.full_name as reviewer_name, u.avatar as reviewer_avatar, u.account_type as reviewer_type "
+            "FROM reviews r JOIN users u ON r.reviewer_id = u.id "
+            "WHERE r.reviewee_id = %s ORDER BY r.created_at DESC",
+            (user_id,)
+        )
+        reviews = cursor.fetchall()
+        
+        cursor.execute(
+            "SELECT AVG(rating) as avg_rating, COUNT(*) as review_count FROM reviews WHERE reviewee_id = %s",
+            (user_id,)
+        )
+        stats = cursor.fetchone()
+        avg_rating = round(stats["avg_rating"], 1) if stats["avg_rating"] else 0.0
+        review_count = stats["review_count"]
+        
+    return render_template("user_profile.html", user=user, reviews=reviews, avg_rating=avg_rating, review_count=review_count)
 
 
 @app.route("/company/<int:user_id>")
@@ -631,7 +813,26 @@ def company_profile(user_id):
     if not company:
         flash("Company not found.", "error")
         return redirect(url_for("home"))
-    return render_template("company_profile.html", company=company)
+        
+    # Query reviews and rating stats
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT r.*, u.full_name as reviewer_name, u.avatar as reviewer_avatar, u.account_type as reviewer_type "
+            "FROM reviews r JOIN users u ON r.reviewer_id = u.id "
+            "WHERE r.reviewee_id = %s ORDER BY r.created_at DESC",
+            (user_id,)
+        )
+        reviews = cursor.fetchall()
+        
+        cursor.execute(
+            "SELECT AVG(rating) as avg_rating, COUNT(*) as review_count FROM reviews WHERE reviewee_id = %s",
+            (user_id,)
+        )
+        stats = cursor.fetchone()
+        avg_rating = round(stats["avg_rating"], 1) if stats["avg_rating"] else 0.0
+        review_count = stats["review_count"]
+        
+    return render_template("company_profile.html", company=company, reviews=reviews, avg_rating=avg_rating, review_count=review_count)
 
 
 # ─── STATIC PAGES ────────────────────────────────────────────────────────────
@@ -1286,13 +1487,39 @@ def dashboard_bookmark_toggle(job_id):
 @app.route("/dashboard/applications")
 @login_required
 def dashboard_applications():
-    return redirect(url_for("dashboard"))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT a.id as application_id, a.status, a.created_at as applied_at,
+               j.id as job_id, j.title, j.opportunity_type, j.location, j.salary,
+               c.company_name, c.logo as company_logo
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.id
+        JOIN companies c ON j.company_id = c.id
+        WHERE a.user_id = %s
+        ORDER BY a.created_at DESC
+    """, (session["user_id"],))
+    applications = cursor.fetchall()
+    return render_template("dashboard_applications.html", applications=applications)
 
 
 @app.route("/dashboard/saved")
 @login_required
 def dashboard_saved():
-    return redirect(url_for("dashboard"))
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT b.id as bookmark_id, b.created_at as bookmarked_at,
+               j.id as job_id, j.title, j.opportunity_type, j.location, j.salary,
+               c.company_name, c.logo as company_logo
+        FROM bookmarks b
+        JOIN jobs j ON b.job_id = j.id
+        JOIN companies c ON j.company_id = c.id
+        WHERE b.user_id = %s
+        ORDER BY b.created_at DESC
+    """, (session["user_id"],))
+    bookmarks = cursor.fetchall()
+    return render_template("dashboard_saved.html", bookmarks=bookmarks)
 
 
 
@@ -1871,7 +2098,89 @@ def dashboard_cv_upload():
 @app.route("/dashboard/events")
 @login_required
 def dashboard_events():
-    return render_template("dashboard_events.html")
+    conn = get_db()
+    account_type = session.get("account_type")
+    
+    with conn.cursor() as cursor:
+        if account_type == "company":
+            cursor.execute(
+                "SELECT e.*, c.company_name, c.logo "
+                "FROM events e "
+                "JOIN companies c ON e.company_id = c.id "
+                "WHERE c.user_id = %s "
+                "ORDER BY e.event_date ASC",
+                (session["user_id"],)
+            )
+        else:
+            cursor.execute(
+                "SELECT e.*, c.company_name, c.logo "
+                "FROM events e "
+                "JOIN companies c ON e.company_id = c.id "
+                "ORDER BY e.event_date ASC"
+            )
+        events = cursor.fetchall()
+        
+    return render_template("dashboard_events.html", events=events)
+
+
+@app.route("/dashboard/events/create", methods=["GET", "POST"])
+@login_required
+def dashboard_create_event():
+    if session.get("account_type") != "company":
+        return redirect(url_for("dashboard_events"))
+        
+    error = None
+    form_data = {}
+    
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        event_date_str = request.form.get("event_date", "").strip()
+        location = request.form.get("location", "").strip()
+        registration_link = request.form.get("registration_link", "").strip() or None
+        
+        form_data = {
+            "title": title,
+            "description": description,
+            "event_date": event_date_str,
+            "location": location,
+            "registration_link": registration_link
+        }
+        
+        if not title:
+            error = "Event title is required."
+        elif not description:
+            error = "Event description is required."
+        elif not event_date_str:
+            error = "Event date and time is required."
+        elif not location:
+            error = "Event location is required."
+        else:
+            try:
+                event_date = datetime.strptime(event_date_str, "%Y-%m-%dT%H:%M")
+                conn = get_db()
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+                    company = cursor.fetchone()
+                
+                if not company:
+                    error = "Company profile not found. Please register as a company first."
+                else:
+                    company_id = company["id"]
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "INSERT INTO events (company_id, title, description, event_date, location, registration_link) "
+                            "VALUES (%s, %s, %s, %s, %s, %s)",
+                            (company_id, title, description, event_date, location, registration_link)
+                        )
+                    flash("Event created successfully!", "success")
+                    return redirect(url_for("dashboard_events"))
+            except ValueError:
+                error = "Invalid date and time format."
+            except Exception as e:
+                error = f"An error occurred: {str(e)}"
+                
+    return render_template("dashboard_create_event.html", form_data=form_data, error=error)
 
 
 @app.route("/dashboard/post-opportunity", methods=["GET", "POST"])
@@ -2256,6 +2565,78 @@ def api_unread_count():
         cursor.execute("SELECT COUNT(*) as count FROM messages WHERE receiver_id = %s AND is_read = 0", (user_id,))
         row = cursor.fetchone()
     return jsonify({"success": True, "unread_count": row["count"] if row else 0})
+
+@app.route("/reviews/submit", methods=["POST"])
+@login_required
+def submit_review():
+    reviewer_id = session.get("user_id")
+    reviewer_type = session.get("account_type")
+    
+    reviewee_id = request.form.get("reviewee_id")
+    rating_str = request.form.get("rating")
+    comment = request.form.get("comment", "").strip()
+    
+    if not reviewee_id or not rating_str or not comment:
+        flash("All fields are required.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    try:
+        reviewee_id = int(reviewee_id)
+        rating = int(rating_str)
+    except ValueError:
+        flash("Invalid input data.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    if reviewer_id == reviewee_id:
+        flash("You cannot review yourself.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    if rating < 1 or rating > 5:
+        flash("Rating must be between 1 and 5.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT account_type FROM users WHERE id = %s", (reviewee_id,))
+        reviewee = cursor.fetchone()
+        
+    if not reviewee:
+        flash("User not found.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    reviewee_type = reviewee["account_type"]
+    
+    if reviewer_type == "company" and reviewee_type != "individual":
+        flash("Companies can only review individual candidates.", "error")
+        return redirect(request.referrer or url_for("home"))
+    elif reviewer_type == "individual" and reviewee_type != "company":
+        flash("Candidates can only review companies.", "error")
+        return redirect(request.referrer or url_for("home"))
+        
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "SELECT id FROM reviews WHERE reviewer_id = %s AND reviewee_id = %s",
+            (reviewer_id, reviewee_id)
+        )
+        existing_review = cursor.fetchone()
+        
+        if existing_review:
+            cursor.execute(
+                "UPDATE reviews SET rating = %s, comment = %s, created_at = CURRENT_TIMESTAMP WHERE id = %s",
+                (rating, comment, existing_review["id"])
+            )
+            flash("Your review has been updated.", "success")
+        else:
+            cursor.execute(
+                "INSERT INTO reviews (reviewer_id, reviewee_id, rating, comment) VALUES (%s, %s, %s, %s)",
+                (reviewer_id, reviewee_id, rating, comment)
+            )
+            flash("Review submitted successfully.", "success")
+            
+    if reviewee_type == "company":
+        return redirect(url_for("company_profile", user_id=reviewee_id))
+    else:
+        return redirect(url_for("user_profile", user_id=reviewee_id))
 
 
 if __name__ == "__main__":

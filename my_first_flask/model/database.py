@@ -29,6 +29,7 @@ class Database:
             )
             self._init_tables()
             self._run_migrations()
+            self._seed_mock_reviews()
             print("Database connected successfully!")
 
         except pymysql.MySQLError as e:
@@ -145,9 +146,69 @@ class Database:
                     INDEX idx_receiver_sender (receiver_id, sender_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
-
-
-
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS reviews (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    reviewer_id INT NOT NULL,
+                    reviewee_id INT NOT NULL,
+                    rating INT NOT NULL,
+                    comment TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (reviewee_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS events (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    company_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL,
+                    event_date DATETIME NOT NULL,
+                    location VARCHAR(255) NOT NULL,
+                    registration_link VARCHAR(255) DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS posts (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    content TEXT NOT NULL,
+                    image_path VARCHAR(255) DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    INDEX idx_user_post (user_id),
+                    INDEX idx_post_created (created_at DESC)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS reactions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    post_id INT NOT NULL,
+                    reaction_type VARCHAR(50) DEFAULT 'like',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_user_post_reaction (user_id, post_id, reaction_type)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS comments (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    post_id INT NOT NULL,
+                    parent_comment_id INT DEFAULT NULL,
+                    comment_text TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                    FOREIGN KEY (parent_comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+                    INDEX idx_post_comments (post_id, parent_comment_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
     def _run_migrations(self):
         """Add any missing columns to existing tables."""
         # Users table migrations
@@ -239,3 +300,24 @@ class Database:
 
     def get_connection(self):
         return self.__connection
+
+    def _seed_mock_reviews(self):
+        """Seed mock reviews if the reviews table is empty."""
+        with self.__connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) as cnt FROM reviews")
+            if cursor.fetchone()["cnt"] == 0:
+                cursor.execute("SELECT id FROM users WHERE account_type = 'individual' LIMIT 1")
+                candidate = cursor.fetchone()
+                cursor.execute("SELECT id FROM users WHERE account_type = 'company' LIMIT 1")
+                company = cursor.fetchone()
+                
+                if candidate and company:
+                    candidate_id = candidate["id"]
+                    company_id = company["id"]
+                    
+                    cursor.execute("""
+                        INSERT INTO reviews (reviewer_id, reviewee_id, rating, comment)
+                        VALUES 
+                        (%s, %s, 5, 'Exceptional experience interviewing with this company. Very transparent and modern tech stack.'),
+                        (%s, %s, 4, 'Outstanding candidate with deep problem-solving skills and a solid understanding of web development frameworks.')
+                    """, (candidate_id, company_id, company_id, candidate_id))

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Talent Khoj{% endblock %}</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
@@ -19,7 +20,7 @@
         <li><a href="/dashboard/search?type=internship" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'internship' %}active{% endif %}">Internships</a></li>
         <li><a href="/dashboard/search?type=job" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'job' %}active{% endif %}">Jobs</a></li>
         <li><a href="/dashboard/events" class="{% if request.path == '/dashboard/events' %}active{% endif %}">Events</a></li>
-        <li><a href="#" class="{% if request.path == '/community' %}active{% endif %}">Community</a></li>
+        <li><a href="/feed" class="{% if request.path == '/feed' %}active{% endif %}">Community</a></li>
     </ul>
 
     <div style="display: flex; align-items: center; gap: 16px;">
@@ -44,6 +45,9 @@
                     <span style="font-size:10px; color:#888; margin-left:2px;">&#9660;</span>
                 </button>
                 <div class="dropdown" id="profileDropdown">
+                    {% if session.get('account_type') == 'admin' %}
+                        <a href="/admin/dashboard" style="font-weight: bold; color: #ef4444;">Admin Panel</a>
+                    {% endif %}
                     <a href="/dashboard">Dashboard</a>
                     <a href="/profile">My Profile</a>
                     <a href="/reset-password">Reset Password</a>

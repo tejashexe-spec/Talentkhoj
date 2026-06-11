@@ -806,17 +806,6 @@
                             Professional at Talent Khoj
                         {% endif %}
                     </div>
-                </div>
-                <div class="profile-card-stats">
-                    <div class="profile-card-stat-item">
-                        <span class="profile-card-stat-label">Profile viewers</span>
-                        <span class="profile-card-stat-value">47</span>
-                    </div>
-                    <div class="profile-card-stat-item">
-                        <span class="profile-card-stat-label">Post impressions</span>
-                        <span class="profile-card-stat-value">182</span>
-                    </div>
-                </div>
                 <div class="profile-card-footer">
                     <a href="/profile">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -943,28 +932,33 @@
                     <span>Add to your feed</span>
                 </div>
                 <div class="widget-list" style="gap: 16px;">
-                    <div class="widget-recommendation">
-                        <img src="https://ui-avatars.com/api/?name=Nepal+Telecom&background=05154b&color=fff" class="widget-rec-avatar" alt="logo">
-                        <div class="widget-rec-info">
-                            <a href="#" class="widget-rec-name">Nepal Telecom</a>
-                            <span class="widget-rec-headline">Telecommunications &bull; Kathmandu</span>
-                            <button class="widget-follow-btn">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                Follow
-                            </button>
-                        </div>
-                    </div>
-                    <div class="widget-recommendation">
-                        <img src="https://ui-avatars.com/api/?name=Fusemachines&background=2456ff&color=fff" class="widget-rec-avatar" alt="logo">
-                        <div class="widget-rec-info">
-                            <a href="#" class="widget-rec-name">Fusemachines</a>
-                            <span class="widget-rec-headline">Artificial Intelligence &bull; Lalitpur</span>
-                            <button class="widget-follow-btn">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                Follow
-                            </button>
-                        </div>
-                    </div>
+                    {% if suggestions %}
+                        {% for sug in suggestions %}
+                            <div class="widget-recommendation">
+                                {% if sug.avatar %}
+                                    <img src="{{ sug.avatar }}" class="widget-rec-avatar" alt="avatar">
+                                {% else %}
+                                    <img src="https://ui-avatars.com/api/?name={{ sug.full_name }}&background=2456ff&color=fff&size=40" class="widget-rec-avatar" alt="avatar">
+                                {% endif %}
+                                <div class="widget-rec-info">
+                                    <a href="{% if sug.account_type == 'company' %}/company/{{ sug.id }}{% else %}/user/{{ sug.id }}{% endif %}" class="widget-rec-name">{{ sug.full_name }}</a>
+                                    <span class="widget-rec-headline">
+                                        {% if sug.bio %}
+                                            {{ sug.bio }}
+                                        {% else %}
+                                            {{ sug.account_type | capitalize }} on Talent Khoj
+                                        {% endif %}
+                                    </span>
+                                    <button class="widget-follow-btn">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                        Follow
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="font-size: 12px; color: #64748b; text-align: center; padding: 10px 0;">No suggestions available</div>
+                    {% endif %}
                 </div>
             </div>
         </aside>

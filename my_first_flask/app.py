@@ -109,7 +109,10 @@ def get_feed():
     with conn.cursor() as cursor:
         cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id = %s", (user_id,))
         user_profile = cursor.fetchone()
-    return render_template("feed.html", user_profile=user_profile)
+        
+        cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id != %s ORDER BY RAND() LIMIT 3", (user_id,))
+        suggestions = cursor.fetchall()
+    return render_template("feed.html", user_profile=user_profile, suggestions=suggestions)
 
 
 def allowed_file(filename):

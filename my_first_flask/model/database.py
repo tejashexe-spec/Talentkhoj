@@ -299,6 +299,21 @@ class Database:
 
 
     def get_connection(self):
+        if self.__connection:
+            try:
+                self.__connection.ping(reconnect=True)
+            except Exception:
+                try:
+                    self.__connection = pymysql.connect(
+                        host=config.MYSQL_HOST,
+                        user=config.MYSQL_USER,
+                        password=config.MYSQL_PASSWORD,
+                        database=config.MYSQL_DATABASE,
+                        cursorclass=pymysql.cursors.DictCursor,
+                        autocommit=True,
+                    )
+                except Exception as e:
+                    print("Failed to reconnect to database:", e)
         return self.__connection
 
     def _seed_mock_reviews(self):

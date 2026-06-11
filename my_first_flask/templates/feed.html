@@ -793,7 +793,7 @@
                 <div class="profile-card-header">
                     <a href="/profile">
                         {% if user_profile.avatar %}
-                            <img src="{{ user_profile.avatar }}" class="profile-card-avatar" alt="avatar">
+                            <img src="{{ user_profile.avatar }}" class="profile-card-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=72&rounded=true&background=2456ff&color=fff';">
                         {% else %}
                             <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=72&rounded=true&background=2456ff&color=fff" class="profile-card-avatar" alt="avatar">
                         {% endif %}
@@ -821,7 +821,7 @@
             <div class="post-creator-trigger-card">
                 <div class="post-creator-top">
                     {% if user_profile.avatar %}
-                        <img src="{{ user_profile.avatar }}" class="post-creator-avatar" alt="avatar">
+                        <img src="{{ user_profile.avatar }}" class="post-creator-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=48&rounded=true&background=2456ff&color=fff';">
                     {% else %}
                         <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=48&rounded=true&background=2456ff&color=fff" class="post-creator-avatar" alt="avatar">
                     {% endif %}
@@ -910,7 +910,7 @@
                         {% for sug in suggestions %}
                             <div class="widget-recommendation">
                                 {% if sug.avatar %}
-                                    <img src="{{ sug.avatar }}" class="widget-rec-avatar" alt="avatar">
+                                    <img src="{{ sug.avatar }}" class="widget-rec-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ sug.full_name|urlencode }}&background=2456ff&color=fff&size=40';">
                                 {% else %}
                                     <img src="https://ui-avatars.com/api/?name={{ sug.full_name }}&background=2456ff&color=fff&size=40" class="widget-rec-avatar" alt="avatar">
                                 {% endif %}
@@ -1058,7 +1058,7 @@
 
         div.innerHTML = `
             <div class="post-header">
-                <img src="${avatarUrl}" class="post-avatar" alt="avatar">
+                <img src="${avatarUrl}" class="post-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(post.full_name) + '&background=2456ff&color=fff&size=48';">
                 <div class="post-author-info">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <a href="/user/${post.user_id}" class="post-author-name">${post.full_name}</a>
@@ -1209,7 +1209,7 @@
                 const repAvatar = reply.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.full_name)}&background=2456ff&color=fff&size=32`;
                 repliesHtml += `
                     <div class="comment-card">
-                        <img src="${repAvatar}" class="comment-avatar" alt="avatar">
+                        <img src="${repAvatar}" class="comment-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(reply.full_name) + '&background=2456ff&color=fff&size=32';">
                         <div class="comment-body">
                             <div class="comment-author">${reply.full_name}</div>
                             <div class="comment-text">${reply.comment_text}</div>
@@ -1227,7 +1227,7 @@
 
         div.innerHTML = `
             <div class="comment-card">
-                <img src="${avatarUrl}" class="comment-avatar" alt="avatar">
+                <img src="${avatarUrl}" class="comment-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.full_name) + '&background=2456ff&color=fff&size=32';">
                 <div class="comment-body">
                     <div class="comment-author">${comment.full_name}</div>
                     <div class="comment-text">${comment.comment_text}</div>

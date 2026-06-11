@@ -81,7 +81,7 @@ def get_feed():
     if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1":
         conn = get_db()
         SQL_QUERY = """
-            SELECT p.id, p.content, p.image_path, p.created_at,
+            SELECT p.id, p.user_id, p.content, p.image_path, p.created_at,
                    u.full_name, u.avatar, u.account_type,
                    COUNT(DISTINCT r.id) AS like_count,
                    COUNT(DISTINCT c.id) AS comment_count,

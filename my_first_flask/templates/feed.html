@@ -1018,7 +1018,12 @@
                 }
                 loadingPosts = false;
             })
-            .catch(() => {
+            .catch(err => {
+                console.error("Error loading feed:", err);
+                const spinner = document.getElementById("loading-spinner");
+                if (spinner) {
+                    spinner.innerHTML = '<div style="color: #ef4444; padding: 10px; font-weight: 500;">Failed to load posts. Please refresh.</div>';
+                }
                 loadingPosts = false;
             });
     }

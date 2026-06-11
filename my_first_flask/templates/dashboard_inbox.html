@@ -78,5 +78,135 @@
             </div>
         </div>
     </div>
+    </div>
 </div>
+
+<script>
+    let activeChatUserId = null;
+    let pollInterval = null;
+
+    function loadConversation(userId, userName, userAvatar) {
+        activeChatUserId = userId;
+        
+        document.getElementById('chatEmptyState').style.display = 'none';
+        document.getElementById('chatActiveState').style.display = 'flex';
+        
+        document.getElementById('activeChatName').textContent = userName;
+        const avatarImg = document.getElementById('activeChatAvatar');
+        if (userAvatar) {
+            avatarImg.src = userAvatar;
+        } else {
+            avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&size=40&rounded=true&background=2456ff&color=fff`;
+        }
+
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        const selectedItem = document.getElementById(`conv-${userId}`);
+        if (selectedItem) {
+            selectedItem.classList.add('active');
+            const badge = selectedItem.querySelector('.conv-badge');
+            if (badge) badge.remove();
+        }
+
+        fetchThreadMessages(userId);
+
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(() => {
+            if (activeChatUserId === userId) {
+                fetchThreadMessages(userId, true);
+            }
+        }, 3000);
+    }
+
+    function fetchThreadMessages(userId, isPolling = false) {
+        fetch(`/api/messages/thread/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const list = document.getElementById('chatMessagesList');
+                    const container = document.getElementById('chatMessagesContainer');
+                    const wasAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
+
+                    list.innerHTML = '';
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            const isSent = msg.sender_id === {{ session['user_id'] }};
+                            const bubble = document.createElement('div');
+                            bubble.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
+                            bubble.innerHTML = `
+                                <div class="message-text">${msg.message_text}</div>
+                                <div class="message-time">${msg.created_at}</div>
+                            `;
+                            list.appendChild(bubble);
+                        });
+                    } else {
+                        list.innerHTML = `<div style="text-align: center; color: #64748b; padding: 20px 0; font-size: 13px;">No messages in this thread yet. Say hi!</div>`;
+                    }
+
+                    if (!isPolling || wasAtBottom) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }
+            });
+    }
+
+    function submitSendMessage(e) {
+        e.preventDefault();
+        if (!activeChatUserId) return;
+
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        fetch('/api/messages/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                receiver_id: activeChatUserId,
+                message_text: text
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                input.value = '';
+                fetchThreadMessages(activeChatUserId);
+                
+                const selectedItem = document.getElementById(`conv-${activeChatUserId}`);
+                if (selectedItem) {
+                    selectedItem.querySelector('.conv-message').textContent = text;
+                    selectedItem.querySelector('.conv-time').textContent = 'Just now';
+                }
+            } else {
+                alert(data.error || 'Failed to send message');
+            }
+        });
+    }
+
+    function filterConversations() {
+        const query = document.getElementById('chatSearchInput').value.toLowerCase();
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            const name = item.querySelector('.conv-name').textContent.toLowerCase();
+            if (name.includes(query)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const contactId = urlParams.get('chat_with');
+        if (contactId) {
+            const item = document.getElementById(`conv-${contactId}`);
+            if (item) {
+                item.click();
+            }
+        }
+    });
+</script>
 {% endblock %}

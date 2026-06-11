@@ -57,6 +57,8 @@ class Database:
                     verification_token_expires_at TIMESTAMP NULL DEFAULT NULL,
                     reset_password_token VARCHAR(255) DEFAULT NULL,
                     reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL,
+                    active_status ENUM('actively_looking', 'open_to_offers', 'not_looking') NOT NULL DEFAULT 'actively_looking',
+                    headhunting_mode TINYINT(1) NOT NULL DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
@@ -129,6 +131,20 @@ class Database:
                     UNIQUE KEY unique_user_bookmark (user_id, job_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    sender_id INT NOT NULL,
+                    receiver_id INT NOT NULL,
+                    message_text TEXT NOT NULL,
+                    is_read TINYINT(1) NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                    INDEX idx_sender_receiver (sender_id, receiver_id),
+                    INDEX idx_receiver_sender (receiver_id, sender_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
 
 
 
@@ -148,6 +164,8 @@ class Database:
             ("verification_token_expires_at", "ALTER TABLE users ADD COLUMN verification_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
             ("reset_password_token", "ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(255) DEFAULT NULL"),
             ("reset_password_token_expires_at", "ALTER TABLE users ADD COLUMN reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
+            ("active_status", "ALTER TABLE users ADD COLUMN active_status ENUM('actively_looking', 'open_to_offers', 'not_looking') NOT NULL DEFAULT 'actively_looking'"),
+            ("headhunting_mode", "ALTER TABLE users ADD COLUMN headhunting_mode TINYINT(1) NOT NULL DEFAULT 1"),
         ]
         with self.__connection.cursor() as cursor:
             cursor.execute(

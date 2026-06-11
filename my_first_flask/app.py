@@ -2103,6 +2103,44 @@ def select_account_type():
     return render_template("select_account_type.html", errors=errors)
 
 
+@app.route("/dashboard/inbox", methods=["GET"])
+@login_required
+def dashboard_inbox():
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                u.id AS other_user_id,
+                u.full_name AS other_user_name,
+                u.avatar AS other_user_avatar,
+                u.account_type AS other_user_account_type,
+                m.message_text AS last_message,
+                m.created_at AS last_message_time,
+                (SELECT COUNT(*) FROM messages WHERE sender_id = u.id AND receiver_id = %s AND is_read = 0) AS unread_count
+            FROM (
+                SELECT 
+                    CASE WHEN sender_id = %s THEN receiver_id ELSE sender_id END AS chat_user_id,
+                    MAX(created_at) AS max_time
+                FROM messages
+                WHERE sender_id = %s OR receiver_id = %s
+                GROUP BY chat_user_id
+            ) latest
+            JOIN messages m ON ((m.sender_id = %s AND m.receiver_id = latest.chat_user_id) 
+                            OR (m.sender_id = latest.chat_user_id AND m.receiver_id = %s)) 
+                            AND m.created_at = latest.max_time
+            JOIN users u ON u.id = latest.chat_user_id
+            ORDER BY last_message_time DESC
+        """, (user_id, user_id, user_id, user_id, user_id, user_id))
+        conversations = cursor.fetchall()
+
+    for conv in conversations:
+        if conv.get("last_message_time"):
+            conv["last_message_time"] = conv["last_message_time"].strftime("%Y-%m-%d %H:%M")
+
+    return render_template("dashboard_inbox.html", conversations=conversations)
+
+
 # ─── MESSAGING API ───────────────────────────────────────────────────────────
 
 @app.route("/api/messages/send", methods=["POST"])

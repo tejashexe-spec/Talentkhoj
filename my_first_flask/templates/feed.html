@@ -6,29 +6,54 @@
 {% block content %}
 <style>
     .feed-container {
-        max-width: 680px;
+        max-width: 1128px;
         margin: 0 auto;
-        padding: 20px 0;
-        display: flex;
-        flex-direction: column;
+        padding: 24px 16px;
+    }
+
+    .feed-grid {
+        display: grid;
+        grid-template-columns: 225px 1fr 290px;
         gap: 24px;
+        align-items: start;
+    }
+
+    @media (max-width: 992px) {
+        .feed-grid {
+            grid-template-columns: 225px 1fr;
+        }
+        .feed-right-col {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .feed-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        .feed-left-col, .feed-right-col {
+            display: none;
+        }
+        .feed-container {
+            padding: 12px 8px;
+        }
+    }
+
+    .skeleton-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        color: #64748b;
+        font-size: 13px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
     .feed-header {
-        margin-bottom: 8px;
-    }
-
-    .feed-header h1 {
-        font-size: 26px;
-        font-weight: 800;
-        color: #0f172a;
-        letter-spacing: -0.5px;
-        margin-bottom: 6px;
-    }
-
-    .feed-header p {
-        font-size: 14px;
-        color: #64748b;
+        margin-bottom: 16px;
+        display: none;
     }
 
     .post-card {
@@ -380,38 +405,48 @@
 </style>
 
 <div class="feed-container">
-    <div class="feed-header">
-        <h1>Community Feed</h1>
-        <p>Connect and share updates with professionals in Nepal.</p>
-    </div>
+    <div class="feed-grid">
+        <!-- Left column -->
+        <aside class="feed-left-col">
+            <div class="skeleton-card">Profile overview loading...</div>
+        </aside>
 
-    <!-- Create Post Card -->
-    <div class="create-post-card">
-        <div class="create-post-header">Create Post</div>
-        <form id="create-post-form" enctype="multipart/form-data">
-            <textarea class="create-post-textarea" name="content" placeholder="What's on your mind? Share updates, jobs, or events..." required></textarea>
-            
-            <div class="image-preview-container" id="preview-container">
-                <img src="" alt="preview" class="image-preview" id="image-preview">
-                <button type="button" class="remove-preview-btn" onclick="removeImagePreview()">&times;</button>
+        <!-- Middle column -->
+        <main class="feed-middle-col" style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- Create Post Card -->
+            <div class="create-post-card">
+                <div class="create-post-header">Create Post</div>
+                <form id="create-post-form" enctype="multipart/form-data">
+                    <textarea class="create-post-textarea" name="content" placeholder="What's on your mind? Share updates, jobs, or events..." required></textarea>
+                    
+                    <div class="image-preview-container" id="preview-container">
+                        <img src="" alt="preview" class="image-preview" id="image-preview">
+                        <button type="button" class="remove-preview-btn" onclick="removeImagePreview()">&times;</button>
+                    </div>
+
+                    <div class="create-post-footer" style="margin-top: 12px;">
+                        <div class="upload-btn-wrapper">
+                            <button type="button" class="btn-upload">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                Add Photo
+                            </button>
+                            <input type="file" name="image" id="post-image-input" accept="image/*" onchange="previewImage(this)">
+                        </div>
+                        <button type="submit" class="btn-submit-post">Publish</button>
+                    </div>
+                </form>
             </div>
 
-            <div class="create-post-footer" style="margin-top: 12px;">
-                <div class="upload-btn-wrapper">
-                    <button type="button" class="btn-upload">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        Add Photo
-                    </button>
-                    <input type="file" name="image" id="post-image-input" accept="image/*" onchange="previewImage(this)">
-                </div>
-                <button type="submit" class="btn-submit-post">Publish</button>
+            <!-- Feed Timeline -->
+            <div id="feed-timeline" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Posts will be loaded here dynamically -->
             </div>
-        </form>
-    </div>
+        </main>
 
-    <!-- Feed Timeline -->
-    <div id="feed-timeline" style="display: flex; flex-direction: column; gap: 24px;">
-        <!-- Posts will be loaded here dynamically -->
+        <!-- Right column -->
+        <aside class="feed-right-col">
+            <div class="skeleton-card">Trending on Talent Khoj...</div>
+        </aside>
     </div>
 </div>
 

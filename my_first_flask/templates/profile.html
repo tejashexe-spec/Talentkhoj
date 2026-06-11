@@ -33,6 +33,10 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
             Security & Verify
         </button>
+        <button class="sub-nav-item" onclick="switchSubTab(event, 'headhunting')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Availability & Status
+        </button>
     </div>
 
     <!-- RIGHT PANEL CONTENT -->
@@ -313,6 +317,62 @@
             </div>
         </div>
 
+        <!-- HEADHUNTING & STATUS PANEL -->
+        <div class="profile-card tab-panel-content" id="panel-headhunting">
+            <h2 class="card-title">Job Search & Headhunting Mode</h2>
+            <p class="card-subtitle">Control your visibility and availability to recruiters in Nepal.</p>
+            
+            <form method="POST" action="/profile">
+                <input type="hidden" name="action" value="headhunting">
+                
+                <div class="form-group-full" style="margin-bottom: 20px;">
+                    <label>Active Job Seeking Status</label>
+                    <select class="form-control" name="active_status" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; outline: none;">
+                        <option value="actively_looking" {% if profile.active_status == 'actively_looking' %}selected{% endif %}>Actively Looking - Highlight me to recruiters and companies</option>
+                        <option value="open_to_offers" {% if profile.active_status == 'open_to_offers' %}selected{% endif %}>Open to Offers - I am open to discussing new opportunities</option>
+                        <option value="not_looking" {% if profile.active_status == 'not_looking' %}selected{% endif %}>Not Looking - Do not show me in active job search lists</option>
+                    </select>
+                </div>
+
+                <div class="form-group-full" style="margin-bottom: 25px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="padding-right: 20px;">
+                        <span style="font-weight: 700; font-size: 14px; color: #1e293b; display: block; margin-bottom: 4px;">Headhunting Mode</span>
+                        <span style="font-size: 12.5px; color: #64748b; line-height: 1.4; display: block;">When enabled, certified companies and recruiters can view your profile and send you direct messages for job offers.</span>
+                    </div>
+                    <div class="switch-container">
+                        <label class="switch" style="position: relative; display: inline-block; width: 50px; height: 26px;">
+                            <input type="checkbox" name="headhunting_mode" id="headhuntingCheckbox" style="opacity: 0; width: 0; height: 0;" {% if profile.headhunting_mode == 1 %}checked{% endif %}>
+                            <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 34px;"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Custom slider style helper -->
+                <style>
+                    .switch input:checked + .slider {
+                        background-color: #2456ff;
+                    }
+                    .slider:before {
+                        position: absolute;
+                        content: "";
+                        height: 18px;
+                        width: 18px;
+                        left: 4px;
+                        bottom: 4px;
+                        background-color: white;
+                        transition: .4s;
+                        border-radius: 50%;
+                    }
+                    .switch input:checked + .slider:before {
+                        transform: translateX(24px);
+                    }
+                </style>
+
+                <div style="display: flex; justify-content: flex-end;">
+                    <button type="submit" class="btn-save-profile">Save Preferences</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 

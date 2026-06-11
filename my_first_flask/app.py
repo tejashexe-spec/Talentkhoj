@@ -2103,5 +2103,59 @@ def select_account_type():
     return render_template("select_account_type.html", errors=errors)
 
 
+# ─── MESSAGING API ───────────────────────────────────────────────────────────
+
+@app.route("/api/messages/send", methods=["POST"])
+@login_required
+def api_send_message():
+    data = request.get_json() or {}
+    receiver_id = data.get("receiver_id")
+    message_text = data.get("message_text", "").strip()
+
+    if not receiver_id or not message_text:
+        return jsonify({"success": False, "error": "Receiver ID and message text are required"}), 400
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM users WHERE id = %s", (receiver_id,))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Receiver not found"}), 404
+
+        cursor.execute(
+            "INSERT INTO messages (sender_id, receiver_id, message_text) VALUES (%s, %s, %s)",
+            (session["user_id"], receiver_id, message_text)
+        )
+    return jsonify({"success": True, "message": "Message sent!"})
+
+
+@app.route("/api/messages/thread/<int:other_user_id>", methods=["GET"])
+@login_required
+def api_get_message_thread(other_user_id):
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "UPDATE messages SET is_read = 1 WHERE sender_id = %s AND receiver_id = %s AND is_read = 0",
+            (other_user_id, user_id)
+        )
+        
+        cursor.execute("""
+            SELECT m.id, m.sender_id, m.receiver_id, m.message_text, m.is_read, m.created_at,
+                   u.full_name AS sender_name, u.avatar AS sender_avatar
+            FROM messages m
+            JOIN users u ON m.sender_id = u.id
+            WHERE (m.sender_id = %s AND m.receiver_id = %s)
+               OR (m.sender_id = %s AND m.receiver_id = %s)
+            ORDER BY m.created_at ASC
+        """, (user_id, other_user_id, other_user_id, user_id))
+        messages = cursor.fetchall()
+
+    for msg in messages:
+        if msg.get("created_at"):
+            msg["created_at"] = msg["created_at"].strftime("%Y-%m-%d %H:%M")
+
+    return jsonify({"success": True, "messages": messages})
+
+
 if __name__ == "__main__":
     app.run(debug=True)

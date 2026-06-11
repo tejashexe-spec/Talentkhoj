@@ -13,8 +13,26 @@
             <img src="https://ui-avatars.com/api/?name={{ user.full_name }}&size=90&rounded=true&background=2456ff&color=fff" alt="{{ user.full_name }}">
         {% endif %}
         <div>
-            <h2>{{ user.full_name }}</h2>
-            <p>{{ user.location or 'Location not set' }}</p>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <h2 style="margin: 0; font-weight: 700; color: #0f172a;">{{ user.full_name }}</h2>
+                {% if user.active_status == 'actively_looking' %}
+                    <span class="seeking-badge active" style="background: #eaf8ef; color: #10b981; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                        <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; animation: pulse-green 2s infinite;"></span> Actively Looking
+                    </span>
+                {% elif user.active_status == 'open_to_offers' %}
+                    <span class="seeking-badge open" style="background: #fffbeb; color: #d97706; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                        <span style="width: 8px; height: 8px; background: #d97706; border-radius: 50%; display: inline-block;"></span> Open to Offers
+                    </span>
+                {% else %}
+                    <span class="seeking-badge not" style="background: #f3f4f6; color: #6b7280; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                        <span style="width: 8px; height: 8px; background: #9ca3af; border-radius: 50%; display: inline-block;"></span> Not Looking
+                    </span>
+                {% endif %}
+            </div>
+            <p style="margin-top: 6px; color: #64748b; font-size: 14px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px; color: #94a3b8;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                {{ user.location or 'Location not set' }}
+            </p>
         </div>
     </div>
 
@@ -22,7 +40,7 @@
     {% if user.bio %}
     <div class="profile-section">
         <h3>About</h3>
-        <p style="font-size:14px; color:#444; line-height:1.7;">{{ user.bio }}</p>
+        <p style="font-size:14.5px; color:#334155; line-height:1.7;">{{ user.bio }}</p>
     </div>
     {% endif %}
 
@@ -49,12 +67,27 @@
     </div>
     {% endif %}
 
-    <!-- Edit button — only visible to the profile owner -->
-    {% if session.get('user_id') == user.id %}
-    <div style="margin-top:16px;">
-        <a href="/profile" class="profile-btn">Edit Profile</a>
+    <!-- Edit and message buttons -->
+    <div style="margin-top:24px; display:flex; gap:12px; align-items:center;">
+        {% if session.get('user_id') == user.id %}
+            <a href="/profile" class="profile-btn">Edit Profile</a>
+        {% endif %}
+
+        {% if session.get('account_type') == 'company' and user.headhunting_mode == 1 %}
+            <button id="open-message-modal-btn" class="profile-btn" style="background: #10b981; color: white; display: inline-flex; align-items: center; gap: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                Message User
+            </button>
+        {% endif %}
     </div>
-    {% endif %}
 
 </div>
+
+<style>
+@keyframes pulse-green {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+</style>
 {% endblock %}

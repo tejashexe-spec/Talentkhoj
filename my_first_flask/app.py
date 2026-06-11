@@ -609,7 +609,7 @@ def user_profile(user_id):
     conn = get_db()
     with conn.cursor() as cursor:
         cursor.execute(
-            "SELECT id, full_name, avatar, bio, location, skills, cv_path FROM users WHERE id = %s AND account_type = 'individual'",
+            "SELECT id, full_name, avatar, bio, location, skills, cv_path, active_status, headhunting_mode FROM users WHERE id = %s AND account_type = 'individual'",
             (user_id,)
         )
         user = cursor.fetchone()

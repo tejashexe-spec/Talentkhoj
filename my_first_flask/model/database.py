@@ -29,7 +29,6 @@ class Database:
             )
             self._init_tables()
             self._run_migrations()
-            self._seed_mock_reviews()
             print("Database connected successfully!")
 
         except pymysql.MySQLError as e:

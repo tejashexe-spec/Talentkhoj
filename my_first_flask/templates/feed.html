@@ -679,6 +679,109 @@
         padding-left: 12px;
         margin-top: 4px;
     }
+
+    /* Right Column Widgets styling */
+    .widget-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        margin-bottom: 16px;
+    }
+    .widget-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .widget-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .widget-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .widget-item-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e293b;
+        text-decoration: none;
+    }
+    .widget-item-title:hover {
+        color: #2456ff;
+        text-decoration: underline;
+    }
+    .widget-item-meta {
+        font-size: 11px;
+        color: #64748b;
+    }
+    .widget-recommendation {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .widget-rec-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+    }
+    .widget-rec-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+    }
+    .widget-rec-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: #0f172a;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .widget-rec-name:hover {
+        color: #2456ff;
+        text-decoration: underline;
+    }
+    .widget-rec-headline {
+        font-size: 11px;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .widget-follow-btn {
+        background: none;
+        border: 1px solid #64748b;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s;
+        width: fit-content;
+        margin-top: 4px;
+    }
+    .widget-follow-btn:hover {
+        background: #f1f5f9;
+        border-color: #0f172a;
+        color: #0f172a;
+    }
 </style>
 
 <div class="feed-container">
@@ -808,7 +911,62 @@
 
         <!-- Right column -->
         <aside class="feed-right-col">
-            <div class="skeleton-card">Trending on Talent Khoj...</div>
+            <!-- News Widget -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>Talent Khoj News</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <div class="widget-list">
+                    <div class="widget-item">
+                        <a href="#" class="widget-item-title">Kathmandu Tech Startups Raising Seed Funds</a>
+                        <span class="widget-item-meta">1h ago &bull; 1,234 readers</span>
+                    </div>
+                    <div class="widget-item">
+                        <a href="#" class="widget-item-title">Nepal's IT Sector Projected to Grow by 20%</a>
+                        <span class="widget-item-meta">5h ago &bull; 850 readers</span>
+                    </div>
+                    <div class="widget-item">
+                        <a href="#" class="widget-item-title">Top 10 High-Income Skills for 2026</a>
+                        <span class="widget-item-meta">1d ago &bull; 3,420 readers</span>
+                    </div>
+                    <div class="widget-item">
+                        <a href="#" class="widget-item-title">Remote Jobs Rising Among Nepalese Graduates</a>
+                        <span class="widget-item-meta">2d ago &bull; 1,890 readers</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Follow Suggestions Widget -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>Add to your feed</span>
+                </div>
+                <div class="widget-list" style="gap: 16px;">
+                    <div class="widget-recommendation">
+                        <img src="https://ui-avatars.com/api/?name=Nepal+Telecom&background=05154b&color=fff" class="widget-rec-avatar" alt="logo">
+                        <div class="widget-rec-info">
+                            <a href="#" class="widget-rec-name">Nepal Telecom</a>
+                            <span class="widget-rec-headline">Telecommunications &bull; Kathmandu</span>
+                            <button class="widget-follow-btn">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Follow
+                            </button>
+                        </div>
+                    </div>
+                    <div class="widget-recommendation">
+                        <img src="https://ui-avatars.com/api/?name=Fusemachines&background=2456ff&color=fff" class="widget-rec-avatar" alt="logo">
+                        <div class="widget-rec-info">
+                            <a href="#" class="widget-rec-name">Fusemachines</a>
+                            <span class="widget-rec-headline">Artificial Intelligence &bull; Lalitpur</span>
+                            <button class="widget-follow-btn">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                Follow
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </aside>
     </div>
 </div>

@@ -2138,7 +2138,7 @@ def dashboard_inbox():
         if conv.get("last_message_time"):
             conv["last_message_time"] = conv["last_message_time"].strftime("%Y-%m-%d %H:%M")
 
-    return render_template("dashboard_inbox.html", conversations=conversations)
+    return render_template("dashboard_inbox.html", conversations=conversations, active="inbox")
 
 
 @app.route("/dashboard/headhunt", methods=["GET"])
@@ -2193,7 +2193,8 @@ def dashboard_headhunt():
         locations=locations,
         query=query_param,
         status=status_param,
-        selected_location=location_param
+        selected_location=location_param,
+        active="headhunt"
     )
 
 
@@ -2249,6 +2250,17 @@ def api_get_message_thread(other_user_id):
             msg["created_at"] = msg["created_at"].strftime("%Y-%m-%d %H:%M")
 
     return jsonify({"success": True, "messages": messages})
+
+
+@app.route("/api/messages/unread-count", methods=["GET"])
+@login_required
+def api_unread_count():
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) as count FROM messages WHERE receiver_id = %s AND is_read = 0", (user_id,))
+        row = cursor.fetchone()
+    return jsonify({"success": True, "unread_count": row["count"] if row else 0})
 
 
 if __name__ == "__main__":

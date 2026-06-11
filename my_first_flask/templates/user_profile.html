@@ -169,7 +169,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        statusMsg.innerHTML = 'Message sent! <a href="/dashboard/inbox" style="color:#10b981; font-weight:600; text-decoration:underline;">Go to Inbox</a>';
+                        statusMsg.innerHTML = 'Message sent! <a href="/dashboard/inbox?chat_with=' + {{ user.id }} + '" style="color:#10b981; font-weight:600; text-decoration:underline;">Go to Inbox</a>';
                         statusMsg.style.background = '#eaf8ef';
                         statusMsg.style.color = '#10b981';
                         statusMsg.style.display = 'block';

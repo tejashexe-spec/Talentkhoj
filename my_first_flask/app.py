@@ -508,6 +508,22 @@ def profile():
                 )
             name_message = "Social links updated successfully."
 
+        # ── Headhunting Settings ─────────────────────────────────────────────
+        elif action == "headhunting":
+            active_status = request.form.get("active_status", "actively_looking").strip()
+            headhunting_mode = 1 if request.form.get("headhunting_mode") == "on" else 0
+            
+            if active_status not in ("actively_looking", "open_to_offers", "not_looking"):
+                active_status = "actively_looking"
+                
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE users SET active_status = %s, headhunting_mode = %s WHERE id = %s",
+                    (active_status, headhunting_mode, session["user_id"])
+                )
+            name_message = "Headhunting settings updated successfully."
+
         # ── Change Password ──────────────────────────────────────────────────
         elif action == "change_password":
             current_password = request.form.get("current_password", "")

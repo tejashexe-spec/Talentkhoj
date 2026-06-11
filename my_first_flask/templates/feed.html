@@ -51,6 +51,90 @@
         box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
 
+    /* Left Profile Widget styling */
+    .profile-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        margin-bottom: 16px;
+    }
+    .profile-card-banner {
+        height: 56px;
+        background: linear-gradient(135deg, #05154b 0%, #2456ff 100%);
+    }
+    .profile-card-header {
+        text-align: center;
+        padding: 0 12px 16px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        position: relative;
+    }
+    .profile-card-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        border: 2px solid white;
+        object-fit: cover;
+        margin-top: -36px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .profile-card-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-top: 8px;
+        text-decoration: none;
+        display: block;
+    }
+    .profile-card-name:hover {
+        text-decoration: underline;
+    }
+    .profile-card-headline {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 4px;
+        line-height: 1.4;
+    }
+    .profile-card-stats {
+        padding: 12px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .profile-card-stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        padding: 4px 0;
+    }
+    .profile-card-stat-label {
+        color: #64748b;
+    }
+    .profile-card-stat-value {
+        font-weight: 700;
+        color: #2456ff;
+    }
+    .profile-card-footer {
+        padding: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        background: #f8fafc;
+    }
+    .profile-card-footer a {
+        color: #475569;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: color 0.2s;
+    }
+    .profile-card-footer a:hover {
+        color: #2456ff;
+    }
+
     .feed-header {
         margin-bottom: 16px;
         display: none;
@@ -408,7 +492,42 @@
     <div class="feed-grid">
         <!-- Left column -->
         <aside class="feed-left-col">
-            <div class="skeleton-card">Profile overview loading...</div>
+            <div class="profile-card">
+                <div class="profile-card-banner"></div>
+                <div class="profile-card-header">
+                    <a href="/profile">
+                        {% if user_profile.avatar %}
+                            <img src="{{ user_profile.avatar }}" class="profile-card-avatar" alt="avatar">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=72&rounded=true&background=2456ff&color=fff" class="profile-card-avatar" alt="avatar">
+                        {% endif %}
+                    </a>
+                    <a href="/profile" class="profile-card-name">{{ user_profile.full_name }}</a>
+                    <div class="profile-card-headline">
+                        {% if user_profile.bio %}
+                            {{ user_profile.bio }}
+                        {% else %}
+                            Professional at Talent Khoj
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="profile-card-stats">
+                    <div class="profile-card-stat-item">
+                        <span class="profile-card-stat-label">Profile viewers</span>
+                        <span class="profile-card-stat-value">47</span>
+                    </div>
+                    <div class="profile-card-stat-item">
+                        <span class="profile-card-stat-label">Post impressions</span>
+                        <span class="profile-card-stat-value">182</span>
+                    </div>
+                </div>
+                <div class="profile-card-footer">
+                    <a href="/profile">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Edit Profile
+                    </a>
+                </div>
+            </div>
         </aside>
 
         <!-- Middle column -->

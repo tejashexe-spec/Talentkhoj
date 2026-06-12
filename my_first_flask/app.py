@@ -843,7 +843,14 @@ def company_profile(user_id):
         avg_rating = round(stats["avg_rating"], 1) if stats["avg_rating"] else 0.0
         review_count = stats["review_count"]
         
-    return render_template("company_profile.html", company=company, reviews=reviews, avg_rating=avg_rating, review_count=review_count)
+        # Query FAQs
+        cursor.execute(
+            "SELECT * FROM company_faqs WHERE company_id = %s ORDER BY created_at ASC",
+            (company["id"],)
+        )
+        faqs = cursor.fetchall()
+        
+    return render_template("company_profile.html", company=company, reviews=reviews, avg_rating=avg_rating, review_count=review_count, faqs=faqs)
 
 
 @app.route("/company/edit", methods=["GET", "POST"])

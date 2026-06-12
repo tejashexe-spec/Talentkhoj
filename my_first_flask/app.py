@@ -1539,6 +1539,11 @@ def dashboard_search():
         else:
             opp["questions_list"] = []
             
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT question, answer FROM job_faqs WHERE job_id = %s", (opp["id"],))
+            opp["faqs_list"] = cursor.fetchall()
+            
+            
     return render_template(
         "dashboard_search.html",
         opportunities=opportunities,

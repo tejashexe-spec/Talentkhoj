@@ -1533,7 +1533,84 @@ def dashboard_settings():
 @app.route("/dashboard/badges", methods=["GET", "POST"])
 @login_required
 def dashboard_badges():
-    return render_template("dashboard_badges.html")
+    conn = get_db()
+    account_type = session.get("account_type")
+    
+    if account_type == "company":
+        with conn.cursor() as cursor:
+            # Get company details
+            cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+            company = cursor.fetchone()
+            
+            if not company:
+                flash("Only registered companies can view or issue badges.", "error")
+                return redirect(url_for("dashboard"))
+                
+            if request.method == "POST":
+                candidate_email = request.form.get("candidate_email", "").strip().lower()
+                badge_type = request.form.get("badge_type", "employment")
+                title = request.form.get("title", "").strip()
+                start_date = request.form.get("start_date")
+                end_date = request.form.get("end_date") or None
+                description = request.form.get("description", "").strip()
+                
+                # Validation
+                if not candidate_email or not title or not start_date:
+                    flash("Please fill in all required fields.", "error")
+                    return redirect(url_for("dashboard_badges"))
+                    
+                # Find candidate
+                cursor.execute("SELECT id, full_name FROM users WHERE email = %s AND account_type = 'individual'", (candidate_email,))
+                candidate = cursor.fetchone()
+                
+                if not candidate:
+                    flash(f"Candidate with email '{candidate_email}' was not found or is a company account.", "error")
+                    return redirect(url_for("dashboard_badges"))
+                    
+                # Insert badge
+                cursor.execute("""
+                    INSERT INTO user_badges (user_id, company_id, title, badge_type, description, start_date, end_date, status)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')
+                """, (candidate["id"], company["id"], title, badge_type, description or None, start_date, end_date))
+                
+                flash(f"Verification badge successfully issued to {candidate['full_name']}!", "success")
+                return redirect(url_for("dashboard_badges"))
+            
+            # Fetch issued badges
+            cursor.execute("""
+                SELECT b.*, u.full_name as candidate_name, u.email as candidate_email
+                FROM user_badges b
+                JOIN users u ON b.user_id = u.id
+                WHERE b.company_id = %s
+                ORDER BY b.awarded_at DESC
+            """, (company["id"],))
+            issued_badges = cursor.fetchall()
+            
+            return render_template("dashboard_badges.html", issued_badges=issued_badges)
+            
+    else: # Individual / Candidate
+        with conn.cursor() as cursor:
+            # Fetch pending badges
+            cursor.execute("""
+                SELECT b.*, c.company_name, c.logo as company_logo
+                FROM user_badges b
+                JOIN companies c ON b.company_id = c.id
+                WHERE b.user_id = %s AND b.status = 'pending'
+                ORDER BY b.awarded_at DESC
+            """, (session["user_id"],))
+            pending_badges = cursor.fetchall()
+            
+            # Fetch active (accepted) badges
+            cursor.execute("""
+                SELECT b.*, c.company_name, c.logo as company_logo
+                FROM user_badges b
+                JOIN companies c ON b.company_id = c.id
+                WHERE b.user_id = %s AND b.status = 'accepted'
+                ORDER BY b.awarded_at DESC
+            """, (session["user_id"],))
+            active_badges = cursor.fetchall()
+            
+            return render_template("dashboard_badges.html", pending_badges=pending_badges, active_badges=active_badges)
 
 
 @app.route("/dashboard/badges/accept/<int:badge_id>", methods=["POST"])

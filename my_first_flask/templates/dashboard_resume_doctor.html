@@ -338,8 +338,70 @@
     </div>
 
     <!-- Results Area (Initial Skeleton) -->
-    <div id="resultsArea" class="results-container" style="display: none;">
-        <!-- Analysis details will go here -->
+    {% if analysis %}
+    <div class="results-container" style="margin-top: 30px;">
+        <div class="dashboard-grid">
+            <!-- Left Side: Circular score & category breakdown -->
+            <div class="score-circle-container">
+                <h3 style="font-size:16px; font-weight:700; color:#05154b; margin-bottom:10px;">Overall ATS Score</h3>
+                <div class="circle-wrap">
+                    <div class="circle">
+                        <div class="mask full" style="transform: rotate({{ (analysis.overall_score / 100) * 180 }}deg);">
+                            <div class="fill" style="transform: rotate({{ (analysis.overall_score / 100) * 180 }}deg);"></div>
+                        </div>
+                        <div class="mask half">
+                            <div class="fill" style="transform: rotate({{ (analysis.overall_score / 100) * 180 }}deg);"></div>
+                        </div>
+                        <div class="inside-circle">{{ analysis.overall_score }}%</div>
+                    </div>
+                </div>
+                
+                <!-- Sub Category Scores -->
+                <div class="category-rating-bar">
+                    <div class="category-label">
+                        <span>Formatting & Design</span>
+                        <span>{{ analysis.categories.formatting }}/100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ analysis.categories.formatting }}%;"></div>
+                    </div>
+                </div>
+                <div class="category-rating-bar">
+                    <div class="category-label">
+                        <span>Impact & Action Verbs</span>
+                        <span>{{ analysis.categories.impact }}/100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ analysis.categories.impact }}%;"></div>
+                    </div>
+                </div>
+                <div class="category-rating-bar">
+                    <div class="category-label">
+                        <span>Skills & Keywords</span>
+                        <span>{{ analysis.categories.skills }}/100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ analysis.categories.skills }}%;"></div>
+                    </div>
+                </div>
+                <div class="category-rating-bar">
+                    <div class="category-label">
+                        <span>Work Experience Depth</span>
+                        <span>{{ analysis.categories.experience }}/100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ analysis.categories.experience }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Side: Expandable diagnostics list -->
+            <div class="diagnostics-list">
+                <!-- Detailed reviews will go here -->
+            </div>
+        </div>
     </div>
+    {% endif %}
 </div>
 {% endblock %}
+

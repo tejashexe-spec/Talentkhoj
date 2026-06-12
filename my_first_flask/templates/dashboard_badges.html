@@ -1,0 +1,280 @@
+{% extends "dashboard_base.html" %}
+{% set active = "badges" %}
+{% block title %}My Verification Badges | Talent Khoj{% endblock %}
+
+{% block content %}
+<style>
+    .badges-section {
+        margin-bottom: 32px;
+    }
+    .badges-section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .badges-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+    }
+    .badge-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.025);
+        display: flex;
+        flex-direction: column;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    .badge-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        border-color: rgba(36, 86, 255, 0.3);
+    }
+    .badge-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+    }
+    .badge-card.pending::before {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+    .badge-card.accepted::before {
+        background: linear-gradient(90deg, #10b981, #34d399);
+    }
+    .badge-card.rejected::before {
+        background: linear-gradient(90deg, #ef4444, #f87171);
+    }
+    .badge-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    .badge-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .badge-card.pending .badge-icon-wrapper {
+        background: #fffbeb;
+        color: #d97706;
+    }
+    .badge-card.accepted .badge-icon-wrapper {
+        background: #eaf8ef;
+        color: #10b981;
+    }
+    .badge-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .badge-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .badge-issuer {
+        font-size: 13px;
+        color: #475569;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .badge-issuer img {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    .badge-description {
+        font-size: 13.5px;
+        color: #64748b;
+        line-height: 1.5;
+        margin-bottom: 18px;
+        flex: 1;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .badge-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: #94a3b8;
+        padding-top: 14px;
+        border-top: 1px solid #f1f5f9;
+        margin-top: auto;
+    }
+    .badge-type-tag {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+    .badge-type-tag.internship { background: #e0f2fe; color: #0369a1; }
+    .badge-type-tag.employment { background: #e0f2fe; color: #0369a1; }
+    .badge-type-tag.contribution { background: #f3e8ff; color: #6b21a8; }
+    .badge-type-tag.other { background: #f1f5f9; color: #475569; }
+    .badge-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+    }
+    .btn-badge {
+        flex: 1;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: background 0.2s;
+    }
+    .btn-badge-accept {
+        background: #10b981;
+        color: white;
+    }
+    .btn-badge-accept:hover {
+        background: #059669;
+    }
+    .btn-badge-reject {
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #cbd5e1;
+    }
+    .btn-badge-reject:hover {
+        background: #e2e8f0;
+        color: #475569;
+    }
+</style>
+
+<div class="dashboard-header" style="margin-bottom: 24px;">
+    <h1>My Verification Badges</h1>
+    <p>View and manage verified experience badges awarded to you by companies.</p>
+</div>
+
+<!-- Candidate View -->
+<div class="badges-container">
+    
+    <!-- PENDING BADGES -->
+    <div class="badges-section">
+        <h2 class="badges-section-title">
+            <span style="font-size: 18px;">⏳</span> Pending Requests
+        </h2>
+        {% if pending_badges %}
+            <div class="badges-grid">
+                {% for badge in pending_badges %}
+                    <div class="badge-card pending">
+                        <div class="badge-header">
+                            <div class="badge-icon-wrapper">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                            </div>
+                            <div class="badge-info">
+                                <div class="badge-title" title="{{ badge.title }}">{{ badge.title }}</div>
+                                <div class="badge-issuer">
+                                    {% if badge.company_logo %}
+                                        <img src="{{ badge.company_logo }}" alt="logo">
+                                    {% endif %}
+                                    <span>{{ badge.company_name }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="badge-description">{{ badge.description or 'No details provided.' }}</div>
+                        <div class="badge-meta">
+                            <span class="badge-type-tag {{ badge.badge_type }}">{{ badge.badge_type }}</span>
+                            <span>{{ badge.start_date.strftime('%b %Y') if badge.start_date else 'N/A' }} - {{ badge.end_date.strftime('%b %Y') if badge.end_date else 'Present' }}</span>
+                        </div>
+                        <div class="badge-actions">
+                            <form action="/dashboard/badges/accept/{{ badge.id }}" method="POST" style="flex:1; margin:0;">
+                                <button type="submit" class="btn-badge btn-badge-accept">
+                                    Accept
+                                </button>
+                            </form>
+                            <form action="/dashboard/badges/reject/{{ badge.id }}" method="POST" style="flex:1; margin:0;">
+                                <button type="submit" class="btn-badge btn-badge-reject" onclick="return confirm('Are you sure you want to reject this badge?');">
+                                    Reject
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 32px; color: #64748b; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+                No pending badge verification requests.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- ACTIVE BADGES -->
+    <div class="badges-section" style="margin-top: 40px;">
+        <h2 class="badges-section-title">
+            <span style="font-size: 18px;">✅</span> Active Badges (Visible on Profile)
+        </h2>
+        {% if active_badges %}
+            <div class="badges-grid">
+                {% for badge in active_badges %}
+                    <div class="badge-card accepted">
+                        <div class="badge-header">
+                            <div class="badge-icon-wrapper">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                </svg>
+                            </div>
+                            <div class="badge-info">
+                                <div class="badge-title" title="{{ badge.title }}">{{ badge.title }}</div>
+                                <div class="badge-issuer">
+                                    {% if badge.company_logo %}
+                                        <img src="{{ badge.company_logo }}" alt="logo">
+                                    {% endif %}
+                                    <span>{{ badge.company_name }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="badge-description">{{ badge.description or 'No details provided.' }}</div>
+                        <div class="badge-meta">
+                            <span class="badge-type-tag {{ badge.badge_type }}">{{ badge.badge_type }}</span>
+                            <span>{{ badge.start_date.strftime('%b %Y') if badge.start_date else 'N/A' }} - {{ badge.end_date.strftime('%b %Y') if badge.end_date else 'Present' }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 40px; color: #64748b; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+                No active badges yet. Once you accept a badge, it will appear here and on your public profile.
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

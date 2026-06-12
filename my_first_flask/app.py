@@ -2376,7 +2376,24 @@ def dashboard_cv_upload():
     return redirect(url_for("dashboard_cv"))
 
 
+def extract_text_from_pdf(filepath):
+    """Extracts text content from a PDF file using pypdf."""
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(filepath)
+        text = ""
+        for page in reader.pages:
+            content = page.extract_text()
+            if content:
+                text += content + "\n"
+        return text.strip()
+    except Exception as e:
+        print(f"Error parsing PDF: {e}")
+        return ""
+
+
 @app.route("/dashboard/resume-doctor", methods=["GET"])
+
 @login_required
 def dashboard_resume_doctor():
     if session.get("account_type") != "individual":

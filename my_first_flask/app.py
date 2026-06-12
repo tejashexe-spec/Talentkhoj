@@ -2148,7 +2148,7 @@ def generate_cv_html(data):
 @app.route("/dashboard/cv", methods=["GET"])
 @login_required
 def dashboard_cv():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can access the CV Builder.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2227,7 +2227,7 @@ def view_cv(user_id):
 @app.route("/dashboard/cv/build", methods=["POST"])
 @login_required
 def dashboard_cv_build():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can build a CV.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2341,7 +2341,7 @@ def dashboard_cv_build():
 @app.route("/dashboard/cv/upload", methods=["POST"])
 @login_required
 def dashboard_cv_upload():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can upload a CV.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2374,6 +2374,226 @@ def dashboard_cv_upload():
         flash("No file selected.", "error")
         
     return redirect(url_for("dashboard_cv"))
+
+
+def extract_text_from_pdf(filepath):
+    """Extracts text content from a PDF file using pypdf."""
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(filepath)
+        text = ""
+        for page in reader.pages:
+            content = page.extract_text()
+            if content:
+                text += content + "\n"
+        return text.strip()
+    except Exception as e:
+        print(f"Error parsing PDF: {e}")
+        return ""
+
+
+def query_gemini_resume_analysis(resume_text, job_description=""):
+    """Queries Gemini 1.5 Flash API to perform resume diagnostics returning JSON."""
+    import urllib.request
+    import json
+    
+    if not config.GEMINI_API_KEY:
+        return {"error": "Gemini API key is not configured in settings."}
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={config.GEMINI_API_KEY}"
+    
+    prompt = f"""
+    You are an expert ATS (Applicant Tracking System) scanner and career coach.
+    Analyze the following resume text and optionally the targeted job description.
+    
+    RESUME TEXT:
+    {resume_text}
+    
+    TARGET JOB DESCRIPTION:
+    {job_description}
+    
+    You must output a raw JSON object matching the following structure:
+    {{
+      "overall_score": <int 0 to 100>,
+      "categories": {{
+        "formatting": <int 0 to 100>,
+        "impact": <int 0 to 100>,
+        "skills": <int 0 to 100>,
+        "experience": <int 0 to 100>
+      }},
+      "feedback": {{
+        "formatting": [<strings of constructive feedback>],
+        "impact": [<strings of constructive feedback>],
+        "skills": [<strings of constructive feedback>],
+        "experience": [<strings of constructive feedback>]
+      }},
+      "rewrites": [
+        {{
+          "original": "<original weak line from the experience section>",
+          "improved": "<improved strong line using action verbs and quantifiable results>",
+          "reason": "<explanation of why the improvement works>"
+        }}
+      ],
+      "keyword_scan": {{
+        "matched_keywords": [<list of matching skills/keywords between resume and job description>],
+        "missing_keywords": [<list of critical missing skills/keywords based on the job description>]
+      }}
+    }}
+    
+    Ensure categories scoring is realistic (most resumes score between 50 and 85).
+    Ensure the JSON response is valid and strictly parsed.
+    Do not add any markup or markdown wraps around the JSON object.
+    """
+    
+    req_data = {
+        "contents": [{
+            "parts": [{
+                "text": prompt
+            }]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json"
+        }
+    }
+    
+    req_body = json.dumps(req_data).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=req_body,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            text_response = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            return json.loads(text_response)
+    except Exception as e:
+        print(f"Error querying Gemini API: {e}")
+        return {"error": f"Failed to get analysis: {str(e)}"}
+
+
+@app.route("/dashboard/resume-doctor", methods=["GET"])
+
+
+@login_required
+def dashboard_resume_doctor():
+    if session.get("account_type") not in ("individual", "admin"):
+        flash("Only individuals can access the Resume Doctor.", "error")
+        return redirect(url_for("dashboard"))
+        
+    import json
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT resume_analysis FROM users WHERE id = %s", (session["user_id"],))
+        user = cursor.fetchone()
+        
+    analysis = None
+    if user and user["resume_analysis"]:
+        try:
+            analysis = json.loads(user["resume_analysis"])
+        except Exception:
+            analysis = None
+            
+    return render_template("dashboard_resume_doctor.html", active="resume_doctor", analysis=analysis)
+
+
+@app.route("/dashboard/resume-doctor/analyze", methods=["POST"])
+@login_required
+def dashboard_resume_doctor_analyze():
+    """
+    POST route to trigger AI resume diagnostic analysis.
+    Extracts text content from either dynamically built resume JSON data 
+    or an uploaded PDF resume, queries the Gemini API, and saves the cached 
+    review JSON back to the user's DB entry.
+    """
+    if session.get("account_type") not in ("individual", "admin"):
+        flash("Only individuals can use the Resume Doctor.", "error")
+        return redirect(url_for("dashboard"))
+        
+    import json
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT cv_path, cv_data FROM users WHERE id = %s", (session["user_id"],))
+        user = cursor.fetchone()
+        
+    if not user or (not user["cv_path"] and not user["cv_data"]):
+        flash("Please build or upload a CV first before using the Resume Doctor.", "error")
+        return redirect(url_for("dashboard_cv"))
+        
+    resume_text = ""
+    cv_data_str = user["cv_data"]
+    cv_path = user["cv_path"]
+    
+    if cv_data_str and cv_data_str != "{}":
+        try:
+            cv_dict = json.loads(cv_data_str)
+            resume_parts = []
+            if cv_dict.get("full_name"): resume_parts.append(f"Name: {cv_dict['full_name']}")
+            if cv_dict.get("email"): resume_parts.append(f"Email: {cv_dict['email']}")
+            if cv_dict.get("portfolio"): resume_parts.append(f"Portfolio: {cv_dict['portfolio']}")
+            if cv_dict.get("github"): resume_parts.append(f"GitHub: {cv_dict['github']}")
+            if cv_dict.get("linkedin"): resume_parts.append(f"LinkedIn: {cv_dict['linkedin']}")
+            
+            if cv_dict.get("education"):
+                resume_parts.append("\nEDUCATION:")
+                for edu in cv_dict["education"]:
+                    resume_parts.append(f"- {edu.get('degree')} at {edu.get('school')}. Details: {edu.get('details')}")
+                    
+            if cv_dict.get("experience"):
+                resume_parts.append("\nWORK EXPERIENCE:")
+                for exp in cv_dict["experience"]:
+                    resume_parts.append(f"- {exp.get('title')} at {exp.get('company')} ({exp.get('dates')}). Description: {exp.get('description')}")
+                    
+            if cv_dict.get("projects"):
+                resume_parts.append("\nPROJECTS:")
+                for proj in cv_dict["projects"]:
+                    resume_parts.append(f"- {proj.get('title')} [{proj.get('tag')}]. Link: {proj.get('link')}. Description: {proj.get('description')}")
+                    
+            if cv_dict.get("skills"):
+                resume_parts.append("\nSKILLS:")
+                for sk in cv_dict["skills"]:
+                    resume_parts.append(f"- {sk.get('category')}: {sk.get('list')}")
+                    
+            if cv_dict.get("certifications"):
+                resume_parts.append("\nCERTIFICATIONS:")
+                for cert in cv_dict["certifications"]:
+                    resume_parts.append(f"- {cert}")
+                    
+            resume_text = "\n".join(resume_parts)
+        except Exception as e:
+            print(f"Error parsing cv_data JSON: {e}")
+            
+    if not resume_text and cv_path:
+        full_path = os.path.join(BASE_DIR, cv_path.lstrip("/"))
+        if os.path.exists(full_path):
+            if cv_path.lower().endswith(".pdf"):
+                resume_text = extract_text_from_pdf(full_path)
+            else:
+                resume_text = f"Uploaded File: {os.path.basename(full_path)}"
+                
+    if not resume_text.strip():
+        flash("Could not extract readable text from your resume. If you uploaded an image or scanned document, please build it dynamically in the CV Builder.", "error")
+        return redirect(url_for("dashboard_resume_doctor"))
+        
+    job_description = request.form.get("job_description", "").strip()
+    
+    analysis_result = query_gemini_resume_analysis(resume_text, job_description)
+    
+    if "error" in analysis_result:
+        flash(analysis_result["error"], "error")
+        return redirect(url_for("dashboard_resume_doctor"))
+        
+    analysis_str = json.dumps(analysis_result)
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE users SET resume_analysis = %s WHERE id = %s", (analysis_str, session["user_id"]))
+        
+    flash("Resume diagnostic review successfully completed!", "success")
+    return redirect(url_for("dashboard_resume_doctor"))
+
+
 
 
 @app.route("/dashboard/events")

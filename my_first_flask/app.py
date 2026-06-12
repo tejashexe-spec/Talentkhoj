@@ -2392,7 +2392,90 @@ def extract_text_from_pdf(filepath):
         return ""
 
 
+def query_gemini_resume_analysis(resume_text, job_description=""):
+    """Queries Gemini 1.5 Flash API to perform resume diagnostics returning JSON."""
+    import urllib.request
+    import json
+    
+    if not config.GEMINI_API_KEY:
+        return {"error": "Gemini API key is not configured in settings."}
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={config.GEMINI_API_KEY}"
+    
+    prompt = f"""
+    You are an expert ATS (Applicant Tracking System) scanner and career coach.
+    Analyze the following resume text and optionally the targeted job description.
+    
+    RESUME TEXT:
+    {resume_text}
+    
+    TARGET JOB DESCRIPTION:
+    {job_description}
+    
+    You must output a raw JSON object matching the following structure:
+    {{
+      "overall_score": <int 0 to 100>,
+      "categories": {{
+        "formatting": <int 0 to 100>,
+        "impact": <int 0 to 100>,
+        "skills": <int 0 to 100>,
+        "experience": <int 0 to 100>
+      }},
+      "feedback": {{
+        "formatting": [<strings of constructive feedback>],
+        "impact": [<strings of constructive feedback>],
+        "skills": [<strings of constructive feedback>],
+        "experience": [<strings of constructive feedback>]
+      }},
+      "rewrites": [
+        {{
+          "original": "<original weak line from the experience section>",
+          "improved": "<improved strong line using action verbs and quantifiable results>",
+          "reason": "<explanation of why the improvement works>"
+        }}
+      ],
+      "keyword_scan": {{
+        "matched_keywords": [<list of matching skills/keywords between resume and job description>],
+        "missing_keywords": [<list of critical missing skills/keywords based on the job description>]
+      }}
+    }}
+    
+    Ensure categories scoring is realistic (most resumes score between 50 and 85).
+    Ensure the JSON response is valid and strictly parsed.
+    Do not add any markup or markdown wraps around the JSON object.
+    """
+    
+    req_data = {
+        "contents": [{
+            "parts": [{
+                "text": prompt
+            }]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json"
+        }
+    }
+    
+    req_body = json.dumps(req_data).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=req_body,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            text_response = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            return json.loads(text_response)
+    except Exception as e:
+        print(f"Error querying Gemini API: {e}")
+        return {"error": f"Failed to get analysis: {str(e)}"}
+
+
 @app.route("/dashboard/resume-doctor", methods=["GET"])
+
 
 @login_required
 def dashboard_resume_doctor():

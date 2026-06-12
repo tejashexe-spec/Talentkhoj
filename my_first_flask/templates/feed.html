@@ -788,6 +788,7 @@
     <div class="feed-grid">
         <!-- Left column -->
         <aside class="feed-left-col">
+            {% if user_profile %}
             <div class="profile-card">
                 <div class="profile-card-banner"></div>
                 <div class="profile-card-header">
@@ -806,6 +807,7 @@
                             Professional at Talent Khoj
                         {% endif %}
                     </div>
+                </div>
                 <div class="profile-card-footer">
                     <a href="/profile">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -813,10 +815,18 @@
                     </a>
                 </div>
             </div>
+            {% else %}
+            <div class="profile-card" style="padding: 20px; text-align: center; border: 1px solid #e2e8f0; border-radius: 10px; background: white;">
+                <h3 style="font-size: 15px; font-weight: 700; color: #05154b; margin-bottom: 8px; margin-top: 0;">Welcome to Community!</h3>
+                <p style="font-size: 12.5px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">Sign in to view your profile, post updates, and connect with other professionals.</p>
+                <a href="/login" class="btn-comment-submit" style="text-decoration: none; display: inline-block; padding: 8px 16px; font-size: 13px; font-weight: 600; background: #2456ff; color: white; border-radius: 20px;">Sign In</a>
+            </div>
+            {% endif %}
         </aside>
 
         <!-- Middle column -->
         <main class="feed-middle-col" style="display: flex; flex-direction: column; gap: 16px;">
+            {% if user_profile %}
             <!-- Start a Post Card -->
             <div class="post-creator-trigger-card">
                 <div class="post-creator-top">
@@ -846,7 +856,7 @@
                     </button>
                 </div>
             </div>
-
+ 
             <!-- Create Post Modal Dialog -->
             <div id="create-post-modal" class="post-modal" onclick="handleOutsideClick(event)">
                 <div class="post-modal-content">
@@ -891,6 +901,7 @@
                     </form>
                 </div>
             </div>
+            {% endif %}
 
             <!-- Feed Timeline -->
             <div id="feed-timeline" style="display: flex; flex-direction: column; gap: 16px;">
@@ -940,6 +951,7 @@
 </div>
 
 <script>
+    const isLoggedIn = {{ 'true' if session.get('user_id') else 'false' }};
     let currentPage = 1;
     let loadingPosts = false;
     let hasMorePosts = true;
@@ -1106,6 +1118,10 @@
     }
 
     function toggleLike(postId) {
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
         fetch("/post/react", {
             method: "POST",
             headers: {
@@ -1251,10 +1267,12 @@
                 <button type="submit" class="btn-comment-submit">Reply</button>
             </form>
         `;
-    }
-
-    function submitComment(e, postId) {
+    }    function submitComment(e, postId) {
         e.preventDefault();
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
         const input = document.getElementById(`comment-input-${postId}`);
         const text = input.value.trim ? input.value.trim() : input.value;
         
@@ -1276,9 +1294,13 @@
             }
         });
     }
-
+ 
     function submitReply(e, postId, parentId) {
         e.preventDefault();
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
         const input = document.getElementById(`reply-input-${parentId}`);
         const text = input.value.trim ? input.value.trim() : input.value;
         

@@ -72,7 +72,6 @@ def home():
 
 
 @app.route("/feed", methods=["GET"])
-@login_required
 def get_feed():
     user_id = session.get("user_id", 0)
     page = int(request.args.get("page", 1))
@@ -179,7 +178,6 @@ def toggle_reaction():
 
 
 @app.route("/post/<int:post_id>/comments", methods=["GET"])
-@login_required
 def get_post_comments(post_id):
     conn = get_db()
     with conn.cursor() as cursor:

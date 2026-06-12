@@ -2376,6 +2376,30 @@ def dashboard_cv_upload():
     return redirect(url_for("dashboard_cv"))
 
 
+@app.route("/dashboard/resume-doctor", methods=["GET"])
+@login_required
+def dashboard_resume_doctor():
+    if session.get("account_type") != "individual":
+        flash("Only individuals can access the Resume Doctor.", "error")
+        return redirect(url_for("dashboard"))
+        
+    import json
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT resume_analysis FROM users WHERE id = %s", (session["user_id"],))
+        user = cursor.fetchone()
+        
+    analysis = None
+    if user and user["resume_analysis"]:
+        try:
+            analysis = json.loads(user["resume_analysis"])
+        except Exception:
+            analysis = None
+            
+    return render_template("dashboard_resume_doctor.html", active="resume_doctor", analysis=analysis)
+
+
+
 @app.route("/dashboard/events")
 def dashboard_events():
     conn = get_db()

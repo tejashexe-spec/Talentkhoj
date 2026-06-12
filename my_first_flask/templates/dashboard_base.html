@@ -56,6 +56,23 @@
                 </span>
                 Post Opportunity
             </a>
+            <a href="/dashboard/headhunt" class="sidebar-item {% if active == 'headhunt' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                </span>
+                Headhunting
+            </a>
+            <a href="/dashboard/inbox" class="sidebar-item {% if active == 'inbox' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </span>
+                Inbox
+                <span class="sidebar-inbox-badge" style="display: none; background: #ef4444; color: white; border-radius: 50%; font-size: 10px; font-weight: 700; width: 18px; height: 18px; align-items: center; justify-content: center; margin-left: auto;">0</span>
+            </a>
             <a href="/dashboard/events" class="sidebar-item {% if active == 'events' %}active{% endif %}">
                 <span class="sidebar-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -66,6 +83,25 @@
                     </svg>
                 </span>
                 Events
+            </a>
+            <a href="/dashboard/badges" class="sidebar-item {% if active == 'badges' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                </span>
+                Award Badges
+            </a>
+            <a href="/feed" class="sidebar-item {% if active == 'community' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </span>
+                Community Feed
             </a>
             <a href="/profile" class="sidebar-item {% if active == 'profile' %}active{% endif %}">
                 <span class="sidebar-icon">
@@ -109,6 +145,15 @@
                 </span>
                 CV Builder
             </a>
+            <a href="/dashboard/inbox" class="sidebar-item {% if active == 'inbox' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                </span>
+                Inbox
+                <span class="sidebar-inbox-badge" style="display: none; background: #ef4444; color: white; border-radius: 50%; font-size: 10px; font-weight: 700; width: 18px; height: 18px; align-items: center; justify-content: center; margin-left: auto;">0</span>
+            </a>
             <a href="/dashboard/events" class="sidebar-item {% if active == 'events' %}active{% endif %}">
                 <span class="sidebar-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -119,6 +164,25 @@
                     </svg>
                 </span>
                 Events
+            </a>
+            <a href="/dashboard/badges" class="sidebar-item {% if active == 'badges' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                </span>
+                My Badges
+            </a>
+            <a href="/feed" class="sidebar-item {% if active == 'community' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </span>
+                Community Feed
             </a>
             <a href="/profile" class="sidebar-item {% if active == 'profile' %}active{% endif %}">
                 <span class="sidebar-icon">
@@ -143,14 +207,15 @@
 
         </nav>
 
+        {% if session.get('user_id') %}
         <div class="sidebar-profile">
             <button class="sidebar-profile-btn" onclick="toggleSidebarDropdown(event)">
                 {% if session.get('user_avatar') %}
                     <img src="{{ session['user_avatar'] }}" alt="profile">
                 {% else %}
-                    <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=36&rounded=true&background=2456ff&color=fff" alt="profile">
+                    <img src="https://ui-avatars.com/api/?name={{ session.get('user_name', '') }}&size=36&rounded=true&background=2456ff&color=fff" alt="profile">
                 {% endif %}
-                <span>{{ session['user_name'] }}</span>
+                <span>{{ session.get('user_name', '') }}</span>
                 <span class="dropdown-arrow">&#9660;</span>
             </button>
             <div class="sidebar-dropdown" id="sidebarDropdown">
@@ -159,6 +224,13 @@
                 <a href="/logout">Logout</a>
             </div>
         </div>
+        {% else %}
+        <div class="sidebar-profile" style="padding: 16px;">
+            <a href="/login" class="submit-btn" style="text-decoration: none; display: block; text-align: center; padding: 10px; font-size: 13.5px; font-weight: 600; border-radius: 8px; background: #2456ff; color: white; margin: 0; width: 100%;">
+                Sign In
+            </a>
+        </div>
+        {% endif %}
 
     </aside>
 
@@ -177,6 +249,228 @@
 
 </div>
 
+<!-- Floating Chat Widget -->
+{% if session.get('user_id') %}
+<div id="floating-chat-widget" style="position: fixed; bottom: 0; right: 20px; width: 300px; z-index: 9999; font-family: inherit; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); border-radius: 12px 12px 0 0; background: white; border: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; transition: max-height 0.25s ease-in-out; max-height: 48px;">
+    <!-- Widget Header -->
+    <div id="chat-widget-header" style="background: #05154b; color: white; padding: 12px 16px; font-weight: 700; font-size: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-radius: 11px 11px 0 0; user-select: none;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">💬</span>
+            <span>Messaging</span>
+            <span id="chat-widget-unread-badge" style="display: none; background: #ef4444; color: white; font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%; align-items: center; justify-content: center; line-height: 1;">0</span>
+        </div>
+        <span id="chat-widget-toggle-icon" style="font-size: 12px; transition: transform 0.2s;">▲</span>
+    </div>
+
+    <!-- Widget Body -->
+    <div id="chat-widget-body" style="height: 380px; display: flex; flex-direction: column; background: #f8fafc;">
+        <!-- Thread List View -->
+        <div id="chat-widget-conv-list" style="flex: 1; overflow-y: auto; display: block;">
+            <!-- Loaded conversations dynamically -->
+        </div>
+
+        <!-- Chat Thread Conversation View -->
+        <div id="chat-widget-thread-view" style="flex: 1; display: none; flex-direction: column; height: 100%;">
+            <!-- Header for active chat -->
+            <div style="padding: 8px 12px; background: #f1f5f9; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+                <button id="chat-widget-back-btn" style="background: none; border: none; font-size: 14px; color: #2456ff; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0; font-weight: 600;">
+                    ← Back
+                </button>
+                <span id="chat-widget-partner-name" style="font-weight: 600; font-size: 13px; color: #0f172a; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">User</span>
+                <div style="width: 32px;"></div>
+            </div>
+
+            <!-- Messages area -->
+            <div id="chat-widget-messages-container" style="flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                <!-- Messages populated via AJAX -->
+            </div>
+
+            <!-- Input area -->
+            <form id="chat-widget-input-form" onsubmit="submitWidgetMessage(event)" style="padding: 8px; border-top: 1px solid #e2e8f0; background: white; display: flex; gap: 6px; margin: 0;">
+                <input type="text" id="chat-widget-input-text" placeholder="Type a message..." style="flex: 1; border: 1.5px solid #cbd5e1; border-radius: 20px; padding: 6px 12px; font-size: 13px; outline: none; transition: border-color 0.2s;" autocomplete="off" required>
+                <button type="submit" style="background: #2456ff; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;">
+                    ➔
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let widgetActiveChatUserId = null;
+    let widgetPollInterval = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const widget = document.getElementById('floating-chat-widget');
+        const header = document.getElementById('chat-widget-header');
+        const icon = document.getElementById('chat-widget-toggle-icon');
+
+        if (header && widget) {
+            header.addEventListener('click', () => {
+                if (widget.style.maxHeight === '48px' || widget.style.maxHeight === '') {
+                    widget.style.maxHeight = '428px';
+                    icon.style.transform = 'rotate(180deg)';
+                    loadWidgetConversations();
+                } else {
+                    widget.style.maxHeight = '48px';
+                    icon.style.transform = 'rotate(0deg)';
+                    if (widgetPollInterval) clearInterval(widgetPollInterval);
+                }
+            });
+        }
+        
+        // Sync badge on load
+        updateWidgetBadge();
+        setInterval(updateWidgetBadge, 10000);
+    });
+
+    function updateWidgetBadge() {
+        fetch('/api/messages/unread-count')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const badge = document.getElementById('chat-widget-unread-badge');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.innerText = data.unread_count;
+                            badge.style.display = 'inline-flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error(err));
+    }
+
+    function loadWidgetConversations() {
+        const listContainer = document.getElementById('chat-widget-conv-list');
+        if (!listContainer) return;
+        listContainer.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 13px; padding: 20px 0;">Loading...</div>';
+
+        fetch('/dashboard/inbox')
+            .then(res => res.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const items = doc.querySelectorAll('.conversation-item');
+                
+                listContainer.innerHTML = '';
+                if (items.length > 0) {
+                    items.forEach(item => {
+                        const id = item.id.replace('conv-', '');
+                        const name = item.querySelector('.conv-name').textContent.trim();
+                        const avatar = item.querySelector('.conv-avatar').src;
+                        const lastMsgTextEl = item.querySelector('.conv-message');
+                        const lastMsg = lastMsgTextEl ? lastMsgTextEl.textContent.trim() : "";
+                        const unreadBadge = item.querySelector('.conv-badge');
+                        const unreadCount = unreadBadge ? unreadBadge.textContent.trim() : 0;
+
+                        const row = document.createElement('div');
+                        row.style.cssText = 'padding: 10px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; background: white; transition: background 0.2s;';
+                        row.innerHTML = `
+                            <img src="${avatar}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;">
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span style="font-weight: 700; font-size: 13px; color: #1e293b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${name}</span>
+                                    ${unreadCount > 0 ? `<span style="background: #ef4444; color: white; font-size: 9px; font-weight: 700; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">${unreadCount}</span>` : ''}
+                                </div>
+                                <div style="font-size: 12px; color: #64748b; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${lastMsg}</div>
+                            </div>
+                        `;
+                        row.addEventListener('click', () => {
+                            startWidgetChat(id, name);
+                        });
+                        listContainer.appendChild(row);
+                    });
+                } else {
+                    listContainer.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 13px; padding: 20px 0;">No messages yet.</div>';
+                }
+            });
+    }
+
+    function startWidgetChat(userId, userName) {
+        widgetActiveChatUserId = userId;
+        document.getElementById('chat-widget-conv-list').style.display = 'none';
+        document.getElementById('chat-widget-thread-view').style.display = 'flex';
+        document.getElementById('chat-widget-partner-name').textContent = userName;
+
+        fetchWidgetMessages(userId);
+
+        if (widgetPollInterval) clearInterval(widgetPollInterval);
+        widgetPollInterval = setInterval(() => {
+            if (widgetActiveChatUserId === userId) {
+                fetchWidgetMessages(userId, true);
+            }
+        }, 3000);
+
+        document.getElementById('chat-widget-back-btn').onclick = () => {
+            widgetActiveChatUserId = null;
+            if (widgetPollInterval) clearInterval(widgetPollInterval);
+            document.getElementById('chat-widget-thread-view').style.display = 'none';
+            document.getElementById('chat-widget-conv-list').style.display = 'block';
+            loadWidgetConversations();
+        };
+    }
+
+    function fetchWidgetMessages(userId, isPolling = false) {
+        fetch(`/api/messages/thread/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const container = document.getElementById('chat-widget-messages-container');
+                    if (!container) return;
+                    const wasAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 30;
+
+                    container.innerHTML = '';
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            const isSent = msg.sender_id === {{ session['user_id'] or 0 }};
+                            const bubble = document.createElement('div');
+                            bubble.style.cssText = `max-width: 80%; padding: 8px 12px; border-radius: 14px; font-size: 12.5px; line-height: 1.4; margin-bottom: 4px; ${isSent ? 'align-self: flex-end; background: #2456ff; color: white; border-bottom-right-radius: 2px;' : 'align-self: flex-start; background: #e2e8f0; color: #1e293b; border-bottom-left-radius: 2px;'}`;
+                            bubble.innerText = msg.message_text;
+                            container.appendChild(bubble);
+                        });
+                    } else {
+                        container.innerHTML = '<div style="text-align: center; font-size: 12px; color: #64748b; padding: 20px 0;">No messages yet.</div>';
+                    }
+
+                    if (!isPolling || wasAtBottom) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }
+            });
+    }
+
+    function submitWidgetMessage(e) {
+        e.preventDefault();
+        if (!widgetActiveChatUserId) return;
+
+        const input = document.getElementById('chat-widget-input-text');
+        const text = input.value.trim();
+        if (!text) return;
+
+        fetch('/api/messages/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                receiver_id: widgetActiveChatUserId,
+                message_text: text
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                input.value = '';
+                fetchWidgetMessages(widgetActiveChatUserId);
+            }
+        });
+    }
+</script>
+{% endif %}
+
 <script>
     function toggleSidebarDropdown(e) {
         e.stopPropagation();
@@ -185,6 +479,31 @@
     document.addEventListener('click', function() {
         var d = document.getElementById('sidebarDropdown');
         if (d) d.classList.remove('open');
+    });
+
+    function updateUnreadCount() {
+        fetch('/api/messages/unread-count')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const count = data.unread_count;
+                    const badges = document.querySelectorAll('.sidebar-inbox-badge');
+                    badges.forEach(badge => {
+                        if (count > 0) {
+                            badge.innerText = count;
+                            badge.style.display = 'inline-flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    });
+                }
+            })
+            .catch(err => console.error('Error fetching unread count:', err));
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        updateUnreadCount();
+        setInterval(updateUnreadCount, 10000); // Check every 10 seconds
     });
 </script>
 

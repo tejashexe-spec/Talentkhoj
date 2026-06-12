@@ -1,0 +1,375 @@
+{% extends "dashboard_base.html" %}
+{% set active = "profile" %}
+
+{% block title %}Edit Company Profile | Talent Khoj{% endblock %}
+
+{% block content %}
+<style>
+    .profile-edit-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding-bottom: 50px;
+    }
+
+    .edit-card {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        padding: 28px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .edit-card h2 {
+        font-size: 17px;
+        font-weight: 800;
+        color: #05154b;
+        margin-bottom: 4px;
+        margin-top: 0;
+    }
+
+    .edit-card p.subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 24px;
+        margin-top: 0;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+
+    @media (max-width: 640px) {
+        .form-row { grid-template-columns: 1fr; }
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #1e293b;
+        transition: border-color 0.2s;
+        box-sizing: border-box;
+        outline: none;
+    }
+
+    .form-control:focus {
+        border-color: #2456ff;
+    }
+
+    .form-group-full {
+        margin-bottom: 16px;
+    }
+
+    .form-group-full label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+
+    .btn-save-profile {
+        background: #2456ff;
+        color: #fff;
+        border: none;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.15s;
+    }
+
+    .btn-save-profile:hover {
+        background: #1848d8;
+        transform: translateY(-1px);
+    }
+
+    .logo-edit-container {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 24px;
+        background: #f8fafc;
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px dashed #cbd5e1;
+    }
+
+    .logo-edit-preview {
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
+        object-fit: cover;
+        border: 1.5px solid #cbd5e1;
+    }
+
+    .btn-upload-logo-trigger {
+        background: white;
+        border: 1.5px solid #cbd5e1;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-upload-logo-trigger:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+    }
+
+    .faq-item-box {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 14px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .faq-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .faq-q {
+        font-weight: 700;
+        font-size: 13.5px;
+        color: #0f172a;
+        margin-bottom: 4px;
+    }
+
+    .faq-a {
+        font-size: 13px;
+        color: #475569;
+        line-height: 1.5;
+    }
+
+    .btn-delete-faq {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        padding: 4px;
+        transition: color 0.15s;
+    }
+
+    .btn-delete-faq:hover {
+        color: #b91c1c;
+    }
+</style>
+
+<div class="profile-edit-container">
+    <div class="dashboard-header" style="margin-bottom: 20px;">
+        <h1>Edit Company Profile</h1>
+        <p>Update your company details, upload your logo, and manage your public FAQs.</p>
+    </div>
+
+    <!-- MAIN PROFILE DETAILS -->
+    <div class="edit-card">
+        <h2>Company Information</h2>
+        <p class="subtitle">Primary details visible on your public business page.</p>
+
+        <form method="POST" action="/company/edit" enctype="multipart/form-data">
+            <!-- Logo Upload -->
+            <div class="logo-edit-container">
+                {% if company.logo %}
+                    <img src="{{ company.logo }}" alt="logo" class="logo-edit-preview" id="logoPreviewImg">
+                {% else %}
+                    <img src="https://ui-avatars.com/api/?name={{ company.company_name }}&size=80&rounded=true&background=05154b&color=fff" alt="logo" class="logo-edit-preview" id="logoPreviewImg">
+                {% endif %}
+                <div>
+                    <input type="file" name="logo" id="logoFileInput" accept="image/*" style="display: none;" onchange="previewLogo(this)">
+                    <button type="button" class="btn-upload-logo-trigger" onclick="document.getElementById('logoFileInput').click()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Upload Business Logo
+                    </button>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 6px;">Supported formats: PNG, JPG, GIF, WEBP</div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Company Name <span style="color: #ef4444;">*</span></label>
+                    <input type="text" class="form-control" name="company_name" value="{{ company.company_name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Industry</label>
+                    <input type="text" class="form-control" name="industry" value="{{ company.industry or '' }}" placeholder="e.g. Technology, Finance, Education">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" class="form-control" name="address" value="{{ company.address or '' }}" placeholder="e.g. Mid Baneshwor, Kathmandu">
+                </div>
+                <div class="form-group">
+                    <label>PAN Number</label>
+                    <input type="text" class="form-control" name="pan_number" value="{{ company.pan_number or '' }}" placeholder="e.g. 609876543">
+                </div>
+            </div>
+
+            <div class="form-group-full">
+                <label>Website URL</label>
+                <input type="url" class="form-control" name="website" value="{{ company.website or '' }}" placeholder="https://example.com">
+            </div>
+
+            <div class="form-group-full">
+                <label>Company Description</label>
+                <textarea class="form-control" name="description" rows="6" placeholder="Tell candidates about your company's mission, values, and work culture..." style="resize: vertical;">{{ company.description or '' }}</textarea>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+                <a href="/company/{{ session['user_id'] }}" class="btn-upload-logo-trigger" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">Cancel</a>
+                <button type="submit" class="btn-save-profile">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- FAQ MANAGEMENT SECTION (Placeholder for dynamic actions) -->
+    <div class="edit-card">
+        <h2>Profile FAQs</h2>
+        <p class="subtitle">Add commonly asked questions about your company, recruitment process, or benefits.</p>
+
+        <div id="companyFaqsContainer">
+            {% if faqs %}
+                {% for faq in faqs %}
+                    <div class="faq-item-box" id="faq-item-{{ faq.id }}">
+                        <div class="faq-content">
+                            <div class="faq-q">Q: {{ faq.question }}</div>
+                            <div class="faq-a">A: {{ faq.answer }}</div>
+                        </div>
+                        <button type="button" class="btn-delete-faq" onclick="deleteCompanyFaq({{ faq.id }})" title="Delete FAQ">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p id="noFaqsText" style="font-size: 13.5px; color: #64748b; font-style: italic; text-align: center; padding: 10px 0; margin: 0;">No FAQs configured yet. Use the fields below to add one.</p>
+            {% endif %}
+        </div>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+        <h3 style="font-size: 14px; font-weight: 700; color: #05154b; margin-bottom: 12px; margin-top: 0;">Add New FAQ</h3>
+        <form id="addFaqForm" onsubmit="addCompanyFaq(event)">
+            <div class="form-group-full">
+                <label>Question</label>
+                <input type="text" class="form-control" id="faqQuestion" placeholder="e.g. Do you offer remote work options?" required>
+            </div>
+            <div class="form-group-full">
+                <label>Answer</label>
+                <textarea class="form-control" id="faqAnswer" rows="3" placeholder="e.g. Yes, we support a hybrid structure with remote capability." required style="resize: vertical;"></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn-save-profile" style="font-size: 12.5px; padding: 8px 16px;">Add FAQ</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function previewLogo(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('logoPreviewImg').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function addCompanyFaq(event) {
+        event.preventDefault();
+        const question = document.getElementById('faqQuestion').value.trim();
+        const answer = document.getElementById('faqAnswer').value.trim();
+        if (!question || !answer) return;
+
+        fetch('/company/faq/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: question, answer: answer })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const container = document.getElementById('companyFaqsContainer');
+                const noFaqs = document.getElementById('noFaqsText');
+                if (noFaqs) noFaqs.remove();
+
+                const box = document.createElement('div');
+                box.className = 'faq-item-box';
+                box.id = 'faq-item-' + data.faq.id;
+                box.innerHTML = `
+                    <div class="faq-content">
+                        <div class="faq-q">Q: ${data.faq.question}</div>
+                        <div class="faq-a">A: ${data.faq.answer}</div>
+                    </div>
+                    <button type="button" class="btn-delete-faq" onclick="deleteCompanyFaq(${data.faq.id})" title="Delete FAQ">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                `;
+                container.appendChild(box);
+                document.getElementById('faqQuestion').value = '';
+                document.getElementById('faqAnswer').value = '';
+            } else {
+                alert(data.message || 'Failed to add FAQ.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('An error occurred. Please try again.');
+        });
+    }
+
+    function deleteCompanyFaq(faqId) {
+        if (!confirm('Are you sure you want to delete this FAQ?')) return;
+
+        fetch('/company/faq/delete/' + faqId, {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const el = document.getElementById('faq-item-' + faqId);
+                if (el) el.remove();
+
+                const container = document.getElementById('companyFaqsContainer');
+                if (container.children.length === 0) {
+                    container.innerHTML = `<p id="noFaqsText" style="font-size: 13.5px; color: #64748b; font-style: italic; text-align: center; padding: 10px 0; margin: 0;">No FAQs configured yet. Use the fields below to add one.</p>`;
+                }
+            } else {
+                alert(data.message || 'Failed to delete FAQ.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('An error occurred. Please try again.');
+        });
+    }
+</script>
+{% endblock %}

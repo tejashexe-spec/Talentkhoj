@@ -653,6 +653,18 @@
                         </div>
                     </div>
 
+                    <div class="form-group" style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 24px;">
+                        <label style="font-weight: 700; font-size: 15px; color: #05154b; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span>Opportunity FAQs (Optional)</span>
+                            <button type="button" class="btn-action" style="padding: 6px 12px; font-size: 12px; background: #2456ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="addJobFaq()">+ Add FAQ</button>
+                        </label>
+                        <p style="color: #64748b; font-size: 12px; margin-bottom: 12px;">Add specific questions and answers regarding this job/internship role.</p>
+                        
+                        <div id="faqsContainer" style="display: flex; flex-direction: column; gap: 16px;">
+                            <!-- Dynamic FAQs will be appended here -->
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="wizard-actions">
@@ -839,6 +851,34 @@
             <button type="button" class="btn-wizard-cancel" style="padding: 10px; background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; margin: 0; min-height: auto; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="this.parentElement.remove()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
+        `;
+        container.appendChild(div);
+    }
+
+    function addJobFaq() {
+        const container = document.getElementById('faqsContainer');
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.gap = '8px';
+        div.style.border = '1px solid #e2e8f0';
+        div.style.borderRadius = '8px';
+        div.style.padding = '12px';
+        div.style.background = '#f8fafc';
+        div.style.position = 'relative';
+
+        div.innerHTML = `
+            <button type="button" style="position: absolute; right: 10px; top: 10px; background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;" onclick="this.parentElement.remove()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div style="margin-right: 30px;">
+                <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">FAQ Question</label>
+                <input type="text" name="faq_questions[]" placeholder="e.g. Is there any bond?" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px;" required>
+            </div>
+            <div>
+                <label style="font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px;">FAQ Answer</label>
+                <textarea name="faq_answers[]" placeholder="e.g. No, there is no service agreement/bond." rows="2" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13.5px; resize: vertical;" required></textarea>
+            </div>
         `;
         container.appendChild(div);
     }

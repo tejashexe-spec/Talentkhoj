@@ -1,0 +1,1325 @@
+{% extends "dashboard_base.html" %}
+{% set active = "community" %}
+
+{% block title %}Social Feed | Talent Khoj{% endblock %}
+
+{% block content %}
+<style>
+    .feed-container {
+        max-width: 1128px;
+        margin: 0 auto;
+        padding: 24px 16px;
+    }
+
+    .feed-grid {
+        display: grid;
+        grid-template-columns: 225px 1fr 290px;
+        gap: 24px;
+        align-items: start;
+    }
+
+    @media (max-width: 992px) {
+        .feed-grid {
+            grid-template-columns: 225px 1fr;
+        }
+        .feed-right-col {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .feed-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+        .feed-left-col, .feed-right-col {
+            display: none;
+        }
+        .feed-container {
+            padding: 12px 8px;
+        }
+    }
+
+    .skeleton-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        color: #64748b;
+        font-size: 13px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    /* Left Profile Widget styling */
+    .profile-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        margin-bottom: 16px;
+    }
+    .profile-card-banner {
+        height: 56px;
+        background: linear-gradient(135deg, #05154b 0%, #2456ff 100%);
+    }
+    .profile-card-header {
+        text-align: center;
+        padding: 0 12px 16px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        position: relative;
+    }
+    .profile-card-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        border: 2px solid white;
+        object-fit: cover;
+        margin-top: -36px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .profile-card-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-top: 8px;
+        text-decoration: none;
+        display: block;
+    }
+    .profile-card-name:hover {
+        text-decoration: underline;
+    }
+    .profile-card-headline {
+        font-size: 12px;
+        color: #64748b;
+        margin-top: 4px;
+        line-height: 1.4;
+    }
+    .profile-card-stats {
+        padding: 12px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .profile-card-stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        padding: 4px 0;
+    }
+    .profile-card-stat-label {
+        color: #64748b;
+    }
+    .profile-card-stat-value {
+        font-weight: 700;
+        color: #2456ff;
+    }
+    .profile-card-footer {
+        padding: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: center;
+        background: #f8fafc;
+    }
+    .profile-card-footer a {
+        color: #475569;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: color 0.2s;
+    }
+    .profile-card-footer a:hover {
+        color: #2456ff;
+    }
+
+    .feed-header {
+        margin-bottom: 16px;
+        display: none;
+    }
+
+    .post-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: box-shadow 0.2s;
+    }
+    .post-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .post-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .post-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+    }
+
+    .post-author-info {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+    }
+
+    .post-author-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+        text-decoration: none;
+    }
+
+    .post-author-name:hover {
+        color: #2456ff;
+        text-decoration: underline;
+    }
+
+    .post-meta {
+        font-size: 12px;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .badge-user-type {
+        font-size: 9.5px;
+        font-weight: 700;
+        padding: 1px 5px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    .badge-user-type.candidate { background: #eff6ff; color: #1e40af; }
+    .badge-user-type.company { background: #fff7ed; color: #c2410c; }
+
+    .post-content {
+        font-size: 14px;
+        color: #1e293b;
+        line-height: 1.5;
+        word-break: break-word;
+        white-space: pre-wrap;
+    }
+
+    .post-see-more {
+        color: #64748b;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        background: none;
+        padding: 0;
+        font-size: 14px;
+        margin-left: 4px;
+    }
+    .post-see-more:hover {
+        color: #2456ff;
+        text-decoration: underline;
+    }
+
+    .post-image {
+        width: calc(100% + 32px);
+        margin: 4px -16px;
+        max-height: 480px;
+        object-fit: cover;
+        border-top: 1px solid #f1f5f9;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    /* Stats Bar below post */
+    .post-stats-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: #64748b;
+        padding: 4px 0 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .post-stats-left {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .post-actions {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding-top: 12px;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .action-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #64748b;
+        transition: all 0.2s;
+        padding: 6px 12px;
+        border-radius: 6px;
+    }
+
+    .action-btn:hover {
+        background: #f8fafc;
+        color: #0f172a;
+    }
+
+    .action-btn.liked {
+        color: #ef4444;
+    }
+
+    .action-btn.liked svg {
+        fill: #ef4444;
+        stroke: #ef4444;
+    }
+
+    .post-creator-trigger-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .post-creator-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .post-creator-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+    }
+    .post-creator-bar {
+        flex: 1;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 35px;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.2s, border-color 0.2s;
+    }
+    .post-creator-bar:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+    }
+    .post-creator-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 4px;
+        border-top: 1px solid #f1f5f9;
+    }
+    .creator-option-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: background 0.2s;
+    }
+    .creator-option-btn:hover {
+        background: #f8fafc;
+        color: #0f172a;
+    }
+    
+    /* Post Modal styling */
+    .post-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+    .post-modal.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .post-modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 552px;
+        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        transform: translateY(-20px);
+        transition: transform 0.25s ease;
+        overflow: hidden;
+    }
+    .post-modal.open .post-modal-content {
+        transform: translateY(0);
+    }
+    .post-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 24px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .post-modal-header h2 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+    .post-modal-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #64748b;
+        font-size: 24px;
+        line-height: 1;
+        padding: 4px;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+    .post-modal-close:hover {
+        background: #f1f5f9;
+        color: #0f172a;
+    }
+    .post-modal-user {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 24px 8px 24px;
+    }
+    .post-modal-user-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+    }
+    .post-modal-user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .post-modal-user-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .post-modal-visibility {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid #cbd5e1;
+        border-radius: 20px;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        color: #64748b;
+        width: fit-content;
+    }
+    .post-modal-body {
+        padding: 8px 24px;
+    }
+    .post-modal-textarea {
+        width: 100%;
+        min-height: 120px;
+        border: none;
+        outline: none;
+        resize: none;
+        font-size: 15px;
+        color: #0f172a;
+        line-height: 1.5;
+        font-family: inherit;
+    }
+    .post-modal-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 24px;
+        border-top: 1px solid #f1f5f9;
+        background: #f8fafc;
+    }
+    .post-modal-actions {
+        display: flex;
+        gap: 8px;
+    }
+    .post-modal-action-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #64748b;
+        padding: 8px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s, color 0.2s;
+    }
+    .post-modal-action-btn:hover {
+        background: #f1f5f9;
+        color: #2456ff;
+    }
+    .btn-submit-modal-post {
+        background: #2456ff;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-submit-modal-post:hover {
+        background: #1d4ed8;
+    }
+    .image-preview-container {
+        display: none;
+        position: relative;
+        width: 100%;
+        max-height: 250px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px dashed #cbd5e1;
+        margin-top: 12px;
+    }
+    .image-preview {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .remove-preview-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: rgba(15, 23, 42, 0.75);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+    }
+    .remove-preview-btn:hover {
+        background: rgba(15, 23, 42, 0.9);
+    }
+    .upload-btn-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+    }
+    .upload-btn-wrapper input[type=file] {
+        font-size: 100px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    /* Threaded Comments Styling */
+    .comments-section {
+        display: none;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #f1f5f9;
+        animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .comment-form {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+    .comment-input {
+        flex: 1;
+        border: 1px solid #cbd5e1;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 13.5px;
+        outline: none;
+        background: #f8fafc;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .comment-input:focus {
+        border-color: #2456ff;
+        background: white;
+    }
+    .btn-comment-submit {
+        background: #2456ff;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-comment-submit:hover {
+        background: #1d4ed8;
+    }
+    .comments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .comment-thread {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .comment-card {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    .comment-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+    }
+    .comment-body {
+        flex: 1;
+        background: #f1f5f9;
+        border-radius: 0 12px 12px 12px;
+        padding: 10px 14px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.01);
+    }
+    .comment-author {
+        font-size: 13px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 2px;
+    }
+    .comment-text {
+        font-size: 13px;
+        color: #1e293b;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+    .comment-footer {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+        font-size: 11px;
+        color: #64748b;
+        padding-left: 46px;
+    }
+    .comment-reply-btn {
+        background: none;
+        border: none;
+        color: #64748b;
+        cursor: pointer;
+        font-weight: 600;
+        padding: 0;
+        transition: color 0.2s;
+    }
+    .comment-reply-btn:hover {
+        color: #2456ff;
+        text-decoration: underline;
+    }
+    .comment-replies {
+        margin-left: 46px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border-left: 2px solid #cbd5e1;
+        padding-left: 12px;
+        margin-top: 4px;
+    }
+
+    /* Right Column Widgets styling */
+    .widget-card {
+        background: white;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        margin-bottom: 16px;
+    }
+    .widget-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .widget-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .widget-item {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .widget-item-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1e293b;
+        text-decoration: none;
+    }
+    .widget-item-title:hover {
+        color: #2456ff;
+        text-decoration: underline;
+    }
+    .widget-item-meta {
+        font-size: 11px;
+        color: #64748b;
+    }
+    .widget-recommendation {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .widget-rec-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+    }
+    .widget-rec-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+    }
+    .widget-rec-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: #0f172a;
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .widget-rec-name:hover {
+        color: #2456ff;
+        text-decoration: underline;
+    }
+    .widget-rec-headline {
+        font-size: 11px;
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .widget-follow-btn {
+        background: none;
+        border: 1px solid #64748b;
+        border-radius: 20px;
+        padding: 4px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s;
+        width: fit-content;
+        margin-top: 4px;
+    }
+    .widget-follow-btn:hover {
+        background: #f1f5f9;
+        border-color: #0f172a;
+        color: #0f172a;
+    }
+</style>
+
+<div class="feed-container">
+    <div class="feed-grid">
+        <!-- Left column -->
+        <aside class="feed-left-col">
+            {% if user_profile %}
+            <div class="profile-card">
+                <div class="profile-card-banner"></div>
+                <div class="profile-card-header">
+                    <a href="/profile">
+                        {% if user_profile.avatar %}
+                            <img src="{{ user_profile.avatar }}" class="profile-card-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=72&rounded=true&background=2456ff&color=fff';">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=72&rounded=true&background=2456ff&color=fff" class="profile-card-avatar" alt="avatar">
+                        {% endif %}
+                    </a>
+                    <a href="/profile" class="profile-card-name">{{ user_profile.full_name }}</a>
+                    <div class="profile-card-headline">
+                        {% if user_profile.bio %}
+                            {{ user_profile.bio }}
+                        {% else %}
+                            Professional at Talent Khoj
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="profile-card-footer">
+                    <a href="/profile">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        Edit Profile
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="profile-card" style="padding: 20px; text-align: center; border: 1px solid #e2e8f0; border-radius: 10px; background: white;">
+                <h3 style="font-size: 15px; font-weight: 700; color: #05154b; margin-bottom: 8px; margin-top: 0;">Welcome to Community!</h3>
+                <p style="font-size: 12.5px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">Sign in to view your profile, post updates, and connect with other professionals.</p>
+                <a href="/login" class="btn-comment-submit" style="text-decoration: none; display: inline-block; padding: 8px 16px; font-size: 13px; font-weight: 600; background: #2456ff; color: white; border-radius: 20px;">Sign In</a>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- Middle column -->
+        <main class="feed-middle-col" style="display: flex; flex-direction: column; gap: 16px;">
+            {% if user_profile %}
+            <!-- Start a Post Card -->
+            <div class="post-creator-trigger-card">
+                <div class="post-creator-top">
+                    {% if user_profile.avatar %}
+                        <img src="{{ user_profile.avatar }}" class="post-creator-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=48&rounded=true&background=2456ff&color=fff';">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=48&rounded=true&background=2456ff&color=fff" class="post-creator-avatar" alt="avatar">
+                    {% endif %}
+                    <button class="post-creator-bar" onclick="openPostModal()">Start a post</button>
+                </div>
+                <div class="post-creator-options">
+                    <button class="creator-option-btn" onclick="openPostModalWithPhoto()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <span>Photo</span>
+                    </button>
+                    <button class="creator-option-btn" onclick="openPostModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                        <span>Video</span>
+                    </button>
+                    <button class="creator-option-btn" onclick="openPostModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        <span>Event</span>
+                    </button>
+                    <button class="creator-option-btn" onclick="openPostModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <span>Write article</span>
+                    </button>
+                </div>
+            </div>
+ 
+            <!-- Create Post Modal Dialog -->
+            <div id="create-post-modal" class="post-modal" onclick="handleOutsideClick(event)">
+                <div class="post-modal-content">
+                    <div class="post-modal-header">
+                        <h2>Create a post</h2>
+                        <button class="post-modal-close" onclick="closePostModal()">&times;</button>
+                    </div>
+                    <form id="create-post-form" enctype="multipart/form-data">
+                        <div class="post-modal-user">
+                            {% if user_profile.avatar %}
+                                <img src="{{ user_profile.avatar }}" class="post-modal-user-avatar" alt="avatar">
+                            {% else %}
+                                <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=48&rounded=true&background=2456ff&color=fff" class="post-modal-user-avatar" alt="avatar">
+                            {% endif %}
+                            <div class="post-modal-user-info">
+                                <span class="post-modal-user-name">{{ user_profile.full_name }}</span>
+                                <div class="post-modal-visibility">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                    <span>Anyone</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="post-modal-body">
+                            <textarea class="post-modal-textarea" name="content" id="post-modal-content-textarea" placeholder="What do you want to talk about?" required></textarea>
+                            
+                            <div class="image-preview-container" id="preview-container">
+                                <img src="" alt="preview" class="image-preview" id="image-preview">
+                                <button type="button" class="remove-preview-btn" onclick="removeImagePreview()">&times;</button>
+                            </div>
+                        </div>
+                        <div class="post-modal-footer">
+                            <div class="post-modal-actions">
+                                <div class="upload-btn-wrapper">
+                                    <button type="button" class="post-modal-action-btn">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                    </button>
+                                    <input type="file" name="image" id="post-image-input" accept="image/*" onchange="previewImage(this)">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-submit-modal-post">Post</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Feed Timeline -->
+            <div id="feed-timeline" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Posts will be loaded here dynamically -->
+            </div>
+        </main>
+
+        <!-- Right column -->
+        <aside class="feed-right-col">
+            <!-- Follow Suggestions Widget -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>Add to your feed</span>
+                </div>
+                <div class="widget-list" style="gap: 16px;">
+                    {% if suggestions %}
+                        {% for sug in suggestions %}
+                            <div class="widget-recommendation">
+                                {% if sug.avatar %}
+                                    <img src="{{ sug.avatar }}" class="widget-rec-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ sug.full_name|urlencode }}&background=2456ff&color=fff&size=40';">
+                                {% else %}
+                                    <img src="https://ui-avatars.com/api/?name={{ sug.full_name }}&background=2456ff&color=fff&size=40" class="widget-rec-avatar" alt="avatar">
+                                {% endif %}
+                                <div class="widget-rec-info">
+                                    <a href="{% if sug.account_type == 'company' %}/company/{{ sug.id }}{% else %}/user/{{ sug.id }}{% endif %}" class="widget-rec-name">{{ sug.full_name }}</a>
+                                    <span class="widget-rec-headline">
+                                        {% if sug.bio %}
+                                            {{ sug.bio }}
+                                        {% else %}
+                                            {{ sug.account_type | capitalize }} on Talent Khoj
+                                        {% endif %}
+                                    </span>
+                                    <button class="widget-follow-btn">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                        Follow
+                                    </button>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="font-size: 12px; color: #64748b; text-align: center; padding: 10px 0;">No suggestions available</div>
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<script>
+    const isLoggedIn = {{ 'true' if session.get('user_id') else 'false' }};
+    let currentPage = 1;
+    let loadingPosts = false;
+    let hasMorePosts = true;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        loadFeed(true);
+        
+        const postForm = document.getElementById("create-post-form");
+        if (postForm) {
+            postForm.addEventListener("submit", function(e) {
+                e.preventDefault();
+                submitPost(this);
+            });
+        }
+
+        // Infinite Scroll Event Listener
+        window.addEventListener("scroll", () => {
+            if ((window.innerHeight + window.scrollY) >= document.documentElement.scrollHeight - 100) {
+                if (!loadingPosts && hasMorePosts) {
+                    loadFeed(false);
+                }
+            }
+        });
+    });
+
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('image-preview').src = e.target.result;
+                document.getElementById('preview-container').style.display = 'block';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function removeImagePreview() {
+        document.getElementById('post-image-input').value = "";
+        document.getElementById('preview-container').style.display = 'none';
+        document.getElementById('image-preview').src = "";
+    }
+
+    function loadFeed(reset = false) {
+        if (reset) {
+            currentPage = 1;
+            hasMorePosts = true;
+            const timeline = document.getElementById("feed-timeline");
+            timeline.innerHTML = '<div style="text-align: center; padding: 20px;" id="loading-spinner">Loading posts...</div>';
+        }
+        
+        loadingPosts = true;
+        
+        fetch(`/feed?ajax=1&page=${currentPage}`)
+            .then(res => res.json())
+            .then(data => {
+                const timeline = document.getElementById("feed-timeline");
+                const spinner = document.getElementById("loading-spinner");
+                if (spinner) spinner.remove();
+
+                if (reset && (!data.posts || data.posts.length === 0)) {
+                    timeline.innerHTML = `<div style="text-align: center; padding: 40px; color: #64748b; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">No posts in the feed yet. Be the first to share!</div>`;
+                    hasMorePosts = false;
+                } else if (data.posts && data.posts.length > 0) {
+                    data.posts.forEach(post => {
+                        // Check if post already exists to prevent duplication
+                        if (!document.getElementById(`post-${post.id}`)) {
+                            timeline.appendChild(createPostHTML(post));
+                        }
+                    });
+                    currentPage++;
+                    if (data.posts.length < 10) {
+                        hasMorePosts = false;
+                    }
+                } else {
+                    hasMorePosts = false;
+                }
+                loadingPosts = false;
+            })
+            .catch(err => {
+                console.error("Error loading feed:", err);
+                const spinner = document.getElementById("loading-spinner");
+                if (spinner) {
+                    spinner.innerHTML = '<div style="color: #ef4444; padding: 10px; font-weight: 500;">Failed to load posts. Please refresh.</div>';
+                }
+                loadingPosts = false;
+            });
+    }
+
+    function showFullPostText(postId) {
+        const card = document.getElementById(`post-${postId}`);
+        if (card) {
+            card.querySelector('.truncated-text').style.display = 'none';
+            card.querySelector('.full-text').style.display = 'inline';
+            card.querySelector('.post-see-more').style.display = 'none';
+        }
+    }
+
+    function createPostHTML(post) {
+        const div = document.createElement("div");
+        div.className = "post-card";
+        div.id = `post-${post.id}`;
+        
+        let imgHtml = "";
+        if (post.image_path) {
+            imgHtml = `<img src="/static/${post.image_path}" class="post-image" alt="post attachment">`;
+        }
+
+        const isLiked = post.has_liked ? "liked" : "";
+        const avatarUrl = post.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.full_name)}&background=2456ff&color=fff&size=48`;
+
+        let contentHtml = post.content;
+        if (post.content && post.content.length > 280) {
+            const truncated = post.content.substring(0, 250);
+            contentHtml = `<span class="truncated-text">${truncated}...</span><span class="full-text" style="display: none;">${post.content}</span><button class="post-see-more" onclick="showFullPostText(${post.id})">see more</button>`;
+        }
+
+        div.innerHTML = `
+            <div class="post-header">
+                <img src="${avatarUrl}" class="post-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(post.full_name) + '&background=2456ff&color=fff&size=48';">
+                <div class="post-author-info">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <a href="/user/${post.user_id}" class="post-author-name">${post.full_name}</a>
+                        <span class="badge-user-type ${post.account_type === 'company' ? 'company' : 'candidate'}">${post.account_type}</span>
+                    </div>
+                    <div class="post-meta">
+                        <span>${post.created_at}</span>
+                        <span>&bull;</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </div>
+                </div>
+            </div>
+            <div class="post-content">${contentHtml}</div>
+            ${imgHtml}
+            <div class="post-stats-bar">
+                <div class="post-stats-left">
+                    <span>👍</span>
+                    <span><span class="like-count">${post.like_count || 0}</span> likes</span>
+                </div>
+                <div class="post-stats-right">
+                    <span><span class="comment-count">${post.comment_count || 0}</span> comments</span>
+                </div>
+            </div>
+            <div class="post-actions">
+                <button class="action-btn ${isLiked}" onclick="toggleLike(${post.id})">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                    <span>Like</span>
+                </button>
+                <button class="action-btn" onclick="toggleCommentsSection(${post.id})">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    <span>Comment</span>
+                </button>
+            </div>
+            <div class="comments-section" id="comments-section-${post.id}">
+                <form class="comment-form" onsubmit="submitComment(event, ${post.id})">
+                    <input type="text" class="comment-input" placeholder="Write a comment..." id="comment-input-${post.id}" required>
+                    <button type="submit" class="btn-comment-submit">Post</button>
+                </form>
+                <div class="comments-list" id="comments-list-${post.id}">
+                    <!-- Comments loaded dynamically -->
+                </div>
+            </div>
+        `;
+        return div;
+    }
+
+    function toggleLike(postId) {
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        fetch("/post/react", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ post_id: postId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const postCard = document.getElementById(`post-${postId}`);
+                const likeBtn = postCard.querySelector(".action-btn");
+                const likeCountSpan = postCard.querySelector(".like-count");
+                likeCountSpan.textContent = data.like_count;
+                
+                if (data.action === "liked") {
+                    likeBtn.classList.add("liked");
+                } else {
+                    likeBtn.classList.remove("liked");
+                }
+            }
+        });
+    }
+
+    function openPostModal() {
+        document.getElementById('create-post-modal').classList.add('open');
+        document.getElementById('post-modal-content-textarea').focus();
+    }
+
+    function closePostModal() {
+        document.getElementById('create-post-modal').classList.remove('open');
+        document.getElementById('create-post-form').reset();
+        removeImagePreview();
+    }
+
+    function handleOutsideClick(e) {
+        const modal = document.getElementById('create-post-modal');
+        if (e.target === modal) {
+            closePostModal();
+        }
+    }
+
+    function openPostModalWithPhoto() {
+        openPostModal();
+        document.getElementById('post-image-input').click();
+    }
+
+    function submitPost(form) {
+        const formData = new FormData(form);
+        fetch("/post/create", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                form.reset();
+                removeImagePreview();
+                closePostModal();
+                loadFeed(true);
+            } else {
+                alert(data.error || "Failed to create post.");
+            }
+        });
+    }
+
+    function toggleCommentsSection(postId) {
+        const sec = document.getElementById(`comments-section-${postId}`);
+        if (sec.style.display === "block") {
+            sec.style.display = "none";
+        } else {
+            sec.style.display = "block";
+            loadComments(postId);
+        }
+    }
+
+    function loadComments(postId) {
+        fetch(`/post/${postId}/comments`)
+        .then(res => res.json())
+        .then(data => {
+            const list = document.getElementById(`comments-list-${postId}`);
+            list.innerHTML = "";
+            if (data.comments && data.comments.length > 0) {
+                data.comments.forEach(comment => {
+                    list.appendChild(createCommentHTML(comment, postId));
+                });
+            } else {
+                list.innerHTML = `<div style="text-align: center; font-size: 13px; color: #64748b; padding: 10px 0;">No comments yet.</div>`;
+            }
+        });
+    }
+
+    function createCommentHTML(comment, postId) {
+        const div = document.createElement("div");
+        div.className = "comment-thread";
+        
+        let repliesHtml = "";
+        if (comment.replies && comment.replies.length > 0) {
+            repliesHtml = `<div class="comment-replies">`;
+            comment.replies.forEach(reply => {
+                const repAvatar = reply.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(reply.full_name)}&background=2456ff&color=fff&size=32`;
+                repliesHtml += `
+                    <div class="comment-card">
+                        <img src="${repAvatar}" class="comment-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(reply.full_name) + '&background=2456ff&color=fff&size=32';">
+                        <div class="comment-body">
+                            <div class="comment-author">${reply.full_name}</div>
+                            <div class="comment-text">${reply.comment_text}</div>
+                            <div class="comment-footer">
+                                <span>${reply.created_at}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            repliesHtml += `</div>`;
+        }
+
+        const avatarUrl = comment.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(comment.full_name)}&background=2456ff&color=fff&size=32`;
+
+        div.innerHTML = `
+            <div class="comment-card">
+                <img src="${avatarUrl}" class="comment-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(comment.full_name) + '&background=2456ff&color=fff&size=32';">
+                <div class="comment-body">
+                    <div class="comment-author">${comment.full_name}</div>
+                    <div class="comment-text">${comment.comment_text}</div>
+                    <div class="comment-footer">
+                        <span>${comment.created_at}</span>
+                        <button class="comment-reply-btn" onclick="showReplyInput(${comment.id}, ${postId})">Reply</button>
+                    </div>
+                </div>
+            </div>
+            <div id="reply-form-container-${comment.id}" style="margin-left: 46px; margin-top: 8px;"></div>
+            ${repliesHtml}
+        `;
+        return div;
+    }
+
+    function showReplyInput(commentId, postId) {
+        const container = document.getElementById(`reply-form-container-${commentId}`);
+        container.innerHTML = `
+            <form class="comment-form" onsubmit="submitReply(event, ${postId}, ${commentId})">
+                <input type="text" class="comment-input" placeholder="Write a reply..." id="reply-input-${commentId}" required>
+                <button type="submit" class="btn-comment-submit">Reply</button>
+            </form>
+        `;
+    }    function submitComment(e, postId) {
+        e.preventDefault();
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        const input = document.getElementById(`comment-input-${postId}`);
+        const text = input.value.trim ? input.value.trim() : input.value;
+        
+        fetch(`/post/${postId}/comment`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ comment_text: text })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                input.value = "";
+                loadComments(postId);
+                // Increment counter
+                const countSpan = document.querySelector(`#post-${postId} .comment-count`);
+                countSpan.textContent = parseInt(countSpan.textContent) + 1;
+            }
+        });
+    }
+ 
+    function submitReply(e, postId, parentId) {
+        e.preventDefault();
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        const input = document.getElementById(`reply-input-${parentId}`);
+        const text = input.value.trim ? input.value.trim() : input.value;
+        
+        fetch(`/post/${postId}/comment`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ comment_text: text, parent_comment_id: parentId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                loadComments(postId);
+                // Increment counter
+                const countSpan = document.querySelector(`#post-${postId} .comment-count`);
+                countSpan.textContent = parseInt(countSpan.textContent) + 1;
+            }
+        });
+    }
+</script>
+{% endblock %}

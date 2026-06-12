@@ -1,0 +1,881 @@
+{% extends "dashboard_base.html" %}
+{% set active = "ats" %}
+
+{% block title %}ATS Board | Talent Khoj{% endblock %}
+
+{% block content %}
+<!-- HELPER MACRO FOR CARD RENDERING -->
+{% macro render_card(app) %}
+<div class="ats-card" id="app-card-{{ app.application_id }}" draggable="true" ondragstart="handleDragStart(event)"
+    ondragend="handleDragEnd(event)" onclick="openApplicantDetailsDirect({{ app.application_id }})">
+    <div class="ats-card-header">
+        {% if app.avatar %}
+        <img class="ats-card-avatar" src="{{ app.avatar }}" alt="avatar">
+        {% else %}
+        <img class="ats-card-avatar"
+            src="https://ui-avatars.com/api/?name={{ app.full_name }}&size=36&rounded=true&background=2456ff&color=fff"
+            alt="avatar">
+        {% endif %}
+        <div class="ats-card-info">
+            <div class="ats-card-name">{{ app.full_name }}</div>
+            <div class="ats-card-job">{{ app.job_title }}</div>
+        </div>
+    </div>
+
+    <div class="ats-card-tags">
+        {% if app.location %}
+        <span class="ats-card-tag location">{{ app.location.split(',')[0] }}</span>
+        {% endif %}
+        {% if app.experience_tag %}
+        <span class="ats-card-tag experience">{{ app.experience_tag }}</span>
+        {% endif %}
+        {% for skill in app.skills_list %}
+        <span class="ats-card-tag">{{ skill }}</span>
+        {% endfor %}
+    </div>
+
+    <div class="ats-card-footer" onclick="event.stopPropagation()">
+        <!-- Nice custom status selector dropdown -->
+        <div class="custom-status-dropdown" id="dropdown-wrapper-{{ app.application_id }}">
+            <button class="custom-dropdown-btn status-{{ app.status }}" onclick="toggleDropdown(event, {{ app.application_id }})">
+                <span class="status-dot">●</span>
+                <span class="status-text">{{ app.status|capitalize }}</span>
+                <svg class="dropdown-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="custom-dropdown-menu" id="dropdown-menu-{{ app.application_id }}">
+                <div class="dropdown-item status-applied" onclick="selectStatus({{ app.application_id }}, 'applied')">
+                    <span class="status-dot">●</span> Applied
+                </div>
+                <div class="dropdown-item status-reviewed" onclick="selectStatus({{ app.application_id }}, 'reviewed')">
+                    <span class="status-dot">●</span> Reviewed
+                </div>
+                <div class="dropdown-item status-shortlisted" onclick="selectStatus({{ app.application_id }}, 'shortlisted')">
+                    <span class="status-dot">●</span> Shortlisted
+                </div>
+                <div class="dropdown-item status-rejected" onclick="selectStatus({{ app.application_id }}, 'rejected')">
+                    <span class="status-dot">●</span> Rejected
+                </div>
+            </div>
+        </div>
+
+        <div class="ats-card-actions">
+            <button class="btn-card-action"
+                onclick="event.stopPropagation(); openApplicantDetailsDirect({{ app.application_id }})"
+                title="View Details">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+            </button>
+            {% if app.status != 'shortlisted' %}
+            <button class="btn-card-action quick-shortlist"
+                onclick="event.stopPropagation(); changeStageDirect({{ app.application_id }}, 'shortlisted')"
+                title="Quick Shortlist">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+            </button>
+            {% endif %}
+            {% if app.status != 'rejected' %}
+            <button class="btn-card-action quick-reject"
+                onclick="event.stopPropagation(); changeStageDirect({{ app.application_id }}, 'rejected')"
+                title="Quick Reject">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+<div class="dashboard-header">
+    <h1>Applicant Tracking System (ATS)</h1>
+    <p>Manage candidate stages, filter by criteria, and select the best talent for your roles.</p>
+</div>
+
+<!-- STATS METRICS BAR -->
+<div class="ats-stats-bar">
+    <div class="stat-card total">
+        <div class="stat-icon">👥</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-total">{{ counts.applied + counts.reviewed + counts.shortlisted +
+                counts.rejected }}</span>
+            <span class="stat-label">Total Applicants</span>
+        </div>
+    </div>
+    <div class="stat-card applied">
+        <div class="stat-icon" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);">●</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-applied">{{ counts.applied }}</span>
+            <span class="stat-label">Applied</span>
+        </div>
+    </div>
+    <div class="stat-card reviewed">
+        <div class="stat-icon" style="color: #eab308; background: rgba(234, 179, 8, 0.1);">●</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-reviewed">{{ counts.reviewed }}</span>
+            <span class="stat-label">Reviewed</span>
+        </div>
+    </div>
+    <div class="stat-card shortlisted">
+        <div class="stat-icon" style="color: #22c55e; background: rgba(34, 197, 94, 0.1);">●</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-shortlisted">{{ counts.shortlisted }}</span>
+            <span class="stat-label">Shortlisted</span>
+        </div>
+    </div>
+    <div class="stat-card rejected">
+        <div class="stat-icon" style="color: #ef4444; background: rgba(239, 68, 68, 0.1);">●</div>
+        <div class="stat-info">
+            <span class="stat-value" id="stat-rejected">{{ counts.rejected }}</span>
+            <span class="stat-label">Rejected</span>
+        </div>
+    </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="ats-filter-bar">
+    <div class="ats-filter-group" style="flex: 1.5;">
+        <label for="jobFilter">Filter by Job Opportunity</label>
+        <select id="jobFilter" class="ats-filter-select" onchange="applyFilters()">
+            <option value="">All Posted Jobs</option>
+            {% for job in jobs %}
+            <option value="{{ job.id }}" {% if selected_job_id|string==job.id|string %}selected{% endif %}>{{ job.title
+                }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="ats-filter-group">
+        <label for="skillFilter">Skills</label>
+        <input type="text" id="skillFilter" class="ats-filter-input" placeholder="e.g., Python, React"
+            value="{{ filters.skills }}" oninput="debounceFilter()">
+    </div>
+
+    <div class="ats-filter-group">
+        <label for="locationFilter">Location</label>
+        <input type="text" id="locationFilter" class="ats-filter-input" placeholder="e.g., Kathmandu"
+            value="{{ filters.location }}" oninput="debounceFilter()">
+    </div>
+
+    <div class="ats-filter-group">
+        <label for="experienceFilter">Experience Level</label>
+        <input type="text" id="experienceFilter" class="ats-filter-input" placeholder="e.g., Entry, Mid"
+            value="{{ filters.experience }}" oninput="debounceFilter()">
+    </div>
+
+    <div class="ats-filter-group" style="flex: 0.5; min-width: 120px; align-self: flex-end;">
+        <button type="button" class="btn-secondary" onclick="resetFilters()"
+            style="padding: 8px 12px; font-size: 13px; height: 38px; width: 100%;">
+            Reset Filters
+        </button>
+    </div>
+</div>
+
+<!-- KANBAN BOARD -->
+<div class="ats-board-container">
+
+    <!-- APPLIED COLUMN -->
+    <div class="ats-column column-applied" data-status="applied" ondragover="allowDrop(event)"
+        ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+        <div class="ats-column-header">
+            <span class="ats-column-title">
+                <span style="color: #3b82f6;">●</span> Applied
+            </span>
+            <span class="ats-column-count" id="count-applied">{{ counts.applied }}</span>
+        </div>
+        <div class="ats-cards-list" id="list-applied">
+            {% for app in board.applied %}
+            {{ render_card(app) }}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- REVIEWED COLUMN -->
+    <div class="ats-column column-reviewed" data-status="reviewed" ondragover="allowDrop(event)"
+        ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+        <div class="ats-column-header">
+            <span class="ats-column-title">
+                <span style="color: #eab308;">●</span> Reviewed
+            </span>
+            <span class="ats-column-count" id="count-reviewed">{{ counts.reviewed }}</span>
+        </div>
+        <div class="ats-cards-list" id="list-reviewed">
+            {% for app in board.reviewed %}
+            {{ render_card(app) }}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- SHORTLISTED COLUMN -->
+    <div class="ats-column column-shortlisted" data-status="shortlisted" ondragover="allowDrop(event)"
+        ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+        <div class="ats-column-header">
+            <span class="ats-column-title">
+                <span style="color: #22c55e;">●</span> Shortlisted
+            </span>
+            <span class="ats-column-count" id="count-shortlisted">{{ counts.shortlisted }}</span>
+        </div>
+        <div class="ats-cards-list" id="list-shortlisted">
+            {% for app in board.shortlisted %}
+            {{ render_card(app) }}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- REJECTED COLUMN -->
+    <div class="ats-column column-rejected" data-status="rejected" ondragover="allowDrop(event)"
+        ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">
+        <div class="ats-column-header">
+            <span class="ats-column-title">
+                <span style="color: #ef4444;">●</span> Rejected
+            </span>
+            <span class="ats-column-count" id="count-rejected">{{ counts.rejected }}</span>
+        </div>
+        <div class="ats-cards-list" id="list-rejected">
+            {% for app in board.rejected %}
+            {{ render_card(app) }}
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- APPLICANT DETAIL PREVIEW MODAL -->
+<div class="ats-modal" id="applicantModal">
+    <div class="ats-modal-content">
+        <div class="ats-modal-header">
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <img id="modalAvatar" class="ats-card-avatar" style="width: 56px; height: 56px;" src="" alt="avatar">
+                <div>
+                    <h2 id="modalName" style="font-size: 20px; color: #0f172a; margin-bottom: 4px;">Candidate Name</h2>
+                    <p id="modalEmail" style="font-size: 13px; color: #64748b; margin-bottom: 2px;">email@domain.com</p>
+                    <p id="modalJob" style="font-size: 12px; color: #2456ff; font-weight: 700;">Job Title Applied For
+                    </p>
+                </div>
+            </div>
+            <button class="ats-modal-close" onclick="closeModal()">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        <div class="ats-modal-body" style="max-height: 60vh; overflow-y: auto; padding-right: 8px;">
+            <div>
+                <h4 class="modal-section-title">Candidate Overview & Skills</h4>
+                <p id="modalBio" style="font-size: 13.5px; color: #334155; margin-bottom: 12px; line-height: 1.6;">No
+                    biography provided.</p>
+                <div id="modalSkills" class="ats-card-tags" style="margin-bottom: 15px;"></div>
+            </div>
+
+            <!-- Education History -->
+            <div id="modalEducationSection" style="display: none; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Education History</h4>
+                <div id="modalEducation" class="modal-timeline-list"></div>
+            </div>
+
+            <!-- Work Experience -->
+            <div id="modalExperienceSection" style="display: none; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Work Experience</h4>
+                <div id="modalExperience" class="modal-timeline-list"></div>
+            </div>
+
+            <!-- Projects -->
+            <div id="modalProjectsSection" style="display: none; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Projects</h4>
+                <div id="modalProjects" class="modal-projects-list"></div>
+            </div>
+
+            <!-- Certifications -->
+            <div id="modalCertificationsSection" style="display: none; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Certifications</h4>
+                <div id="modalCertifications" class="modal-certs-list"></div>
+            </div>
+
+            <div id="modalAnswersSection" style="margin-bottom: 15px;">
+                <h4 class="modal-section-title">Screening Question Answers</h4>
+                <div id="modalAnswers" class="modal-answers-list"></div>
+            </div>
+
+            <div
+                style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 10px; position: sticky; bottom: 0; background: white; z-index: 10;">
+                <a id="modalCVBtn" href="#" target="_blank" class="btn-action"
+                    style="padding: 10px 20px; background: #2456ff; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 13.5px;">Open
+                    Candidate CV</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="board-data" style="display: none;">{{ board|tojson|safe }}</div>
+
+<script>
+    // --- CUSTOM DROPDOWN CONTROLS ---
+    function toggleDropdown(event, appId) {
+        event.stopPropagation();
+        
+        // Close all other dropdowns first
+        document.querySelectorAll(".custom-dropdown-menu").forEach(menu => {
+            if (menu.id !== `dropdown-menu-${appId}`) {
+                menu.classList.remove("show");
+            }
+        });
+        document.querySelectorAll(".custom-status-dropdown").forEach(wrapper => {
+            if (wrapper.id !== `dropdown-wrapper-${appId}`) {
+                wrapper.classList.remove("active");
+            }
+        });
+        
+        // Toggle this one
+        const menu = document.getElementById(`dropdown-menu-${appId}`);
+        const wrapper = document.getElementById(`dropdown-wrapper-${appId}`);
+        if (menu && wrapper) {
+            menu.classList.toggle("show");
+            wrapper.classList.toggle("active");
+        }
+    }
+
+    function selectStatus(appId, newStatus) {
+        const card = document.getElementById(`app-card-${appId}`);
+        const targetColumn = document.querySelector(`.ats-column[data-status="${newStatus}"]`);
+        
+        // Close dropdown
+        const menu = document.getElementById(`dropdown-menu-${appId}`);
+        if (menu) menu.classList.remove("show");
+        const wrapper = document.getElementById(`dropdown-wrapper-${appId}`);
+        if (wrapper) wrapper.classList.remove("active");
+        
+        if (card && targetColumn) {
+            const listContainer = targetColumn.querySelector(".ats-cards-list");
+            listContainer.appendChild(card);
+            updateApplicantStatus(appId, newStatus, card);
+        }
+    }
+
+    // Global listener to close dropdowns when clicking outside
+    document.addEventListener("click", () => {
+        document.querySelectorAll(".custom-dropdown-menu").forEach(menu => {
+            menu.classList.remove("show");
+        });
+        document.querySelectorAll(".custom-status-dropdown").forEach(wrapper => {
+            wrapper.classList.remove("active");
+        });
+    });
+
+    // Keep a cache of all loaded applicants for direct details lookup
+    let applicantsCache = {};
+
+    // Cache the initial page load candidates
+    document.addEventListener("DOMContentLoaded", () => {
+        const boardData = JSON.parse(document.getElementById("board-data").textContent || "{}");
+        Object.values(boardData).forEach(group => {
+            if (Array.isArray(group)) {
+                group.forEach(app => {
+                    applicantsCache[app.application_id] = app;
+                });
+            }
+        });
+    });
+
+    // --- FILTERS LOGIC ---
+    let filterDebounceTimer;
+    function debounceFilter() {
+        clearTimeout(filterDebounceTimer);
+        filterDebounceTimer = setTimeout(applyFilters, 400);
+    }
+
+    function applyFilters() {
+        const jobId = document.getElementById("jobFilter").value;
+        const skills = document.getElementById("skillFilter").value;
+        const location = document.getElementById("locationFilter").value;
+        const experience = document.getElementById("experienceFilter").value;
+
+        const params = new URLSearchParams({
+            job_id: jobId,
+            skills: skills,
+            location: location,
+            experience: experience
+        });
+
+        // Fetch matching JSON from backend API
+        fetch(`/dashboard/ats/filter?${params.toString()}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    rebuildBoard(data.applicants);
+                }
+            })
+            .catch(err => console.error("Filter error:", err));
+    }
+
+    function resetFilters() {
+        document.getElementById("jobFilter").value = "";
+        document.getElementById("skillFilter").value = "";
+        document.getElementById("locationFilter").value = "";
+        document.getElementById("experienceFilter").value = "";
+        applyFilters();
+    }
+
+    function rebuildBoard(applicants) {
+        // Clear all columns
+        const lists = {
+            applied: document.getElementById("list-applied"),
+            reviewed: document.getElementById("list-reviewed"),
+            shortlisted: document.getElementById("list-shortlisted"),
+            rejected: document.getElementById("list-rejected")
+        };
+
+        Object.values(lists).forEach(list => list.innerHTML = "");
+
+        // Re-populate cache and lists
+        applicantsCache = {};
+        const counts = { applied: 0, reviewed: 0, shortlisted: 0, rejected: 0 };
+
+        applicants.forEach(app => {
+            applicantsCache[app.application_id] = app;
+            counts[app.status]++;
+
+            // Build card element
+            const cardHtml = renderCardElement(app);
+            if (lists[app.status]) {
+                lists[app.status].insertAdjacentHTML("beforeend", cardHtml);
+            }
+        });
+
+        // Update column headers counts and stats widget
+        let total = 0;
+        Object.keys(counts).forEach(status => {
+            document.getElementById(`count-${status}`).innerText = counts[status];
+            const statVal = document.getElementById(`stat-${status}`);
+            if (statVal) statVal.innerText = counts[status];
+            total += counts[status];
+        });
+        const totalVal = document.getElementById("stat-total");
+        if (totalVal) totalVal.innerText = total;
+    }
+
+    function renderCardElement(app) {
+        const avatar = app.avatar ? app.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(app.full_name)}&size=36&rounded=true&background=2456ff&color=fff`;
+        const locationTag = app.location ? `<span class="ats-card-tag location">${app.location.split(',')[0]}</span>` : '';
+        const expTag = app.experience_tag ? `<span class="ats-card-tag experience">${app.experience_tag}</span>` : '';
+
+        const skillsTags = (app.skills_list || []).map(sk => `<span class="ats-card-tag">${sk}</span>`).join('');
+
+        const escapedApp = JSON.stringify(app).replace(/"/g, '&quot;');
+
+        const quickShortlist = app.status !== 'shortlisted' ? `
+            <button class="btn-card-action quick-shortlist" onclick="event.stopPropagation(); changeStageDirect(${app.application_id}, 'shortlisted')" title="Quick Shortlist">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+        ` : '';
+        const quickReject = app.status !== 'rejected' ? `
+            <button class="btn-card-action quick-reject" onclick="event.stopPropagation(); changeStageDirect(${app.application_id}, 'rejected')" title="Quick Reject">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        ` : '';
+
+        return `
+            <div class="ats-card" id="app-card-${app.application_id}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" onclick="openApplicantDetailsDirect(${app.application_id})">
+                <div class="ats-card-header">
+                    <img class="ats-card-avatar" src="${avatar}" alt="avatar">
+                    <div class="ats-card-info">
+                        <div class="ats-card-name">${app.full_name}</div>
+                        <div class="ats-card-job">${app.job_title}</div>
+                    </div>
+                </div>
+                
+                <div class="ats-card-tags">
+                    ${locationTag}
+                    ${expTag}
+                    ${skillsTags}
+                </div>
+                
+                <div class="ats-card-footer" onclick="event.stopPropagation()">
+                    <div class="custom-status-dropdown" id="dropdown-wrapper-${app.application_id}">
+                        <button class="custom-dropdown-btn status-${app.status}" onclick="toggleDropdown(event, ${app.application_id})">
+                            <span class="status-dot">●</span>
+                            <span class="status-text">${app.status.charAt(0).toUpperCase() + app.status.slice(1)}</span>
+                            <svg class="dropdown-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div class="custom-dropdown-menu" id="dropdown-menu-${app.application_id}">
+                            <div class="dropdown-item status-applied" onclick="selectStatus(${app.application_id}, 'applied')">
+                                <span class="status-dot">●</span> Applied
+                            </div>
+                            <div class="dropdown-item status-reviewed" onclick="selectStatus(${app.application_id}, 'reviewed')">
+                                <span class="status-dot">●</span> Reviewed
+                            </div>
+                            <div class="dropdown-item status-shortlisted" onclick="selectStatus(${app.application_id}, 'shortlisted')">
+                                <span class="status-dot">●</span> Shortlisted
+                            </div>
+                            <div class="dropdown-item status-rejected" onclick="selectStatus(${app.application_id}, 'rejected')">
+                                <span class="status-dot">●</span> Rejected
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ats-card-actions">
+                        <button class="btn-card-action" onclick="event.stopPropagation(); openApplicantDetailsDirect(${app.application_id})" title="View Details">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </button>
+                        ${quickShortlist}
+                        ${quickReject}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- DRAG AND DROP ---
+    let draggedCard = null;
+
+    function handleDragStart(e) {
+        draggedCard = e.currentTarget;
+        draggedCard.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", draggedCard.id);
+    }
+
+    function handleDragEnd(e) {
+        if (draggedCard) {
+            draggedCard.classList.remove("dragging");
+        }
+        draggedCard = null;
+
+        // Remove hover state from columns
+        document.querySelectorAll(".ats-column").forEach(col => {
+            col.classList.remove("dragover");
+        });
+    }
+
+    function allowDrop(e) {
+        e.preventDefault();
+    }
+
+    function dragEnter(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add("dragover");
+    }
+
+    function dragLeave(e) {
+        e.currentTarget.classList.remove("dragover");
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        const column = e.currentTarget;
+        column.classList.remove("dragover");
+
+        const cardId = e.dataTransfer.getData("text/plain");
+        const card = document.getElementById(cardId);
+
+        if (card && column) {
+            const listContainer = column.querySelector(".ats-cards-list");
+            const newStatus = column.dataset.status;
+            const appId = cardId.replace("app-card-", "");
+
+            // Check if card is dropped in a different column
+            const oldStatus = card.closest(".ats-column").dataset.status;
+            if (oldStatus !== newStatus) {
+                listContainer.appendChild(card);
+                updateApplicantStatus(appId, newStatus, card);
+            }
+        }
+    }
+
+    function changeStageDropdown(appId, selectEl) {
+        const newStatus = selectEl.value;
+        selectEl.setAttribute('data-status', newStatus);
+        const card = document.getElementById(`app-card-${appId}`);
+        const targetColumn = document.querySelector(`.ats-column[data-status="${newStatus}"]`);
+
+        if (card && targetColumn) {
+            const listContainer = targetColumn.querySelector(".ats-cards-list");
+            listContainer.appendChild(card);
+            updateApplicantStatus(appId, newStatus, card);
+        }
+    }
+
+    function changeStageDirect(appId, newStatus) {
+        const card = document.getElementById(`app-card-${appId}`);
+        const targetColumn = document.querySelector(`.ats-column[data-status="${newStatus}"]`);
+        if (card && targetColumn) {
+            const listContainer = targetColumn.querySelector(".ats-cards-list");
+            listContainer.appendChild(card);
+            updateApplicantStatus(appId, newStatus, card);
+        }
+    }
+
+    function updateApplicantStatus(appId, status, cardEl) {
+        // Send updates to backend
+        fetch("/dashboard/ats/update-status", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                application_id: parseInt(appId),
+                status: status
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Update custom dropdown trigger button status classes and text
+                    const wrapper = cardEl.querySelector(".custom-status-dropdown");
+                    if (wrapper) {
+                        const btn = wrapper.querySelector(".custom-dropdown-btn");
+                        if (btn) {
+                            btn.className = `custom-dropdown-btn status-${status}`;
+                            const textEl = btn.querySelector(".status-text");
+                            if (textEl) {
+                                textEl.innerText = status.charAt(0).toUpperCase() + status.slice(1);
+                            }
+                        }
+                    }
+
+                    // Update applicant status in cache
+                    if (applicantsCache[appId]) {
+                        applicantsCache[appId].status = status;
+                    }
+
+                    // Update action buttons based on new status
+                    const actionsContainer = cardEl.querySelector(".ats-card-actions");
+                    if (actionsContainer) {
+                        let actionsHtml = `
+                        <button class="btn-card-action" onclick="openApplicantDetailsDirect(${appId})" title="View Details">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </button>
+                    `;
+                        if (status !== 'shortlisted') {
+                            actionsHtml += `
+                            <button class="btn-card-action quick-shortlist" onclick="changeStageDirect(${appId}, 'shortlisted')" title="Quick Shortlist">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            </button>
+                        `;
+                        }
+                        if (status !== 'rejected') {
+                            actionsHtml += `
+                            <button class="btn-card-action quick-reject" onclick="changeStageDirect(${appId}, 'rejected')" title="Quick Reject">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            </button>
+                        `;
+                        }
+                        actionsContainer.innerHTML = actionsHtml;
+                    }
+
+                    // Recalculate column counters
+                    recalculateCounters();
+                } else {
+                    alert(data.message || "Failed to update applicant status.");
+                    // Reload page if state gets out of sync
+                    window.location.reload();
+                }
+            })
+            .catch(err => {
+                console.error("Status update error:", err);
+                window.location.reload();
+            });
+    }
+
+    function recalculateCounters() {
+        const columns = ["applied", "reviewed", "shortlisted", "rejected"];
+        let total = 0;
+        columns.forEach(status => {
+            const list = document.getElementById(`list-${status}`);
+            const count = list.querySelectorAll(".ats-card").length;
+            document.getElementById(`count-${status}`).innerText = count;
+            // Update stats bar value
+            const statVal = document.getElementById(`stat-${status}`);
+            if (statVal) statVal.innerText = count;
+            total += count;
+        });
+        const totalVal = document.getElementById("stat-total");
+        if (totalVal) totalVal.innerText = total;
+    }
+
+    // --- MODAL PREVIEW ---
+    function openApplicantDetailsDirect(appId) {
+        const app = applicantsCache[appId];
+        if (app) {
+            openApplicantDetails(app);
+        }
+    }
+
+    function openApplicantDetails(app) {
+        document.getElementById("modalName").innerText = app.full_name;
+        document.getElementById("modalEmail").innerText = app.email;
+        document.getElementById("modalJob").innerText = app.job_title;
+
+        const avatar = app.avatar ? app.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(app.full_name)}&size=56&rounded=true&background=2456ff&color=fff`;
+        document.getElementById("modalAvatar").src = avatar;
+
+        // Parse bio and skills
+        let cvData = {};
+        if (app.cv_data) {
+            try {
+                cvData = (typeof app.cv_data === "string") ? JSON.parse(app.cv_data) : app.cv_data;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        document.getElementById("modalBio").innerText = app.bio || cvData.bio || "No biography provided.";
+
+        // Populate skills tags
+        const skillsContainer = document.getElementById("modalSkills");
+        skillsContainer.innerHTML = "";
+
+        let allSkills = [];
+        if (app.skills) {
+            allSkills = app.skills.split(",");
+        } else if (cvData.skills) {
+            cvData.skills.forEach(cat => {
+                if (cat.list) {
+                    allSkills.push(...cat.list.split(","));
+                }
+            });
+        }
+
+        allSkills.forEach(sk => {
+            if (sk.trim()) {
+                const tag = document.createElement("span");
+                tag.className = "ats-card-tag";
+                tag.innerText = sk.trim();
+                skillsContainer.appendChild(tag);
+            }
+        });
+
+        // Populate Education
+        const eduContainer = document.getElementById("modalEducation");
+        const eduSection = document.getElementById("modalEducationSection");
+        eduContainer.innerHTML = "";
+        if (cvData.education && cvData.education.length > 0) {
+            eduSection.style.display = "block";
+            cvData.education.forEach(edu => {
+                const item = document.createElement("div");
+                item.className = "modal-timeline-item";
+                item.innerHTML = `
+                    <div class="timeline-title">${edu.degree || "Degree / Qualification"}</div>
+                    <div class="timeline-subtitle">${edu.school || "Institution / University"}</div>
+                    ${edu.details ? `<div class="timeline-details">${edu.details}</div>` : ''}
+                `;
+                eduContainer.appendChild(item);
+            });
+        } else {
+            eduSection.style.display = "none";
+        }
+
+        // Populate Experience
+        const expContainer = document.getElementById("modalExperience");
+        const expSection = document.getElementById("modalExperienceSection");
+        expContainer.innerHTML = "";
+        if (cvData.experience && cvData.experience.length > 0) {
+            expSection.style.display = "block";
+            cvData.experience.forEach(exp => {
+                const item = document.createElement("div");
+                item.className = "modal-timeline-item";
+                item.innerHTML = `
+                    <div class="timeline-title">${exp.title || "Job Title"}</div>
+                    <div class="timeline-subtitle">${exp.company || "Company Name"} ${exp.dates ? `• ${exp.dates}` : ''}</div>
+                    ${exp.description ? `<div class="timeline-details">${exp.description}</div>` : ''}
+                `;
+                expContainer.appendChild(item);
+            });
+        } else {
+            expSection.style.display = "none";
+        }
+
+        // Populate Projects
+        const projContainer = document.getElementById("modalProjects");
+        const projSection = document.getElementById("modalProjectsSection");
+        projContainer.innerHTML = "";
+        if (cvData.projects && cvData.projects.length > 0) {
+            projSection.style.display = "block";
+            cvData.projects.forEach(proj => {
+                const item = document.createElement("div");
+                item.className = "modal-project-item";
+                item.innerHTML = `
+                    <div class="project-header">
+                        <span class="project-title">${proj.title || "Project Title"}</span>
+                        ${proj.tag ? `<span class="project-tag">${proj.tag}</span>` : ''}
+                    </div>
+                    ${proj.description ? `<p class="project-desc">${proj.description}</p>` : ''}
+                    ${proj.link ? `<a href="${proj.link}" target="_blank" class="project-link">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        View Project
+                    </a>` : ''}
+                `;
+                projContainer.appendChild(item);
+            });
+        } else {
+            projSection.style.display = "none";
+        }
+
+        // Populate Certifications
+        const certContainer = document.getElementById("modalCertifications");
+        const certSection = document.getElementById("modalCertificationsSection");
+        certContainer.innerHTML = "";
+        if (cvData.certifications && cvData.certifications.length > 0) {
+            certSection.style.display = "block";
+            cvData.certifications.forEach(cert => {
+                const badge = document.createElement("span");
+                badge.className = "modal-cert-badge";
+                badge.innerText = cert;
+                certContainer.appendChild(badge);
+            });
+        } else {
+            certSection.style.display = "none";
+        }
+
+        // Populate screening answers
+        const answersContainer = document.getElementById("modalAnswers");
+        const answersSection = document.getElementById("modalAnswersSection");
+        answersContainer.innerHTML = "";
+
+        const answers = (typeof app.answers_list === "string") ? JSON.parse(app.answers_list) : app.answers_list;
+
+        if (answers && answers.length > 0) {
+            answersSection.style.display = "block";
+            answers.forEach(item => {
+                const ansItem = document.createElement("div");
+                ansItem.className = "modal-answer-item";
+                ansItem.innerHTML = `
+                    <div class="modal-question">Q: ${item.question}</div>
+                    <div class="modal-answer">A: ${item.answer}</div>
+                `;
+                answersContainer.appendChild(ansItem);
+            });
+        } else {
+            answersSection.style.display = "none";
+        }
+
+        // Set CV link
+        const cvBtn = document.getElementById("modalCVBtn");
+        if (app.cv_path && app.user_id) {
+            cvBtn.href = "/cv/view/" + app.user_id;
+            cvBtn.style.display = "inline-block";
+        } else {
+            cvBtn.style.display = "none";
+        }
+
+        // Open Modal
+        document.getElementById("applicantModal").classList.add("open");
+    }
+
+    function closeModal() {
+        document.getElementById("applicantModal").classList.remove("open");
+    }
+
+    // Close modal on click outside modal content
+    document.getElementById("applicantModal").addEventListener("click", (e) => {
+        if (e.target.id === "applicantModal") {
+            closeModal();
+        }
+    });
+</script>
+{% endblock %}

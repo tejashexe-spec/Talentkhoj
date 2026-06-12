@@ -1,9 +1,208 @@
 {% extends "dashboard_base.html" %}
 {% set active = "applications" %}
 {% block title %}Applications | Talent Khoj{% endblock %}
+
 {% block content %}
-<div class="dashboard-header">
-    <h1>Applications</h1>
-    <p>Track your job applications.</p>
+<style>
+    /* CSS imported from dashboard.html to maintain styles in subpage */
+    .tracker-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .tracker-card-header {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+    }
+    .tracker-company-logo {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #2456ff;
+        font-size: 15px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+    .tracker-company-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .tracker-job-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .tracker-job-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 2px;
+    }
+    .tracker-company-name {
+        font-size: 12.5px;
+        color: #64748b;
+        font-weight: 500;
+    }
+    .tracker-date {
+        font-size: 12px;
+        color: #94a3b8;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    .timeline-steps {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        padding: 0 5px;
+        margin-top: 6px;
+    }
+    .timeline-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+        gap: 6px;
+    }
+    .step-circle {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #f1f5f9;
+        color: #94a3b8;
+        border: 2px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 11px;
+        transition: all 0.3s ease;
+    }
+    .step-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+        transition: all 0.3s ease;
+    }
+    .timeline-line {
+        flex: 1;
+        height: 3px;
+        background: #e2e8f0;
+        position: relative;
+        top: -9px;
+        z-index: 1;
+        margin: 0 -8px;
+    }
+    .timeline-step.active .step-circle {
+        background: #f0f4ff;
+        color: #2456ff;
+        border-color: #2456ff;
+        box-shadow: 0 0 0 3px rgba(36, 86, 255, 0.08);
+    }
+    .timeline-step.active .step-label {
+        color: #2456ff;
+    }
+    .timeline-step.completed .step-circle {
+        background: #22c55e;
+        color: white;
+        border-color: #22c55e;
+    }
+    .timeline-step.completed .step-label {
+        color: #22c55e;
+    }
+    .timeline-step.rejected .step-circle {
+        background: #ef4444;
+        color: white;
+        border-color: #ef4444;
+    }
+    .timeline-step.rejected .step-label {
+        color: #ef4444;
+    }
+    .timeline-line.completed {
+        background: #22c55e;
+    }
+</style>
+
+<div class="dashboard-header" style="margin-bottom: 24px;">
+    <h1>My Applications</h1>
+    <p>Track all your job submissions and recruitment statuses.</p>
+</div>
+
+<div style="max-width: 800px;">
+    {% if applications %}
+        {% for app in applications %}
+            <div class="tracker-card">
+                <div class="tracker-card-header">
+                    <div class="tracker-company-logo">
+                        {% if app.company_logo %}
+                            <img src="{{ app.company_logo }}" alt="logo">
+                        {% else %}
+                            {{ app.company_name[:2]|upper }}
+                        {% endif %}
+                    </div>
+                    <div class="tracker-job-info">
+                        <h3 class="tracker-job-title">{{ app.title }}</h3>
+                        <p class="tracker-company-name">{{ app.company_name }} &bull; {{ app.location or 'Remote' }}</p>
+                    </div>
+                    <span class="tracker-date">Applied on {{ app.applied_at.strftime('%b %d, %Y') }}</span>
+                </div>
+                
+                <div class="timeline-steps">
+                    {% if app.status == 'rejected' %}
+                        <div class="timeline-step active completed">
+                            <div class="step-circle">✓</div>
+                            <div class="step-label">Applied</div>
+                        </div>
+                        <div class="timeline-line completed" style="background: #ef4444;"></div>
+                        <div class="timeline-step active rejected">
+                            <div class="step-circle">&times;</div>
+                            <div class="step-label">Rejected</div>
+                        </div>
+                    {% else %}
+                        <!-- Applied -->
+                        <div class="timeline-step active completed">
+                            <div class="step-circle">✓</div>
+                            <div class="step-label">Applied</div>
+                        </div>
+                        
+                        <div class="timeline-line {% if app.status in ['reviewed', 'shortlisted'] %}completed{% endif %}"></div>
+                        
+                        <!-- Reviewed -->
+                        <div class="timeline-step {% if app.status in ['reviewed', 'shortlisted'] %}active{% endif %} {% if app.status == 'reviewed' %}current{% endif %} {% if app.status == 'shortlisted' %}completed{% endif %}">
+                            <div class="step-circle">{% if app.status == 'shortlisted' %}✓{% else %}2{% endif %}</div>
+                            <div class="step-label">Reviewed</div>
+                        </div>
+                        
+                        <div class="timeline-line {% if app.status == 'shortlisted' %}completed{% endif %}"></div>
+                        
+                        <!-- Shortlisted -->
+                        <div class="timeline-step {% if app.status == 'shortlisted' %}active completed{% endif %}">
+                            <div class="step-circle">{% if app.status == 'shortlisted' %}✓{% else %}3{% endif %}</div>
+                            <div class="step-label">Shortlisted</div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div style="text-align: center; padding: 40px; color: #64748b; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+            <p style="font-size: 14px; margin-bottom: 15px;">You haven't submitted any applications yet.</p>
+            <a href="/dashboard/search" class="btn-action" style="background: #2456ff; border-radius: 6px; padding: 8px 16px; color: white; text-decoration: none; font-size: 13px; font-weight: 600; display: inline-block;">Search Opportunities</a>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}

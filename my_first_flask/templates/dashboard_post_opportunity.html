@@ -729,7 +729,9 @@
             typeInputLabel.innerHTML = 'Job type <span class="required-star">*</span>';
             levelInputLabel.innerHTML = 'Job Level';
             
-            jobAlertBanner.style.display = 'block';
+            if (jobAlertBanner) {
+                jobAlertBanner.style.display = 'block';
+            }
             experienceRow.style.display = 'grid';
             
             document.getElementById('minExp').setAttribute('required', 'true');
@@ -742,7 +744,9 @@
             typeInputLabel.innerHTML = 'Internship type <span class="required-star">*</span>';
             levelInputLabel.innerHTML = 'Internship Level';
             
-            jobAlertBanner.style.display = 'none';
+            if (jobAlertBanner) {
+                jobAlertBanner.style.display = 'none';
+            }
             experienceRow.style.display = 'none';
             
             document.getElementById('minExp').removeAttribute('required');

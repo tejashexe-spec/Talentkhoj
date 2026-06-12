@@ -356,10 +356,16 @@
                 <span style="color:#0369a1; font-weight:600; font-size:14px; display:block;">Active CV Configured</span>
                 <span style="color:#0284c7; font-size:13px; display:block;">Your CV is linked to your profile and visible to recruiters.</span>
             </div>
-            <a href="{{ user_cv_path }}" target="_blank" class="cv-view-link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                View Active CV
-            </a>
+            <div style="display: flex; gap: 10px;">
+                <a href="/cv/view/{{ session['user_id'] }}" target="_blank" class="cv-view-link">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    View Active CV
+                </a>
+                <a href="/cv/view/{{ session['user_id'] }}?print=true" target="_blank" class="cv-view-link" style="background: #2456ff; box-shadow: 0 4px 14px rgba(36, 86, 255, 0.3);">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download PDF
+                </a>
+            </div>
         </div>
         {% endif %}
 
@@ -511,6 +517,9 @@
 
     </div>
 </div>
+<script id="cv-data-json" type="application/json">
+    {{ cv_data_raw|safe }}
+</script>
 
 <script>
     // Tab switching logic
@@ -696,10 +705,11 @@
 
     // Initialize with existing data or defaults
     document.addEventListener("DOMContentLoaded", function() {
-        // Parse raw JSON of cv_data injected from python controller
+        // Parse raw JSON of cv_data injected from HTML JSON block
         var existingData = null;
         try {
-            existingData = {{ cv_data_raw|safe }};
+            var dataElement = document.getElementById('cv-data-json');
+            existingData = dataElement ? JSON.parse(dataElement.textContent) : null;
         } catch(e) {
             existingData = null;
         }

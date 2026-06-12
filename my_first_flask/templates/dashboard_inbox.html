@@ -1,9 +1,212 @@
 {% extends "dashboard_base.html" %}
 {% set active = "inbox" %}
 {% block title %}Inbox | Talent Khoj{% endblock %}
+
 {% block content %}
-<div class="dashboard-header">
+<div class="dashboard-header" style="margin-bottom: 20px;">
     <h1>Inbox</h1>
-    <p>Your messages and notifications.</p>
+    <p>Manage your direct messages and recruitement negotiations.</p>
 </div>
+
+<div class="inbox-container">
+    <!-- Conversation Sidebar -->
+    <div class="inbox-sidebar">
+        <div class="inbox-search">
+            <input type="text" id="chatSearchInput" placeholder="Search conversations..." onkeyup="filterConversations()">
+        </div>
+        <div class="conversation-list" id="conversationList">
+            {% if conversations %}
+                {% for conv in conversations %}
+                    <div class="conversation-item" id="conv-{{ conv.other_user_id }}" onclick="loadConversation({{ conv.other_user_id }}, '{{ conv.other_user_name }}', '{{ conv.other_user_avatar or '' }}')">
+                        {% if conv.other_user_avatar %}
+                            <img src="{{ conv.other_user_avatar }}" class="conv-avatar" alt="avatar">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ conv.other_user_name }}&size=44&rounded=true&background=2456ff&color=fff" class="conv-avatar" alt="avatar">
+                        {% endif %}
+                        <div class="conv-info">
+                            <div class="conv-header">
+                                <span class="conv-name">{{ conv.other_user_name }}</span>
+                                <span class="conv-time">{{ conv.last_message_time }}</span>
+                            </div>
+                            <div class="conv-body">
+                                <span class="conv-message">{{ conv.last_message }}</span>
+                                {% if conv.unread_count > 0 %}
+                                    <span class="conv-badge">{{ conv.unread_count }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-conversations">No messages yet.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Active Chat Window -->
+    <div class="chat-window" id="chatWindow">
+        <!-- Default State: No conversation loaded -->
+        <div class="chat-empty-state" id="chatEmptyState">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <h3>Select a conversation</h3>
+            <p>Select a contact from the sidebar to view thread messages or start a new conversation.</p>
+        </div>
+
+        <!-- Chat Loaded State -->
+        <div class="chat-active-state" id="chatActiveState" style="display: none;">
+            <div class="chat-header">
+                <img id="activeChatAvatar" src="" class="chat-partner-avatar" alt="avatar">
+                <div class="chat-partner-info">
+                    <span id="activeChatName" class="chat-partner-name">User Name</span>
+                    <span class="chat-partner-status"><span class="status-indicator online"></span>Online</span>
+                </div>
+            </div>
+            
+            <div class="chat-messages-container" id="chatMessagesContainer">
+                <div class="chat-messages-list" id="chatMessagesList">
+                    <!-- Messages populated via JavaScript -->
+                </div>
+            </div>
+
+            <div class="chat-input-bar">
+                <form id="sendMessageForm" onsubmit="submitSendMessage(event)">
+                    <input type="text" id="messageInput" placeholder="Write a message..." required autocomplete="off">
+                    <button type="submit" class="btn-send-message">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+</div>
+
+<script>
+    let activeChatUserId = null;
+    let pollInterval = null;
+
+    function loadConversation(userId, userName, userAvatar) {
+        activeChatUserId = userId;
+        
+        document.getElementById('chatEmptyState').style.display = 'none';
+        document.getElementById('chatActiveState').style.display = 'flex';
+        
+        document.getElementById('activeChatName').textContent = userName;
+        const avatarImg = document.getElementById('activeChatAvatar');
+        if (userAvatar) {
+            avatarImg.src = userAvatar;
+        } else {
+            avatarImg.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&size=40&rounded=true&background=2456ff&color=fff`;
+        }
+
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        const selectedItem = document.getElementById(`conv-${userId}`);
+        if (selectedItem) {
+            selectedItem.classList.add('active');
+            const badge = selectedItem.querySelector('.conv-badge');
+            if (badge) badge.remove();
+        }
+
+        fetchThreadMessages(userId);
+
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(() => {
+            if (activeChatUserId === userId) {
+                fetchThreadMessages(userId, true);
+            }
+        }, 3000);
+    }
+
+    function fetchThreadMessages(userId, isPolling = false) {
+        fetch(`/api/messages/thread/${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const list = document.getElementById('chatMessagesList');
+                    const container = document.getElementById('chatMessagesContainer');
+                    const wasAtBottom = container.scrollHeight - container.clientHeight <= container.scrollTop + 50;
+
+                    list.innerHTML = '';
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            const isSent = msg.sender_id === {{ session['user_id'] }};
+                            const bubble = document.createElement('div');
+                            bubble.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
+                            bubble.innerHTML = `
+                                <div class="message-text">${msg.message_text}</div>
+                                <div class="message-time">${msg.created_at}</div>
+                            `;
+                            list.appendChild(bubble);
+                        });
+                    } else {
+                        list.innerHTML = `<div style="text-align: center; color: #64748b; padding: 20px 0; font-size: 13px;">No messages in this thread yet. Say hi!</div>`;
+                    }
+
+                    if (!isPolling || wasAtBottom) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }
+            });
+    }
+
+    function submitSendMessage(e) {
+        e.preventDefault();
+        if (!activeChatUserId) return;
+
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        fetch('/api/messages/send', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                receiver_id: activeChatUserId,
+                message_text: text
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                input.value = '';
+                fetchThreadMessages(activeChatUserId);
+                
+                const selectedItem = document.getElementById(`conv-${activeChatUserId}`);
+                if (selectedItem) {
+                    selectedItem.querySelector('.conv-message').textContent = text;
+                    selectedItem.querySelector('.conv-time').textContent = 'Just now';
+                }
+            } else {
+                alert(data.error || 'Failed to send message');
+            }
+        });
+    }
+
+    function filterConversations() {
+        const query = document.getElementById('chatSearchInput').value.toLowerCase();
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            const name = item.querySelector('.conv-name').textContent.toLowerCase();
+            if (name.includes(query)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const contactId = urlParams.get('chat_with');
+        if (contactId) {
+            const item = document.getElementById(`conv-${contactId}`);
+            if (item) {
+                item.click();
+            }
+        }
+    });
+</script>
 {% endblock %}

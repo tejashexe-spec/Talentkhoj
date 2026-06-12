@@ -1,5 +1,4 @@
 import pymysql
-from datetime import datetime, timedelta
 from my_first_flask import config
 
 
@@ -59,6 +58,8 @@ class Database:
                     verification_token_expires_at TIMESTAMP NULL DEFAULT NULL,
                     reset_password_token VARCHAR(255) DEFAULT NULL,
                     reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL,
+                    active_status ENUM('actively_looking', 'open_to_offers', 'not_looking') NOT NULL DEFAULT 'actively_looking',
+                    headhunting_mode TINYINT(1) NOT NULL DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
@@ -108,6 +109,56 @@ class Database:
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS applications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    job_id INT NOT NULL,
+                    status ENUM('applied', 'reviewed', 'shortlisted', 'rejected') NOT NULL DEFAULT 'applied',
+                    answers TEXT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_user_job (user_id, job_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS bookmarks (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    job_id INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_user_bookmark (user_id, job_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    sender_id INT NOT NULL,
+                    receiver_id INT NOT NULL,
+                    message_text TEXT NOT NULL,
+                    is_read TINYINT(1) NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
+                    INDEX idx_sender_receiver (sender_id, receiver_id),
+                    INDEX idx_receiver_sender (receiver_id, sender_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS reviews (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    reviewer_id INT NOT NULL,
+                    reviewee_id INT NOT NULL,
+                    rating INT NOT NULL,
+                    comment TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (reviewee_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS events (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     company_id INT NOT NULL,
@@ -121,19 +172,43 @@ class Database:
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS applications (
+                CREATE TABLE IF NOT EXISTS posts (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     user_id INT NOT NULL,
-                    job_id INT NOT NULL,
-                    status ENUM('applied', 'reviewed', 'shortlisted', 'rejected') NOT NULL DEFAULT 'applied',
-                    answers TEXT DEFAULT NULL,
+                    content TEXT NOT NULL,
+                    image_path VARCHAR(255) DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-                    UNIQUE KEY unique_user_job (user_id, job_id)
+                    INDEX idx_user_post (user_id),
+                    INDEX idx_post_created (created_at DESC)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
-
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS reactions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    post_id INT NOT NULL,
+                    reaction_type VARCHAR(50) DEFAULT 'like',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_user_post_reaction (user_id, post_id, reaction_type)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS comments (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    post_id INT NOT NULL,
+                    parent_comment_id INT DEFAULT NULL,
+                    comment_text TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+                    FOREIGN KEY (parent_comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+                    INDEX idx_post_comments (post_id, parent_comment_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
     def _run_migrations(self):
         """Add any missing columns to existing tables."""
         # Users table migrations
@@ -150,6 +225,8 @@ class Database:
             ("verification_token_expires_at", "ALTER TABLE users ADD COLUMN verification_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
             ("reset_password_token", "ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(255) DEFAULT NULL"),
             ("reset_password_token_expires_at", "ALTER TABLE users ADD COLUMN reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
+            ("active_status", "ALTER TABLE users ADD COLUMN active_status ENUM('actively_looking', 'open_to_offers', 'not_looking') NOT NULL DEFAULT 'actively_looking'"),
+            ("headhunting_mode", "ALTER TABLE users ADD COLUMN headhunting_mode TINYINT(1) NOT NULL DEFAULT 1"),
         ]
         with self.__connection.cursor() as cursor:
             cursor.execute(
@@ -195,7 +272,7 @@ class Database:
             with self.__connection.cursor() as cursor:
                 cursor.execute("ALTER TABLE jobs ADD COLUMN questions TEXT DEFAULT NULL")
 
-        # Applications table migrations (answers column)
+        # Applications table migrations (answers column & status index)
         with self.__connection.cursor() as cursor:
             cursor.execute(
                 "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
@@ -208,27 +285,54 @@ class Database:
             with self.__connection.cursor() as cursor:
                 cursor.execute("ALTER TABLE applications ADD COLUMN answers TEXT DEFAULT NULL")
 
+        with self.__connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT INDEX_NAME FROM information_schema.STATISTICS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'applications' AND INDEX_NAME = 'idx_status'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing_index = cursor.fetchone()
+
+        if not existing_index:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE applications ADD INDEX idx_status (status)")
+
 
     def get_connection(self):
+        if self.__connection:
+            try:
+                self.__connection.ping(reconnect=True)
+            except Exception:
+                try:
+                    self.__connection = pymysql.connect(
+                        host=config.MYSQL_HOST,
+                        user=config.MYSQL_USER,
+                        password=config.MYSQL_PASSWORD,
+                        database=config.MYSQL_DATABASE,
+                        cursorclass=pymysql.cursors.DictCursor,
+                        autocommit=True,
+                    )
+                except Exception as e:
+                    print("Failed to reconnect to database:", e)
         return self.__connection
 
-    def _seed_mock_events(self):
-        """Seed mock events if the events table is empty."""
+    def _seed_mock_reviews(self):
+        """Seed mock reviews if the reviews table is empty."""
         with self.__connection.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) as cnt FROM events")
+            cursor.execute("SELECT COUNT(*) as cnt FROM reviews")
             if cursor.fetchone()["cnt"] == 0:
-                # Find a company to attach the events to
-                cursor.execute("SELECT id FROM companies LIMIT 1")
+                cursor.execute("SELECT id FROM users WHERE account_type = 'individual' LIMIT 1")
+                candidate = cursor.fetchone()
+                cursor.execute("SELECT id FROM users WHERE account_type = 'company' LIMIT 1")
                 company = cursor.fetchone()
-                if company:
+                
+                if candidate and company:
+                    candidate_id = candidate["id"]
                     company_id = company["id"]
+                    
                     cursor.execute("""
-                        INSERT INTO events (company_id, title, description, event_date, location, registration_link)
+                        INSERT INTO reviews (reviewer_id, reviewee_id, rating, comment)
                         VALUES 
-                        (%s, 'Resume Building & Interview Prep Masterclass', 'Join our engineering and talent acquisition teams to learn how to stand out in technical interviews and craft a world-class software engineering CV.', %s, 'Virtual - Google Meet', 'https://meet.google.com'),
-                        (%s, 'Talent Khoj Virtual Networking & Career Fair 2026', 'Connect directly with hiring managers, ask questions about open roles, and get fast-tracked for upcoming software engineer, designer, and PM roles.', %s, 'Pragati Manzil Event Hall / Hybrid', 'https://talentkhoj.com/register')
-                    """, (
-                        company_id, datetime.now() + timedelta(days=5),
-                        company_id, datetime.now() + timedelta(days=10)
-                    ))
-                    print("✅ Mock events seeded successfully!")
+                        (%s, %s, 5, 'Exceptional experience interviewing with this company. Very transparent and modern tech stack.'),
+                        (%s, %s, 4, 'Outstanding candidate with deep problem-solving skills and a solid understanding of web development frameworks.')
+                    """, (candidate_id, company_id, company_id, candidate_id))

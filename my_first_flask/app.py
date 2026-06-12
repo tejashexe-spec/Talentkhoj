@@ -2367,7 +2367,6 @@ def dashboard_cv_upload():
 
 
 @app.route("/dashboard/events")
-@login_required
 def dashboard_events():
     conn = get_db()
     account_type = session.get("account_type")

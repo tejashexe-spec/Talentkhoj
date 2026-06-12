@@ -64,6 +64,16 @@ def login_required(f):
     return decorated
 
 
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("user_id") or session.get("account_type") != "admin":
+            flash("Unauthorized access. Admin privileges required.", "error")
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
 # ─── HOME ────────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -2920,6 +2930,845 @@ def submit_review():
         return redirect(url_for("company_profile", user_id=reviewee_id))
     else:
         return redirect(url_for("user_profile", user_id=reviewee_id))
+
+
+# ─── ADMIN DASHBOARD ─────────────────────────────────────────────────────────
+
+@app.route("/admin/dashboard")
+@admin_required
+def admin_dashboard():
+    conn = get_db()
+    with conn.cursor() as cursor:
+        # Total Users
+        cursor.execute("SELECT COUNT(*) as count FROM users")
+        total_users = cursor.fetchone()["count"]
+
+        # Suspended Users
+        cursor.execute("SELECT COUNT(*) as count FROM users WHERE is_banned = 1")
+        suspended_users = cursor.fetchone()["count"]
+
+        # Pending Reports
+        cursor.execute("SELECT COUNT(*) as count FROM reports WHERE status = 'Pending'")
+        pending_reports = cursor.fetchone()["count"]
+
+        # Pending Verifications (unverified companies)
+        cursor.execute("SELECT COUNT(*) as count FROM users WHERE account_type = 'company' AND verified = 0")
+        pending_verifications = cursor.fetchone()["count"]
+
+        # Active Projects (Jobs)
+        cursor.execute("SELECT COUNT(*) as count FROM jobs")
+        active_projects = cursor.fetchone()["count"]
+
+        # Total Applications
+        cursor.execute("SELECT COUNT(*) as count FROM applications")
+        total_applications = cursor.fetchone()["count"]
+
+        # Total Companies
+        cursor.execute("SELECT COUNT(*) as count FROM users WHERE account_type = 'company'")
+        total_companies = cursor.fetchone()["count"]
+
+        # Growth: new users in last 30 days vs previous 30 days
+        cursor.execute("""
+            SELECT
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as current_period,
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL 60 DAY
+                          AND created_at < NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as prev_period
+            FROM users
+        """)
+        row = cursor.fetchone()
+        cur_u = row["current_period"] or 0
+        prev_u = row["prev_period"] or 1
+        user_growth = round(((cur_u - prev_u) / prev_u) * 100) if prev_u else 0
+
+        # Growth: new jobs in last 30 days vs previous 30 days
+        cursor.execute("""
+            SELECT
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as current_period,
+                SUM(CASE WHEN created_at >= NOW() - INTERVAL 60 DAY
+                          AND created_at < NOW() - INTERVAL 30 DAY THEN 1 ELSE 0 END) as prev_period
+            FROM jobs
+        """)
+        row = cursor.fetchone()
+        cur_j = row["current_period"] or 0
+        prev_j = row["prev_period"] or 1
+        job_growth = round(((cur_j - prev_j) / prev_j) * 100) if prev_j else 0
+
+        # Recent Reports
+        cursor.execute("""
+            SELECT r.id, r.type, r.content, r.status, r.created_at, u.full_name as user
+            FROM reports r
+            LEFT JOIN users u ON r.user_id = u.id
+            ORDER BY r.created_at DESC
+            LIMIT 5
+        """)
+        db_reports = cursor.fetchall()
+        recent_reports = []
+        for r in db_reports:
+            recent_reports.append({
+                "id": r["id"],
+                "type": r["type"],
+                "content": r["content"],
+                "user": r["user"] or "Anonymous",
+                "status": r["status"],
+                "date": r["created_at"].strftime("%b %d, %Y") if r["created_at"] else ""
+            })
+            
+        # Recent Activities (Users and Jobs)
+        cursor.execute("SELECT full_name, created_at FROM users ORDER BY created_at DESC LIMIT 4")
+        recent_users = cursor.fetchall()
+        
+        cursor.execute("""
+            SELECT j.title, c.company_name, j.created_at 
+            FROM jobs j 
+            JOIN companies c ON j.company_id = c.id 
+            ORDER BY j.created_at DESC 
+            LIMIT 4
+        """)
+        recent_jobs = cursor.fetchall()
+        
+        recent_activities = []
+        for u in recent_users:
+            recent_activities.append({
+                "user": u["full_name"],
+                "action": "registered a new account",
+                "details": "User registered",
+                "time_ago": u["created_at"].strftime("%b %d, %H:%M") if u["created_at"] else "",
+                "color": "primary",
+                "icon": "user-plus"
+            })
+        for j in recent_jobs:
+            recent_activities.append({
+                "user": j["company_name"],
+                "action": f"posted a new opportunity: {j['title']}",
+                "details": "Active listing",
+                "time_ago": j["created_at"].strftime("%b %d, %H:%M") if j["created_at"] else "",
+                "color": "success",
+                "icon": "briefcase"
+            })
+            
+        recent_activities = sorted(recent_activities, key=lambda x: x["time_ago"], reverse=True)[:6]
+
+        # Recent Registrations (last 6 signups)
+        cursor.execute("""
+            SELECT id, full_name, email, account_type, verified, created_at
+            FROM users ORDER BY created_at DESC LIMIT 6
+        """)
+        recent_reg_rows = cursor.fetchall()
+        recent_registrations = [{
+            "id": r["id"],
+            "full_name": r["full_name"],
+            "email": r["email"],
+            "account_type": r["account_type"],
+            "verified": r["verified"],
+            "date": r["created_at"].strftime("%b %d, %Y") if r["created_at"] else ""
+        } for r in recent_reg_rows]
+
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+
+    return render_template(
+        "admin_dashboard.html",
+        total_users=total_users,
+        pending_reports=pending_reports,
+        pending_verifications=pending_verifications,
+        active_projects=active_projects,
+        total_applications=total_applications,
+        total_companies=total_companies,
+        suspended_users=suspended_users,
+        user_growth=user_growth,
+        job_growth=job_growth,
+        recent_reports=recent_reports,
+        recent_activities=recent_activities,
+        recent_registrations=recent_registrations,
+        current_user=CurrentUserMock()
+    )
+
+
+# ─── ADMIN CHART APIS (Commit 2) ─────────────────────────────────────────────
+
+@app.route("/admin/api/stats/registrations")
+@admin_required
+def admin_stats_registrations():
+    """Return daily new-user counts for the last 30 days."""
+    from datetime import date, timedelta
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT DATE(created_at) as day, COUNT(*) as count
+            FROM users
+            WHERE created_at >= NOW() - INTERVAL 30 DAY
+            GROUP BY DATE(created_at)
+            ORDER BY day ASC
+        """)
+        rows = cursor.fetchall()
+
+    today = date.today()
+    data_map = {str(r["day"]): r["count"] for r in rows}
+    labels, counts = [], []
+    for i in range(30):
+        d = today - timedelta(days=29 - i)
+        labels.append(d.strftime("%b %d"))
+        counts.append(data_map.get(str(d), 0))
+    return jsonify({"labels": labels, "counts": counts})
+
+
+@app.route("/admin/api/stats/roles")
+@admin_required
+def admin_stats_roles():
+    """Return count of users by account_type for the donut chart."""
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT account_type, COUNT(*) as count FROM users GROUP BY account_type")
+        rows = cursor.fetchall()
+    role_map = {r["account_type"]: r["count"] for r in rows}
+    return jsonify({
+        "individual": role_map.get("individual", 0),
+        "company": role_map.get("company", 0),
+        "admin": role_map.get("admin", 0)
+    })
+
+
+@app.route("/admin/reports")
+@admin_required
+def admin_reports():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 20
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) as count FROM reports")
+        total_reports = cursor.fetchone()["count"]
+        
+        cursor.execute("SELECT COUNT(*) as count FROM reports WHERE status = 'Pending'")
+        pending_reports = cursor.fetchone()["count"]
+        
+        cursor.execute("SELECT COUNT(*) as count FROM reports WHERE status = 'Resolved'")
+        resolved_reports = cursor.fetchone()["count"]
+        
+        offset = (page - 1) * per_page
+        cursor.execute("""
+            SELECT r.id, r.type, r.content, r.status, r.created_at, u.full_name as user 
+            FROM reports r 
+            LEFT JOIN users u ON r.user_id = u.id 
+            ORDER BY r.created_at DESC
+            LIMIT %s OFFSET %s
+        """, (per_page, offset))
+        db_reports = cursor.fetchall()
+        
+        reports_list = []
+        for r in db_reports:
+            reports_list.append({
+                "id": r["id"],
+                "type": r["type"],
+                "content": r["content"],
+                "user": r["user"] or "Anonymous",
+                "status": r["status"],
+                "date": r["created_at"].strftime("%b %d, %Y") if r["created_at"] else ""
+            })
+            
+    total_pages = max(1, (total_reports + per_page - 1) // per_page)
+            
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+        
+    return render_template(
+        "admin_report.html",
+        total_reports=total_reports,
+        pending_reports=pending_reports,
+        resolved_reports=resolved_reports,
+        reports=reports_list,
+        current_user=CurrentUserMock(),
+        page=page,
+        total_pages=total_pages,
+        total_count=total_reports,
+        per_page=per_page
+    )
+
+
+@app.route("/admin/report/<int:report_id>")
+@admin_required
+def view_report(report_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT r.id, r.type, r.content, r.status, r.created_at, u.id as user_id, u.full_name as user_name, u.email as user_email
+            FROM reports r 
+            LEFT JOIN users u ON r.user_id = u.id 
+            WHERE r.id = %s
+        """, (report_id,))
+        report = cursor.fetchone()
+        
+    if not report:
+        flash("Report not found.", "error")
+        return redirect(url_for("admin_reports"))
+        
+    report_data = {
+        "id": report["id"],
+        "type": report["type"],
+        "content": report["content"],
+        "status": report["status"],
+        "user_id": report["user_id"],
+        "user_name": report["user_name"] or "Anonymous",
+        "user_email": report["user_email"] or "N/A",
+        "date": report["created_at"].strftime("%b %d, %Y %H:%M") if report["created_at"] else ""
+    }
+    
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+        
+    return render_template(
+        "admin_view_report.html",
+        report=report_data,
+        current_user=CurrentUserMock()
+    )
+
+
+@app.route("/admin/report/resolve", methods=["POST"])
+@admin_required
+def resolve_reports():
+    data = request.get_json() or {}
+    report_ids = data.get("ids", [])
+    if not report_ids:
+        return jsonify({"success": False, "message": "No reports selected."}), 400
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        format_strings = ','.join(['%s'] * len(report_ids))
+        cursor.execute(f"UPDATE reports SET status = 'Resolved' WHERE id IN ({format_strings})", tuple(report_ids))
+        
+    return jsonify({"success": True, "message": "Selected reports marked as resolved."})
+
+
+@app.route("/admin/report/delete", methods=["POST"])
+@admin_required
+def delete_reports():
+    data = request.get_json() or {}
+    report_ids = data.get("ids", [])
+    if not report_ids:
+        return jsonify({"success": False, "message": "No reports selected."}), 400
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        format_strings = ','.join(['%s'] * len(report_ids))
+        cursor.execute(f"DELETE FROM reports WHERE id IN ({format_strings})", tuple(report_ids))
+    
+    log_admin_action("delete_reports", "report", 0, f"Deleted report IDs: {report_ids}")
+    return jsonify({"success": True, "message": "Selected reports deleted successfully."})
+
+
+@app.route("/admin/users")
+@admin_required
+def admin_users():
+    search = request.args.get("search", "").strip()
+    role_filter = request.args.get("role", "").strip()
+    status_filter = request.args.get("status", "").strip()
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 20
+
+    conn = get_db()
+    base_query = "FROM users"
+    params = []
+    conditions = []
+    if search:
+        conditions.append("(full_name LIKE %s OR email LIKE %s)")
+        params.extend([f"%{search}%", f"%{search}%"])
+    if role_filter:
+        conditions.append("account_type = %s")
+        params.append(role_filter)
+    if status_filter == "suspended":
+        conditions.append("is_banned = 1")
+    elif status_filter == "active":
+        conditions.append("is_banned = 0")
+    if conditions:
+        base_query += " WHERE " + " AND ".join(conditions)
+
+    with conn.cursor() as cursor:
+        cursor.execute(f"SELECT COUNT(*) as cnt {base_query}", tuple(params))
+        total_count = cursor.fetchone()["cnt"]
+
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            f"SELECT id, full_name, email, account_type, verified, is_banned, ban_reason, created_at {base_query} ORDER BY created_at DESC LIMIT %s OFFSET %s",
+            tuple(params) + (per_page, offset)
+        )
+        db_users = cursor.fetchall()
+
+    users_list = [{
+        "id": u["id"], "full_name": u["full_name"], "email": u["email"],
+        "account_type": u["account_type"], "verified": u["verified"],
+        "is_banned": u.get("is_banned", 0), "ban_reason": u.get("ban_reason", ""),
+        "date": u["created_at"].strftime("%b %d, %Y") if u["created_at"] else ""
+    } for u in db_users]
+
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+
+    return render_template(
+        "admin_users.html",
+        users=users_list,
+        search=search,
+        selected_role=role_filter,
+        selected_status=status_filter,
+        page=page,
+        total_pages=total_pages,
+        total_count=total_count,
+        per_page=per_page,
+        current_user=CurrentUserMock()
+    )
+
+
+@app.route("/admin/user/toggle-verify/<int:user_id>", methods=["POST"])
+@admin_required
+def toggle_user_verify(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT verified FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "message": "User not found"}), 404
+            
+        new_val = 0 if user["verified"] else 1
+        cursor.execute("UPDATE users SET verified = %s WHERE id = %s", (new_val, user_id))
+        
+    status_str = "verified" if new_val else "unverified"
+    return jsonify({"success": True, "message": f"User status set to {status_str}."})
+
+
+@app.route("/admin/user/delete/<int:user_id>", methods=["POST"])
+@admin_required
+def delete_user(user_id):
+    if user_id == session.get("user_id"):
+        return jsonify({"success": False, "message": "You cannot delete yourself!"}), 400
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT full_name FROM users WHERE id = %s", (user_id,))
+        target = cursor.fetchone()
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+
+    log_admin_action("delete_user", "user", user_id, f"Deleted user: {target['full_name'] if target else user_id}")
+    return jsonify({"success": True, "message": "User account permanently deleted."})
+
+
+@app.route("/admin/user/change-role/<int:user_id>", methods=["POST"])
+@admin_required
+def change_user_role(user_id):
+    if user_id == session.get("user_id"):
+        return jsonify({"success": False, "message": "You cannot change your own role!"}), 400
+
+    data = request.get_json() or {}
+    new_role = data.get("role", "").strip().lower()
+
+    allowed_roles = ("individual", "company", "admin")
+    if new_role not in allowed_roles:
+        return jsonify({"success": False, "message": f"Invalid role. Choose from: {', '.join(allowed_roles)}."}), 400
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, account_type FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "message": "User not found."}), 404
+
+        cursor.execute("UPDATE users SET account_type = %s WHERE id = %s", (new_role, user_id))
+
+    log_admin_action("change_role", "user", user_id, f"Changed role to {new_role}")
+    return jsonify({"success": True, "message": f"User role updated to '{new_role.capitalize()}' successfully."})
+
+
+# ─── BAN / UNBAN USERS (Commit 3) ────────────────────────────────────────────
+
+@app.route("/admin/user/ban/<int:user_id>", methods=["POST"])
+@admin_required
+def ban_user(user_id):
+    if user_id == session.get("user_id"):
+        return jsonify({"success": False, "message": "You cannot ban yourself!"}), 400
+
+    data = request.get_json() or {}
+    reason = data.get("reason", "").strip() or "Violation of platform terms."
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, full_name FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "message": "User not found."}), 404
+        cursor.execute(
+            "UPDATE users SET is_banned = 1, ban_reason = %s WHERE id = %s",
+            (reason, user_id)
+        )
+    log_admin_action("ban_user", "user", user_id, f"Suspended: {user['full_name']} — {reason}")
+    return jsonify({"success": True, "message": f"User '{user['full_name']}' has been suspended."})
+
+
+@app.route("/admin/user/unban/<int:user_id>", methods=["POST"])
+@admin_required
+def unban_user(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, full_name FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        if not user:
+            return jsonify({"success": False, "message": "User not found."}), 404
+        cursor.execute(
+            "UPDATE users SET is_banned = 0, ban_reason = NULL WHERE id = %s",
+            (user_id,)
+        )
+    log_admin_action("unban_user", "user", user_id, f"Reinstated: {user['full_name']}")
+    return jsonify({"success": True, "message": f"User '{user['full_name']}' has been reinstated."})
+
+
+# ─── ADMIN LOGS PAGE (Commit 5) ───────────────────────────────────────────────
+
+@app.route("/admin/logs")
+@admin_required
+def admin_logs():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 30
+    action_filter = request.args.get("action", "").strip()
+
+    conn = get_db()
+    base = "FROM admin_logs"
+    params = []
+    if action_filter:
+        base += " WHERE action = %s"
+        params.append(action_filter)
+
+    with conn.cursor() as cursor:
+        cursor.execute(f"SELECT COUNT(*) as cnt {base}", tuple(params))
+        total_count = cursor.fetchone()["cnt"]
+
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    offset = (page - 1) * per_page
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            f"SELECT id, admin_name, action, target_type, target_id, details, created_at {base} ORDER BY created_at DESC LIMIT %s OFFSET %s",
+            tuple(params) + (per_page, offset)
+        )
+        logs_raw = cursor.fetchall()
+
+    logs = [{
+        "id": r["id"],
+        "admin_name": r["admin_name"] or "System",
+        "action": r["action"],
+        "target_type": r["target_type"] or "-",
+        "target_id": r["target_id"],
+        "details": r["details"] or "-",
+        "date": r["created_at"].strftime("%b %d, %Y %H:%M") if r["created_at"] else ""
+    } for r in logs_raw]
+
+    # Distinct actions for filter dropdown
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT DISTINCT action FROM admin_logs ORDER BY action")
+        actions = [r["action"] for r in cursor.fetchall()]
+
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+
+    return render_template(
+        "admin_logs.html",
+        logs=logs,
+        page=page,
+        total_pages=total_pages,
+        total_count=total_count,
+        per_page=per_page,
+        action_filter=action_filter,
+        actions=actions,
+        current_user=CurrentUserMock()
+    )
+
+
+# ─── CSV EXPORT (Commit 6) ────────────────────────────────────────────────────
+
+@app.route("/admin/users/export")
+@admin_required
+def export_users_csv():
+    import csv, io
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, full_name, email, account_type, verified, is_banned, ban_reason, created_at
+            FROM users ORDER BY created_at DESC
+        """)
+        users = cursor.fetchall()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Full Name", "Email", "Role", "Verified", "Banned", "Ban Reason", "Joined Date"])
+    for u in users:
+        writer.writerow([
+            u["id"],
+            u["full_name"],
+            u["email"],
+            u["account_type"],
+            "Yes" if u.get("verified") else "No",
+            "Yes" if u.get("is_banned") else "No",
+            u.get("ban_reason") or "",
+            u["created_at"].strftime("%Y-%m-%d %H:%M") if u["created_at"] else ""
+        ])
+
+    output.seek(0)
+    from flask import Response
+    from datetime import date
+    filename = f"talentkhoj_users_{date.today()}.csv"
+    log_admin_action("export_csv", "users", None, f"Exported {len(users)} users to CSV")
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+@app.route("/admin/verification")
+@admin_required
+def admin_verification():
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT u.id, u.full_name as company_name, u.email, c.address, c.pan_number, u.created_at
+            FROM users u
+            JOIN companies c ON u.id = c.user_id
+            WHERE u.account_type = 'company' AND u.verified = 0
+            ORDER BY u.created_at DESC
+        """)
+        companies = cursor.fetchall()
+        
+    companies_list = []
+    for c in companies:
+        companies_list.append({
+            "id": c["id"],
+            "company_name": c["company_name"],
+            "email": c["email"],
+            "address": c["address"] or "N/A",
+            "pan_number": c["pan_number"] or "N/A",
+            "date": c["created_at"].strftime("%b %d, %Y") if c["created_at"] else ""
+        })
+        
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+        
+    return render_template(
+        "admin_verification.html",
+        companies=companies_list,
+        current_user=CurrentUserMock()
+    )
+
+
+@app.route("/admin/projects")
+@admin_required
+def admin_projects():
+    page = max(1, int(request.args.get("page", 1)))
+    per_page = 20
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) as count FROM jobs")
+        total_count = cursor.fetchone()["count"]
+        
+        offset = (page - 1) * per_page
+        cursor.execute("""
+            SELECT j.id, j.title, j.opportunity_type, j.location, j.salary, j.created_at, c.company_name
+            FROM jobs j
+            JOIN companies c ON j.company_id = c.id
+            ORDER BY j.created_at DESC
+            LIMIT %s OFFSET %s
+        """, (per_page, offset))
+        jobs = cursor.fetchall()
+        
+    projects_list = []
+    for j in jobs:
+        projects_list.append({
+            "id": j["id"],
+            "title": j["title"],
+            "type": j["opportunity_type"],
+            "location": j["location"] or "Remote",
+            "salary": j["salary"] or "N/A",
+            "company": j["company_name"],
+            "date": j["created_at"].strftime("%b %d, %Y") if j["created_at"] else ""
+        })
+        
+    total_pages = max(1, (total_count + per_page - 1) // per_page)
+        
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+        
+    return render_template(
+        "admin_projects.html",
+        projects=projects_list,
+        current_user=CurrentUserMock(),
+        page=page,
+        total_pages=total_pages,
+        total_count=total_count,
+        per_page=per_page
+    )
+
+
+@app.route("/admin/project/delete/<int:job_id>", methods=["POST"])
+@admin_required
+def delete_project(job_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("DELETE FROM jobs WHERE id = %s", (job_id,))
+        
+    return jsonify({"success": True, "message": "Opportunity deleted successfully."})
+
+
+@app.route("/admin/settings", methods=["GET", "POST"])
+@admin_required
+def admin_settings():
+    errors = []
+    success = None
+    
+    if request.method == "POST":
+        action = request.form.get("action")
+        
+        if action == "change_password":
+            current_pw = request.form.get("current_password", "")
+            new_pw = request.form.get("new_password", "")
+            confirm_pw = request.form.get("confirm_password", "")
+            
+            conn = get_db()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT password_hash FROM users WHERE id = %s", (session["user_id"],))
+                u = cursor.fetchone()
+                
+            if not u or not check_password_hash(u["password_hash"], current_pw):
+                errors.append("Current password is incorrect.")
+            if len(new_pw) < 8:
+                errors.append("New password must be at least 8 characters.")
+            if new_pw != confirm_pw:
+                errors.append("Confirm password does not match.")
+                
+            if not errors:
+                new_hash = generate_password_hash(new_pw)
+                with conn.cursor() as cursor:
+                    cursor.execute("UPDATE users SET password_hash = %s WHERE id = %s", (new_hash, session["user_id"]))
+                success = "Password updated successfully."
+                
+        elif action == "create_admin":
+            admin_name = request.form.get("admin_name", "").strip()
+            admin_email = request.form.get("admin_email", "").strip().lower()
+            admin_password = request.form.get("admin_password", "")
+            
+            if not admin_name or not admin_email or not admin_password:
+                errors.append("All fields are required to create a new admin.")
+            else:
+                conn = get_db()
+                with conn.cursor() as cursor:
+                    cursor.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
+                    if cursor.fetchone():
+                        errors.append("Email is already registered.")
+                        
+                if not errors:
+                    pw_hash = generate_password_hash(admin_password)
+                    with conn.cursor() as cursor:
+                        cursor.execute(
+                            "INSERT INTO users (full_name, email, password_hash, account_type, verified, email_verified) "
+                            "VALUES (%s, %s, %s, 'admin', 1, 1)",
+                            (admin_name, admin_email, pw_hash)
+                        )
+                    success = f"New administrator account for {admin_name} created successfully!"
+                    
+    class CurrentUserMock:
+        username = session.get("user_name", "Admin")
+        
+    return render_template(
+        "admin_settings.html",
+        errors=errors,
+        success_message=success,
+        current_user=CurrentUserMock()
+    )
+
+
+
+# ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
+
+@app.route("/admin/announcement/send", methods=["POST"])
+@admin_required
+def send_announcement():
+    data = request.get_json() or {}
+    title = data.get("title", "").strip()
+    message = data.get("message", "").strip()
+    target = data.get("target", "all")
+
+    if not title or not message:
+        return jsonify({"success": False, "message": "Title and message are required."}), 400
+    if target not in ("all", "verified", "new"):
+        target = "all"
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO announcements (title, message, target, created_by) VALUES (%s, %s, %s, %s)",
+            (title, message, target, session["user_id"])
+        )
+
+    return jsonify({"success": True, "message": "Announcement sent successfully!"})
+
+
+@app.route("/api/announcements")
+@login_required
+def get_announcements():
+    """Return unread announcements for the logged-in user."""
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT a.id, a.title, a.message, a.created_at
+            FROM announcements a
+            WHERE a.id NOT IN (
+                SELECT announcement_id FROM announcement_reads WHERE user_id = %s
+            )
+            ORDER BY a.created_at DESC
+            LIMIT 10
+        """, (user_id,))
+        rows = cursor.fetchall()
+
+    result = []
+    for r in rows:
+        result.append({
+            "id": r["id"],
+            "title": r["title"],
+            "message": r["message"],
+            "time": r["created_at"].strftime("%b %d, %Y") if r["created_at"] else ""
+        })
+
+    return jsonify({"announcements": result, "count": len(result)})
+
+
+@app.route("/api/announcements/read", methods=["POST"])
+@login_required
+def mark_announcement_read():
+    """Mark one or all announcements as read."""
+    data = request.get_json() or {}
+    ann_id = data.get("id")  # None means mark all
+    user_id = session["user_id"]
+    conn = get_db()
+
+    if ann_id:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "INSERT IGNORE INTO announcement_reads (user_id, announcement_id) VALUES (%s, %s)",
+                (user_id, ann_id)
+            )
+    else:
+        # Mark all unread as read
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM announcements WHERE id NOT IN (SELECT announcement_id FROM announcement_reads WHERE user_id = %s)", (user_id,))
+            ids = [row["id"] for row in cursor.fetchall()]
+        for aid in ids:
+            with conn.cursor() as cursor:
+                cursor.execute("INSERT IGNORE INTO announcement_reads (user_id, announcement_id) VALUES (%s, %s)", (user_id, aid))
+
+    return jsonify({"success": True})
+
+
 
 
 if __name__ == "__main__":

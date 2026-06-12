@@ -511,7 +511,46 @@
                     </div>
                 </div>
                 {% endif %}
+
+                <!-- ATS Keyword Match Scanner -->
+                {% if analysis.keyword_scan %}
+                <div class="diag-item">
+                    <div class="diag-header" onclick="toggleDiag('keywords')">
+                        <div class="diag-title-area">
+                            <div class="diag-icon" style="background:#ccfbf1; color:#0d9488;">🎯</div>
+                            <span>ATS Keyword Scan Analysis</span>
+                        </div>
+                        <span id="keywords-chevron">▼</span>
+                    </div>
+                    <div class="diag-body" id="keywords-body">
+                        {% if analysis.keyword_scan.matched_keywords %}
+                        <div style="margin-bottom: 16px;">
+                            <div style="font-weight:700; font-size:13px; color:#065f46; margin-bottom:8px;">Matched Keywords ({{ analysis.keyword_scan.matched_keywords|length }}):</div>
+                            <div class="ats-keywords-container">
+                                {% for kw in analysis.keyword_scan.matched_keywords %}
+                                <span class="keyword-tag matched">✓ {{ kw }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if analysis.keyword_scan.missing_keywords %}
+                        <div>
+                            <div style="font-weight:700; font-size:13px; color:#991b1b; margin-bottom:8px;">Missing Keywords ({{ analysis.keyword_scan.missing_keywords|length }}):</div>
+                            <div class="ats-keywords-container">
+                                {% for kw in analysis.keyword_scan.missing_keywords %}
+                                <span class="keyword-tag missing">✗ {{ kw }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <p style="color: #059669; margin: 0; font-weight: 600;">✓ Amazing! Your resume matches all target job keywords.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
+
         </div>
     </div>
     {% endif %}

@@ -846,6 +846,76 @@ def company_profile(user_id):
     return render_template("company_profile.html", company=company, reviews=reviews, avg_rating=avg_rating, review_count=review_count)
 
 
+@app.route("/company/edit", methods=["GET", "POST"])
+@login_required
+def edit_company_profile():
+    if session.get("account_type") != "company":
+        flash("Only company accounts can edit their profile.", "error")
+        return redirect(url_for("home"))
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        flash("Company profile not found.", "error")
+        return redirect(url_for("home"))
+
+    if request.method == "POST":
+        company_name = request.form.get("company_name", "").strip()
+        address = request.form.get("address", "").strip()
+        pan_number = request.form.get("pan_number", "").strip()
+        industry = request.form.get("industry", "").strip()
+        website = request.form.get("website", "").strip()
+        description = request.form.get("description", "").strip()
+        
+        if not company_name:
+            flash("Company name is required.", "error")
+            return redirect(url_for("edit_company_profile"))
+            
+        logo_url = company["logo"]
+        logo_file = request.files.get("logo")
+        allowed_extensions = {"png", "jpg", "jpeg", "gif", "webp"}
+        if logo_file and logo_file.filename:
+            ext = logo_file.filename.rsplit(".", 1)[-1].lower()
+            if ext in allowed_extensions:
+                filename = f"company_{session['user_id']}_{int(time.time())}.{ext}"
+                upload_path = os.path.join(BASE_DIR, "static", "uploads", filename)
+                os.makedirs(os.path.dirname(upload_path), exist_ok=True)
+                logo_file.save(upload_path)
+                logo_url = f"/static/uploads/{filename}"
+                
+                # Also update user avatar
+                with conn.cursor() as cursor:
+                    cursor.execute("UPDATE users SET avatar = %s WHERE id = %s", (logo_url, session["user_id"]))
+                session["user_avatar"] = logo_url
+                session.modified = True
+
+        with conn.cursor() as cursor:
+            # Update users table full_name
+            cursor.execute("UPDATE users SET full_name = %s WHERE id = %s", (company_name, session["user_id"]))
+            # Update companies table details
+            cursor.execute("""
+                UPDATE companies 
+                SET company_name = %s, address = %s, pan_number = %s, industry = %s, website = %s, description = %s, logo = %s
+                WHERE user_id = %s
+            """, (company_name, address or None, pan_number or None, industry or None, website or None, description or None, logo_url, session["user_id"]))
+            
+        session["user_name"] = company_name
+        session.modified = True
+        flash("Company profile updated successfully.", "success")
+        return redirect(url_for("company_profile", user_id=session["user_id"]))
+
+    # Fetch company FAQs
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM company_faqs WHERE company_id = %s ORDER BY created_at ASC", (company["id"],))
+        faqs = cursor.fetchall()
+
+    return render_template("company_profile_edit.html", company=company, faqs=faqs)
+
+
+
 # ─── STATIC PAGES ────────────────────────────────────────────────────────────
 
 @app.route("/about")

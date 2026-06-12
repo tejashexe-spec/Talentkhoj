@@ -54,6 +54,7 @@ class Database:
                     skills TEXT DEFAULT NULL,
                     cv_path VARCHAR(255) DEFAULT NULL,
                     cv_data TEXT DEFAULT NULL,
+                    resume_analysis LONGTEXT DEFAULT NULL,
                     email_verified TINYINT(1) NOT NULL DEFAULT 0,
                     verification_token VARCHAR(255) DEFAULT NULL,
                     verification_token_expires_at TIMESTAMP NULL DEFAULT NULL,
@@ -266,6 +267,7 @@ class Database:
             ("reset_password_token_expires_at", "ALTER TABLE users ADD COLUMN reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
             ("active_status", "ALTER TABLE users ADD COLUMN active_status ENUM('actively_looking', 'open_to_offers', 'not_looking') NOT NULL DEFAULT 'actively_looking'"),
             ("headhunting_mode", "ALTER TABLE users ADD COLUMN headhunting_mode TINYINT(1) NOT NULL DEFAULT 1"),
+            ("resume_analysis", "ALTER TABLE users ADD COLUMN resume_analysis LONGTEXT DEFAULT NULL"),
         ]
         with self.__connection.cursor() as cursor:
             cursor.execute(

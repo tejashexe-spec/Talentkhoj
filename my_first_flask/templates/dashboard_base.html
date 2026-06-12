@@ -207,14 +207,15 @@
 
         </nav>
 
+        {% if session.get('user_id') %}
         <div class="sidebar-profile">
             <button class="sidebar-profile-btn" onclick="toggleSidebarDropdown(event)">
                 {% if session.get('user_avatar') %}
                     <img src="{{ session['user_avatar'] }}" alt="profile">
                 {% else %}
-                    <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=36&rounded=true&background=2456ff&color=fff" alt="profile">
+                    <img src="https://ui-avatars.com/api/?name={{ session.get('user_name', '') }}&size=36&rounded=true&background=2456ff&color=fff" alt="profile">
                 {% endif %}
-                <span>{{ session['user_name'] }}</span>
+                <span>{{ session.get('user_name', '') }}</span>
                 <span class="dropdown-arrow">&#9660;</span>
             </button>
             <div class="sidebar-dropdown" id="sidebarDropdown">
@@ -223,6 +224,13 @@
                 <a href="/logout">Logout</a>
             </div>
         </div>
+        {% else %}
+        <div class="sidebar-profile" style="padding: 16px;">
+            <a href="/login" class="submit-btn" style="text-decoration: none; display: block; text-align: center; padding: 10px; font-size: 13.5px; font-weight: 600; border-radius: 8px; background: #2456ff; color: white; margin: 0; width: 100%;">
+                Sign In
+            </a>
+        </div>
+        {% endif %}
 
     </aside>
 

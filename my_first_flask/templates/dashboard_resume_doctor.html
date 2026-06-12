@@ -1,0 +1,39 @@
+{% extends "dashboard_base.html" %}
+{% set active = "resume_doctor" %}
+
+{% block title %}AI Resume Doctor | Talent Khoj{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>AI Resume Doctor</h1>
+    <p>Upload a target job description and get detailed diagnosis, scores, and improvements for your resume powered by Google Gemini AI.</p>
+</div>
+
+<div class="doctor-container">
+    <div class="doctor-card">
+        <div class="doctor-header-bar">
+            <h2>Resume Diagnostic Center</h2>
+            <span class="status-badge">Powered by Gemini 1.5 Flash</span>
+        </div>
+
+        <form action="/dashboard/resume-doctor/analyze" method="POST" id="analysisForm">
+            <div class="form-group">
+                <label for="jobDescription">Target Job Description (Optional but Recommended for ATS Check)</label>
+                <textarea id="jobDescription" name="job_description" placeholder="Paste the job description you are targeting (e.g., Senior Full Stack Developer, required skills: React, Node.js, AWS...) to run an ATS compatibility scan."></textarea>
+            </div>
+            
+            <div class="action-bar">
+                <button type="submit" class="btn-primary" id="analyzeBtn">
+                    <span class="btn-text">Analyze Active Resume</span>
+                    <span class="loader-spinner" style="display: none;"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Area (Initial Skeleton) -->
+    <div id="resultsArea" class="results-container" style="display: none;">
+        <!-- Analysis details will go here -->
+    </div>
+</div>
+{% endblock %}

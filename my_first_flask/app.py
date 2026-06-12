@@ -2499,6 +2499,96 @@ def dashboard_resume_doctor():
     return render_template("dashboard_resume_doctor.html", active="resume_doctor", analysis=analysis)
 
 
+@app.route("/dashboard/resume-doctor/analyze", methods=["POST"])
+@login_required
+def dashboard_resume_doctor_analyze():
+    if session.get("account_type") != "individual":
+        flash("Only individuals can use the Resume Doctor.", "error")
+        return redirect(url_for("dashboard"))
+        
+    import json
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT cv_path, cv_data FROM users WHERE id = %s", (session["user_id"],))
+        user = cursor.fetchone()
+        
+    if not user or (not user["cv_path"] and not user["cv_data"]):
+        flash("Please build or upload a CV first before using the Resume Doctor.", "error")
+        return redirect(url_for("dashboard_cv"))
+        
+    resume_text = ""
+    cv_data_str = user["cv_data"]
+    cv_path = user["cv_path"]
+    
+    if cv_data_str and cv_data_str != "{}":
+        try:
+            cv_dict = json.loads(cv_data_str)
+            resume_parts = []
+            if cv_dict.get("full_name"): resume_parts.append(f"Name: {cv_dict['full_name']}")
+            if cv_dict.get("email"): resume_parts.append(f"Email: {cv_dict['email']}")
+            if cv_dict.get("portfolio"): resume_parts.append(f"Portfolio: {cv_dict['portfolio']}")
+            if cv_dict.get("github"): resume_parts.append(f"GitHub: {cv_dict['github']}")
+            if cv_dict.get("linkedin"): resume_parts.append(f"LinkedIn: {cv_dict['linkedin']}")
+            
+            if cv_dict.get("education"):
+                resume_parts.append("\nEDUCATION:")
+                for edu in cv_dict["education"]:
+                    resume_parts.append(f"- {edu.get('degree')} at {edu.get('school')}. Details: {edu.get('details')}")
+                    
+            if cv_dict.get("experience"):
+                resume_parts.append("\nWORK EXPERIENCE:")
+                for exp in cv_dict["experience"]:
+                    resume_parts.append(f"- {exp.get('title')} at {exp.get('company')} ({exp.get('dates')}). Description: {exp.get('description')}")
+                    
+            if cv_dict.get("projects"):
+                resume_parts.append("\nPROJECTS:")
+                for proj in cv_dict["projects"]:
+                    resume_parts.append(f"- {proj.get('title')} [{proj.get('tag')}]. Link: {proj.get('link')}. Description: {proj.get('description')}")
+                    
+            if cv_dict.get("skills"):
+                resume_parts.append("\nSKILLS:")
+                for sk in cv_dict["skills"]:
+                    resume_parts.append(f"- {sk.get('category')}: {sk.get('list')}")
+                    
+            if cv_dict.get("certifications"):
+                resume_parts.append("\nCERTIFICATIONS:")
+                for cert in cv_dict["certifications"]:
+                    resume_parts.append(f"- {cert}")
+                    
+            resume_text = "\n".join(resume_parts)
+        except Exception as e:
+            print(f"Error parsing cv_data JSON: {e}")
+            
+    if not resume_text and cv_path:
+        full_path = os.path.join(BASE_DIR, cv_path.lstrip("/"))
+        if os.path.exists(full_path):
+            if cv_path.lower().endswith(".pdf"):
+                resume_text = extract_text_from_pdf(full_path)
+            else:
+                resume_text = f"Uploaded File: {os.path.basename(full_path)}"
+                
+    if not resume_text.strip():
+        flash("Could not extract readable text from your resume. If you uploaded an image or scanned document, please build it dynamically in the CV Builder.", "error")
+        return redirect(url_for("dashboard_resume_doctor"))
+        
+    job_description = request.form.get("job_description", "").strip()
+    
+    analysis_result = query_gemini_resume_analysis(resume_text, job_description)
+    
+    if "error" in analysis_result:
+        flash(analysis_result["error"], "error")
+        return redirect(url_for("dashboard_resume_doctor"))
+        
+    analysis_str = json.dumps(analysis_result)
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE users SET resume_analysis = %s WHERE id = %s", (analysis_str, session["user_id"]))
+        
+    flash("Resume diagnostic review successfully completed!", "success")
+    return redirect(url_for("dashboard_resume_doctor"))
+
+
+
 
 @app.route("/dashboard/events")
 def dashboard_events():

@@ -22,3 +22,5 @@ MAIL_USE_TLS = False
 MAIL_USERNAME = os.getenv("MAIL_USERNAME", "").strip()
 MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "").strip()
 MAIL_DEFAULT_SENDER = MAIL_USERNAME
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

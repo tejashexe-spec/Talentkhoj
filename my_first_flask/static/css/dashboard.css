@@ -1444,3 +1444,14 @@
 .btn-send-message:hover {
     background: #1d4ed8;
 }
+
+/* ── VERIFICATION BADGES SYSTEM ── */
+.profile-badge-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.profile-badge-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+    border-color: rgba(36, 86, 255, 0.4) !important;
+}
+

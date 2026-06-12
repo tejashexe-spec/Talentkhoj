@@ -4,6 +4,312 @@
 {% block title %}AI Resume Doctor | Talent Khoj{% endblock %}
 
 {% block content %}
+<style>
+    .doctor-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+
+    .doctor-card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .doctor-header-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #f0ede8;
+        padding-bottom: 16px;
+    }
+
+    .doctor-header-bar h2 {
+        font-size: 20px;
+        color: #05154b;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .status-badge {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: #f0f4ff;
+        color: #2456ff;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #475569;
+    }
+
+    .form-group textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 12px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        color: #1e293b;
+        outline: none;
+        font-family: inherit;
+        background: #f8fafc;
+        transition: all 0.25s ease;
+        resize: vertical;
+    }
+
+    .form-group textarea:focus {
+        border-color: #2456ff;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(36, 86, 255, 0.1);
+    }
+
+    .btn-primary {
+        background: #2456ff;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px rgba(36, 86, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-primary:hover {
+        background: #1848d8;
+        transform: translateY(-2px);
+    }
+
+    .loader-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2.5px solid rgba(255,255,255,0.4);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Diagnostics UI styling */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 30px;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .score-circle-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 40px 20px;
+        border: 1px dashed #e2e8f0;
+    }
+
+    .circle-wrap {
+        margin: 20px auto;
+        width: 150px;
+        height: 150px;
+        background: #e2e8f0;
+        border-radius: 50%;
+        position: relative;
+    }
+
+    .circle-wrap .circle .mask,
+    .circle-wrap .circle .fill {
+        width: 150px;
+        height: 150px;
+        position: absolute;
+        border-radius: 50%;
+    }
+
+    .circle-wrap .circle .mask {
+        clip: rect(0px, 150px, 150px, 75px);
+    }
+
+    .circle-wrap .inside-circle {
+        width: 122px;
+        height: 122px;
+        border-radius: 50%;
+        background: white;
+        line-height: 120px;
+        text-align: center;
+        margin-top: 14px;
+        margin-left: 14px;
+        color: #05154b;
+        position: absolute;
+        z-index: 100;
+        font-weight: 700;
+        font-size: 2em;
+    }
+
+    .mask .fill {
+        clip: rect(0px, 75px, 150px, 0px);
+        background-color: #2456ff;
+    }
+
+    .mask.full,
+    .circle .fill {
+        animation: fill ease-in-out 3s;
+        transform: rotate(135deg);
+    }
+
+    .category-rating-bar {
+        width: 100%;
+        margin-top: 15px;
+    }
+
+    .category-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .progress-bar-bg {
+        width: 100%;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: #2456ff;
+        border-radius: 4px;
+        transition: width 1s ease-in-out;
+    }
+
+    /* Expandable Diagnostics Feedback */
+    .diagnostics-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .diag-item {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .diag-header {
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+        background: #f8fafc;
+        transition: background 0.2s;
+    }
+
+    .diag-header:hover {
+        background: #f1f5f9;
+    }
+
+    .diag-title-area {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .diag-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+
+    .diag-body {
+        padding: 20px;
+        border-top: 1px solid #e2e8f0;
+        display: none;
+    }
+
+    .suggestion-card {
+        padding: 14px;
+        border-left: 4px solid #f59e0b;
+        background: #fffbeb;
+        border-radius: 4px;
+        margin-bottom: 12px;
+    }
+
+    .suggestion-card.correct {
+        border-left-color: #10b981;
+        background: #ecfdf5;
+    }
+
+    .ats-keywords-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .keyword-tag {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .keyword-tag.matched {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .keyword-tag.missing {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+</style>
+
 <div class="dashboard-header">
     <h1>AI Resume Doctor</h1>
     <p>Upload a target job description and get detailed diagnosis, scores, and improvements for your resume powered by Google Gemini AI.</p>

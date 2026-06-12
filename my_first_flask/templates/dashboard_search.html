@@ -1046,6 +1046,8 @@
         document.getElementById('detailScroller').scrollTop = 0;
     }
 
+    const isLoggedIn = {{ 'true' if session.get('user_id') else 'false' }};
+    const accountType = "{{ session.get('account_type', '') }}";
     const isProfileComplete = {{ 'true' if profile_complete else 'false' }};
 
     function openIncompleteModal() {
@@ -1156,6 +1158,15 @@
     }
 
     function handlePortalApply() {
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        if (accountType !== 'individual') {
+            alert("Only candidate accounts can apply for opportunities.");
+            return;
+        }
+
         const opp = window.currentSelectedOpportunity;
         if (!opp) return;
 
@@ -1239,6 +1250,11 @@
     function toggleBookmark(event, jobId) {
         if (event) {
             event.stopPropagation();
+        }
+
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
         }
         
         fetch('/dashboard/jobs/bookmark/' + jobId, {

@@ -568,6 +568,18 @@
             chevron.innerText = '▲';
         }
     }
+
+    document.getElementById('analysisForm').addEventListener('submit', function() {
+        const btn = document.getElementById('analyzeBtn');
+        const btnText = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.loader-spinner');
+        
+        btn.disabled = true;
+        btnText.innerText = "Analyzing Resume with AI (may take a few seconds)...";
+        if (spinner) {
+            spinner.style.display = "inline-block";
+        }
+    });
 </script>
 {% endblock %}
 

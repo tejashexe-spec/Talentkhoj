@@ -915,6 +915,67 @@ def edit_company_profile():
     return render_template("company_profile_edit.html", company=company, faqs=faqs)
 
 
+@app.route("/company/faq/add", methods=["POST"])
+@login_required
+def add_company_faq():
+    if session.get("account_type") != "company":
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    data = request.get_json() or {}
+    question = data.get("question", "").strip()
+    answer = data.get("answer", "").strip()
+    
+    if not question or not answer:
+        return jsonify({"success": False, "message": "Question and answer are required."}), 400
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        return jsonify({"success": False, "message": "Company profile not found."}), 404
+        
+    company_id = company["id"]
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO company_faqs (company_id, question, answer) VALUES (%s, %s, %s)",
+            (company_id, question, answer)
+        )
+        faq_id = cursor.lastrowid
+        
+    return jsonify({
+        "success": True,
+        "faq": {
+            "id": faq_id,
+            "question": question,
+            "answer": answer
+        }
+    })
+
+
+@app.route("/company/faq/delete/<int:faq_id>", methods=["POST"])
+@login_required
+def delete_company_faq(faq_id):
+    if session.get("account_type") != "company":
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+    if not company:
+        return jsonify({"success": False, "message": "Company profile not found."}), 404
+        
+    company_id = company["id"]
+    with conn.cursor() as cursor:
+        cursor.execute("DELETE FROM company_faqs WHERE id = %s AND company_id = %s", (faq_id, company_id))
+        
+    return jsonify({"success": True})
+
+
+
 
 # ─── STATIC PAGES ────────────────────────────────────────────────────────────
 

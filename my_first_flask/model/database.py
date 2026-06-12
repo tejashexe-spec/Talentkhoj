@@ -314,6 +314,26 @@ class Database:
             with self.__connection.cursor() as cursor:
                 cursor.execute("ALTER TABLE applications ADD INDEX idx_status (status)")
 
+        # Create user_badges if it doesn't exist (migration)
+        with self.__connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_badges (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    company_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    badge_type ENUM('internship', 'employment', 'contribution', 'other') NOT NULL DEFAULT 'employment',
+                    description TEXT DEFAULT NULL,
+                    start_date DATE DEFAULT NULL,
+                    end_date DATE DEFAULT NULL,
+                    status ENUM('pending', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',
+                    awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+
 
     def get_connection(self):
         if self.__connection:

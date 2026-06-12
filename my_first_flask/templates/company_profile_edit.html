@@ -272,6 +272,23 @@
                 <p id="noFaqsText" style="font-size: 13.5px; color: #64748b; font-style: italic; text-align: center; padding: 10px 0; margin: 0;">No FAQs configured yet. Use the fields below to add one.</p>
             {% endif %}
         </div>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+
+        <h3 style="font-size: 14px; font-weight: 700; color: #05154b; margin-bottom: 12px; margin-top: 0;">Add New FAQ</h3>
+        <form id="addFaqForm" onsubmit="addCompanyFaq(event)">
+            <div class="form-group-full">
+                <label>Question</label>
+                <input type="text" class="form-control" id="faqQuestion" placeholder="e.g. Do you offer remote work options?" required>
+            </div>
+            <div class="form-group-full">
+                <label>Answer</label>
+                <textarea class="form-control" id="faqAnswer" rows="3" placeholder="e.g. Yes, we support a hybrid structure with remote capability." required style="resize: vertical;"></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end;">
+                <button type="submit" class="btn-save-profile" style="font-size: 12.5px; padding: 8px 16px;">Add FAQ</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -284,6 +301,75 @@
             }
             reader.readAsDataURL(input.files[0]);
         }
+    }
+
+    function addCompanyFaq(event) {
+        event.preventDefault();
+        const question = document.getElementById('faqQuestion').value.trim();
+        const answer = document.getElementById('faqAnswer').value.trim();
+        if (!question || !answer) return;
+
+        fetch('/company/faq/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: question, answer: answer })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const container = document.getElementById('companyFaqsContainer');
+                const noFaqs = document.getElementById('noFaqsText');
+                if (noFaqs) noFaqs.remove();
+
+                const box = document.createElement('div');
+                box.className = 'faq-item-box';
+                box.id = 'faq-item-' + data.faq.id;
+                box.innerHTML = `
+                    <div class="faq-content">
+                        <div class="faq-q">Q: ${data.faq.question}</div>
+                        <div class="faq-a">A: ${data.faq.answer}</div>
+                    </div>
+                    <button type="button" class="btn-delete-faq" onclick="deleteCompanyFaq(${data.faq.id})" title="Delete FAQ">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                    </button>
+                `;
+                container.appendChild(box);
+                document.getElementById('faqQuestion').value = '';
+                document.getElementById('faqAnswer').value = '';
+            } else {
+                alert(data.message || 'Failed to add FAQ.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('An error occurred. Please try again.');
+        });
+    }
+
+    function deleteCompanyFaq(faqId) {
+        if (!confirm('Are you sure you want to delete this FAQ?')) return;
+
+        fetch('/company/faq/delete/' + faqId, {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const el = document.getElementById('faq-item-' + faqId);
+                if (el) el.remove();
+
+                const container = document.getElementById('companyFaqsContainer');
+                if (container.children.length === 0) {
+                    container.innerHTML = `<p id="noFaqsText" style="font-size: 13.5px; color: #64748b; font-style: italic; text-align: center; padding: 10px 0; margin: 0;">No FAQs configured yet. Use the fields below to add one.</p>`;
+                }
+            } else {
+                alert(data.message || 'Failed to delete FAQ.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('An error occurred. Please try again.');
+        });
     }
 </script>
 {% endblock %}

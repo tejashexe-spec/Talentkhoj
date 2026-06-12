@@ -227,6 +227,7 @@ class Database:
                     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            # company_faqs table stores FAQs specific to a company profile
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS company_faqs (
                     id INT AUTO_INCREMENT PRIMARY KEY,

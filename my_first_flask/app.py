@@ -1,7 +1,7 @@
 import sys
 import os
-import time
-import secrets
+import time 
+import secrets  
 from datetime import datetime, timedelta
 from functools import wraps
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,6 +31,7 @@ app.config['MAIL_USE_SSL'] = config.MAIL_USE_SSL
 app.config['MAIL_USE_TLS'] = config.MAIL_USE_TLS
 app.config['MAIL_USERNAME'] = config.MAIL_USERNAME
 app.config['MAIL_PASSWORD'] = config.MAIL_PASSWORD
+app.config['MAIL_DEFAULT_SENDER'] = config.MAIL_DEFAULT_SENDER
 mail = Mail(app)
 
 # ── Google OAuth ──────────────────────────────────────────────────────────────
@@ -1527,6 +1528,25 @@ def dashboard_saved():
 @login_required
 def dashboard_settings():
     return render_template("dashboard_settings.html")
+
+
+@app.route("/dashboard/badges", methods=["GET", "POST"])
+@login_required
+def dashboard_badges():
+    return render_template("dashboard_badges.html")
+
+
+@app.route("/dashboard/badges/accept/<int:badge_id>", methods=["POST"])
+@login_required
+def accept_badge(badge_id):
+    return redirect(url_for("dashboard_badges"))
+
+
+@app.route("/dashboard/badges/reject/<int:badge_id>", methods=["POST"])
+@login_required
+def reject_badge(badge_id):
+    return redirect(url_for("dashboard_badges"))
+
 
 
 # ─── CV BUILDER / UPLOADER ──────────────────────────────────────────────────

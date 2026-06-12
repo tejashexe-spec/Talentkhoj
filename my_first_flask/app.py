@@ -2148,7 +2148,7 @@ def generate_cv_html(data):
 @app.route("/dashboard/cv", methods=["GET"])
 @login_required
 def dashboard_cv():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can access the CV Builder.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2227,7 +2227,7 @@ def view_cv(user_id):
 @app.route("/dashboard/cv/build", methods=["POST"])
 @login_required
 def dashboard_cv_build():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can build a CV.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2341,7 +2341,7 @@ def dashboard_cv_build():
 @app.route("/dashboard/cv/upload", methods=["POST"])
 @login_required
 def dashboard_cv_upload():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can upload a CV.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2479,7 +2479,7 @@ def query_gemini_resume_analysis(resume_text, job_description=""):
 
 @login_required
 def dashboard_resume_doctor():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can access the Resume Doctor.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2508,8 +2508,7 @@ def dashboard_resume_doctor_analyze():
     or an uploaded PDF resume, queries the Gemini API, and saves the cached 
     review JSON back to the user's DB entry.
     """
-    if session.get("account_type") != "individual":
-
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can use the Resume Doctor.", "error")
         return redirect(url_for("dashboard"))
         

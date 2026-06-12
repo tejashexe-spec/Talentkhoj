@@ -1457,7 +1457,6 @@ def dashboard_ats_update_status():
 
 
 @app.route("/dashboard/search")
-@login_required
 def dashboard_search():
     conn = get_db()
     

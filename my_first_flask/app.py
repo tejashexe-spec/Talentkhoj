@@ -799,7 +799,17 @@ def user_profile(user_id):
         avg_rating = round(stats["avg_rating"], 1) if stats["avg_rating"] else 0.0
         review_count = stats["review_count"]
         
-    return render_template("user_profile.html", user=user, reviews=reviews, avg_rating=avg_rating, review_count=review_count)
+        # Fetch accepted badges
+        cursor.execute("""
+            SELECT b.*, c.company_name, c.logo as company_logo
+            FROM user_badges b
+            JOIN companies c ON b.company_id = c.id
+            WHERE b.user_id = %s AND b.status = 'accepted'
+            ORDER BY b.end_date DESC, b.awarded_at DESC
+        """, (user_id,))
+        accepted_badges = cursor.fetchall()
+        
+    return render_template("user_profile.html", user=user, reviews=reviews, avg_rating=avg_rating, review_count=review_count, accepted_badges=accepted_badges)
 
 
 @app.route("/company/<int:user_id>")

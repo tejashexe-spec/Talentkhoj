@@ -2502,7 +2502,14 @@ def dashboard_resume_doctor():
 @app.route("/dashboard/resume-doctor/analyze", methods=["POST"])
 @login_required
 def dashboard_resume_doctor_analyze():
+    """
+    POST route to trigger AI resume diagnostic analysis.
+    Extracts text content from either dynamically built resume JSON data 
+    or an uploaded PDF resume, queries the Gemini API, and saves the cached 
+    review JSON back to the user's DB entry.
+    """
     if session.get("account_type") != "individual":
+
         flash("Only individuals can use the Resume Doctor.", "error")
         return redirect(url_for("dashboard"))
         

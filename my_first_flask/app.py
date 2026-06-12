@@ -1616,12 +1616,36 @@ def dashboard_badges():
 @app.route("/dashboard/badges/accept/<int:badge_id>", methods=["POST"])
 @login_required
 def accept_badge(badge_id):
+    conn = get_db()
+    user_id = session["user_id"]
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM user_badges WHERE id = %s AND user_id = %s AND status = 'pending'", (badge_id, user_id))
+        badge = cursor.fetchone()
+        
+        if badge:
+            cursor.execute("UPDATE user_badges SET status = 'accepted' WHERE id = %s", (badge_id,))
+            flash("Badge successfully accepted and added to your public profile!", "success")
+        else:
+            flash("Unable to accept badge.", "error")
+            
     return redirect(url_for("dashboard_badges"))
 
 
 @app.route("/dashboard/badges/reject/<int:badge_id>", methods=["POST"])
 @login_required
 def reject_badge(badge_id):
+    conn = get_db()
+    user_id = session["user_id"]
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM user_badges WHERE id = %s AND user_id = %s AND status = 'pending'", (badge_id, user_id))
+        badge = cursor.fetchone()
+        
+        if badge:
+            cursor.execute("UPDATE user_badges SET status = 'rejected' WHERE id = %s", (badge_id,))
+            flash("Badge verification request rejected.", "info")
+        else:
+            flash("Unable to reject badge.", "error")
+            
     return redirect(url_for("dashboard_badges"))
 
 

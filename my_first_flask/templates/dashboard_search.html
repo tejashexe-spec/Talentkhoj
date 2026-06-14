@@ -675,6 +675,12 @@
             </select>
 
             <button type="submit" class="btn-filter-submit">Apply</button>
+            <button type="button" class="btn-filter-submit" style="background: #ef4444; display: inline-flex; align-items: center; gap: 6px;" onclick="openSaveSearchModal()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                </svg>
+                Save Search
+            </button>
         </div>
 
         {% if filters.get('q') or filters.get('type') or filters.get('location') or filters.get('experience') %}
@@ -904,6 +910,52 @@
                 <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 16px;">
                     <button type="button" class="btn-modal-cancel" onclick="closeApplyModal()">Cancel</button>
                     <button type="submit" class="btn-apply-now" id="btnSubmitScreening" style="box-shadow: none;">Submit Application</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- SAVE SEARCH MODAL -->
+<div class="modal-backdrop" id="saveSearchModalBackdrop" onclick="closeSaveSearchModal()">
+    <div class="opp-modal" onclick="event.stopPropagation()" style="max-width: 460px;">
+        <div class="modal-header" style="padding: 20px 24px;">
+            <div>
+                <h2 style="font-size: 20px; font-weight: 800; color: #05154b; margin-bottom: 2px;">Save Search & Job Alert</h2>
+                <div style="font-size: 13px; color: #64748b; font-weight: 600;">Save your current filter criteria for quick access</div>
+            </div>
+            <button class="btn-close-modal" onclick="closeSaveSearchModal()">&times;</button>
+        </div>
+
+        <div class="modal-body" style="padding: 20px 24px;">
+            <form id="saveSearchForm" onsubmit="submitSaveSearch(event)">
+                <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+                    <div style="background: #fafbfe; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #475569;">
+                        <strong style="display: block; margin-bottom: 4px; color: #05154b;">Current Filters:</strong>
+                        <ul style="margin: 0; padding-left: 18px; line-height: 1.5;">
+                            <li>Keyword: <span id="lblFilterQ" style="font-weight: 600; color: #334155;">-</span></li>
+                            <li>Type: <span id="lblFilterType" style="font-weight: 600; color: #334155;">-</span></li>
+                            <li>Location: <span id="lblFilterLocation" style="font-weight: 600; color: #334155;">-</span></li>
+                            <li>Experience: <span id="lblFilterExperience" style="font-weight: 600; color: #334155;">-</span></li>
+                        </ul>
+                    </div>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #fafbfe; margin-top: 10px;">
+                        <div>
+                            <p style="font-size: 13.5px; font-weight: 700; color: #0f172a; margin: 0 0 2px;">Email Job Alerts</p>
+                            <p style="font-size: 12px; color: #64748b; margin: 0;">Receive emails when new matching jobs are posted</p>
+                        </div>
+                        <label style="position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer;">
+                            <input type="checkbox" id="chkEmailAlerts" style="opacity:0;width:0;height:0;" checked>
+                            <span style="position:absolute;top:0;left:0;right:0;bottom:0;background:#10b981;border-radius:24px;transition:.2s;"></span>
+                            <span style="position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.2s;"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 16px;">
+                    <button type="button" class="btn-modal-cancel" onclick="closeSaveSearchModal()">Cancel</button>
+                    <button type="submit" class="btn-apply-now" id="btnSubmitSaveSearch" style="box-shadow: none; background: #ef4444;">Save Search</button>
                 </div>
             </form>
         </div>
@@ -1325,6 +1377,98 @@
         })
         .catch(err => {
             console.error("Error toggling bookmark:", err);
+        });
+    }
+
+    function openSaveSearchModal() {
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        if (accountType !== 'individual') {
+            alert("Only candidate accounts can save searches.");
+            return;
+        }
+
+        const q = document.querySelector('input[name="q"]').value.trim();
+        const type = document.querySelector('select[name="type"]').value;
+        const location = document.querySelector('select[name="location"]').value;
+        const experience = document.querySelector('select[name="experience"]').value;
+
+        if (!q && !type && !location && !experience) {
+            alert("Cannot save an empty search. Please specify at least one filter.");
+            return;
+        }
+
+        document.getElementById('lblFilterQ').innerText = q || 'Any';
+        document.getElementById('lblFilterType').innerText = type ? type.toUpperCase() : 'Any';
+        document.getElementById('lblFilterLocation').innerText = location || 'Any';
+        document.getElementById('lblFilterExperience').innerText = experience || 'Any';
+
+        document.getElementById('saveSearchModalBackdrop').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSaveSearchModal() {
+        document.getElementById('saveSearchModalBackdrop').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    function submitSaveSearch(event) {
+        event.preventDefault();
+
+        const q = document.querySelector('input[name="q"]').value.trim();
+        const type = document.querySelector('select[name="type"]').value;
+        const location = document.querySelector('select[name="location"]').value;
+        const experience = document.querySelector('select[name="experience"]').value;
+        const emailAlerts = document.getElementById('chkEmailAlerts').checked;
+
+        const btn = document.getElementById('btnSubmitSaveSearch');
+        const originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        btn.innerHTML = `Saving...`;
+
+        fetch('/dashboard/saved-searches/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query: q,
+                type: type,
+                location: location,
+                experience: experience,
+                email_alerts: emailAlerts
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.innerHTML = originalHtml;
+            
+            if (data.success) {
+                closeSaveSearchModal();
+                
+                // Show Success Toast Notification
+                const toast = document.getElementById('easyApplyToast');
+                document.getElementById('toastMessage').innerText = data.message;
+                toast.classList.add('show');
+
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            } else {
+                alert(data.message || "An error occurred.");
+            }
+        })
+        .catch(err => {
+            console.error("Error saving search:", err);
+            alert("Connection error. Please try again.");
+            btn.disabled = false;
+            btn.style.pointerEvents = '';
+            btn.innerHTML = originalHtml;
         });
     }
 

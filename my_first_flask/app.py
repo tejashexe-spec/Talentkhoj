@@ -1454,6 +1454,15 @@ def dashboard_ats_update_status():
         
     with conn.cursor() as cursor:
         cursor.execute("UPDATE applications SET status = %s WHERE id = %s", (new_status, app_id))
+        cursor.execute("""
+            INSERT INTO notifications (user_id, title, message, link)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            application["user_id"],
+            "Application Status Updated",
+            f"Your application for '{application['job_title']}' has been updated to '{new_status.capitalize()}'.",
+            "/dashboard"
+        ))
         
     try:
         from my_first_flask.utils.logger import log_activity
@@ -1692,6 +1701,26 @@ def dashboard_saved():
     return render_template("dashboard_saved.html", bookmarks=bookmarks, saved_searches=saved_searches)
 
 
+@app.route("/dashboard/notifications")
+@login_required
+def dashboard_notifications():
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, title, message, link, is_read, created_at
+            FROM notifications
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+        """, (session["user_id"],))
+        notifications = cursor.fetchall()
+    
+    for notif in notifications:
+        if notif.get("created_at"):
+            notif["created_at_str"] = notif["created_at"].strftime("%Y-%m-%d %H:%M")
+            
+    return render_template("dashboard_notifications.html", notifications=notifications, active="notifications")
+
+
 @app.route("/dashboard/saved-searches/save", methods=["POST"])
 @login_required
 def save_search():
@@ -1829,6 +1858,16 @@ def dashboard_badges():
                     VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')
                 """, (candidate["id"], company["id"], title, badge_type, description or None, start_date, end_date))
                 
+                cursor.execute("""
+                    INSERT INTO notifications (user_id, title, message, link)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    candidate["id"],
+                    "New Badge Verification Request",
+                    f"Company '{session['user_name']}' has issued you a professional verification badge request: '{title}'.",
+                    "/dashboard/badges"
+                ))
+                
                 flash(f"Verification badge successfully issued to {candidate['full_name']}!", "success")
                 return redirect(url_for("dashboard_badges"))
             
@@ -1880,6 +1919,23 @@ def accept_badge(badge_id):
         
         if badge:
             cursor.execute("UPDATE user_badges SET status = 'accepted' WHERE id = %s", (badge_id,))
+            cursor.execute("""
+                SELECT b.title, c.user_id as company_user_id
+                FROM user_badges b
+                JOIN companies c ON b.company_id = c.id
+                WHERE b.id = %s
+            """, (badge_id,))
+            badge_info = cursor.fetchone()
+            if badge_info:
+                cursor.execute("""
+                    INSERT INTO notifications (user_id, title, message, link)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    badge_info["company_user_id"],
+                    "Badge Verification Accepted",
+                    f"Candidate '{session['user_name']}' has accepted the verification badge: '{badge_info['title']}'.",
+                    "/dashboard/badges"
+                ))
             flash("Badge successfully accepted and added to your public profile!", "success")
         else:
             flash("Unable to accept badge.", "error")
@@ -1898,6 +1954,23 @@ def reject_badge(badge_id):
         
         if badge:
             cursor.execute("UPDATE user_badges SET status = 'rejected' WHERE id = %s", (badge_id,))
+            cursor.execute("""
+                SELECT b.title, c.user_id as company_user_id
+                FROM user_badges b
+                JOIN companies c ON b.company_id = c.id
+                WHERE b.id = %s
+            """, (badge_id,))
+            badge_info = cursor.fetchone()
+            if badge_info:
+                cursor.execute("""
+                    INSERT INTO notifications (user_id, title, message, link)
+                    VALUES (%s, %s, %s, %s)
+                """, (
+                    badge_info["company_user_id"],
+                    "Badge Verification Rejected",
+                    f"Candidate '{session['user_name']}' has rejected the verification badge: '{badge_info['title']}'.",
+                    "/dashboard/badges"
+                ))
             flash("Badge verification request rejected.", "info")
         else:
             flash("Unable to reject badge.", "error")
@@ -2977,11 +3050,12 @@ def dashboard_post_opportunity():
         try:
             with conn.cursor() as cursor:
                 # Get all saved searches with email alerts active
+                # Get all saved searches for active matching notifications
                 cursor.execute("""
                     SELECT s.*, u.email as user_email, u.full_name as user_name
                     FROM saved_searches s
                     JOIN users u ON s.user_id = u.id
-                    WHERE s.email_alerts = 1 AND u.is_banned = 0
+                    WHERE u.is_banned = 0
                 """)
                 active_alerts = cursor.fetchall()
                 
@@ -3016,42 +3090,54 @@ def dashboard_post_opportunity():
                             match = False
                             
                     if match:
-                        # Send email alert to user!
-                        # Prepare HTML content
-                        alert_email_html = f"""
-                        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
-                            <div style="text-align: center; border-bottom: 2px solid #2456ff; padding-bottom: 15px; margin-bottom: 20px;">
-                                <h1 style="color: #05154b; font-size: 24px; margin: 0;">Talent Khoj</h1>
-                                <p style="color: #64748b; font-size: 14px; margin: 5px 0 0;">New Opportunity Match Alert!</p>
-                            </div>
-                            <p style="font-size: 16px; color: #1e293b;">Hi {alert['user_name']},</p>
-                            <p style="font-size: 15px; color: #334155; line-height: 1.6;">
-                                A new opportunity matching your saved search preferences has been posted on Talent Khoj.
-                            </p>
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
-                                <h2 style="font-size: 18px; color: #0f172a; margin: 0 0 10px;">{title}</h2>
-                                <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Company:</strong> {company['company_name']}</p>
-                                <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Location:</strong> {location}</p>
-                                <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Type:</strong> <span style="text-transform: capitalize;">{opportunity_type}</span></p>
-                                <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Salary:</strong> {salary}</p>
-                                <p style="margin: 0; font-size: 14px; color: #475569;"><strong>Required Experience:</strong> {experience_level}</p>
-                            </div>
-                            <div style="text-align: center; margin-top: 30px;">
-                                <a href="http://127.0.0.1:5000/dashboard/search?q={alert['search_query'] or ''}" style="background: #2456ff; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">View Opportunity</a>
-                            </div>
-                            <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0 20px;">
-                            <p style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
-                                You are receiving this because you enabled email alerts for your saved search on Talent Khoj.<br>
-                                <a href="http://127.0.0.1:5000/dashboard/saved" style="color: #2456ff; text-decoration: underline;">Manage Alert Settings</a>
-                            </p>
-                        </div>
-                        """
+                        # Create in-app notification
+                        cursor.execute("""
+                            INSERT INTO notifications (user_id, title, message, link)
+                            VALUES (%s, %s, %s, %s)
+                        """, (
+                            alert["user_id"],
+                            "Opportunity Match",
+                            f"New {opportunity_type.capitalize()} '{title}' matching your saved search '{alert['search_query'] or ''}' has been posted by {company['company_name']}.",
+                            f"/dashboard/search?q={alert['search_query'] or ''}"
+                        ))
                         
-                        EmailService.send_email(
-                            to=alert["user_email"],
-                            subject=f"Job Alert: New {opportunity_type.capitalize()} matching your search - {title}",
-                            html=alert_email_html
-                        )
+                        # Send email alert to user if enabled!
+                        if alert.get("email_alerts") == 1:
+                            # Prepare HTML content
+                            alert_email_html = f"""
+                            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+                                <div style="text-align: center; border-bottom: 2px solid #2456ff; padding-bottom: 15px; margin-bottom: 20px;">
+                                    <h1 style="color: #05154b; font-size: 24px; margin: 0;">Talent Khoj</h1>
+                                    <p style="color: #64748b; font-size: 14px; margin: 5px 0 0;">New Opportunity Match Alert!</p>
+                                </div>
+                                <p style="font-size: 16px; color: #1e293b;">Hi {alert['user_name']},</p>
+                                <p style="font-size: 15px; color: #334155; line-height: 1.6;">
+                                    A new opportunity matching your saved search preferences has been posted on Talent Khoj.
+                                </p>
+                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                                    <h2 style="font-size: 18px; color: #0f172a; margin: 0 0 10px;">{title}</h2>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Company:</strong> {company['company_name']}</p>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Location:</strong> {location}</p>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Type:</strong> <span style="text-transform: capitalize;">{opportunity_type}</span></p>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Salary:</strong> {salary}</p>
+                                    <p style="margin: 0; font-size: 14px; color: #475569;"><strong>Required Experience:</strong> {experience_level}</p>
+                                </div>
+                                <div style="text-align: center; margin-top: 30px;">
+                                    <a href="http://127.0.0.1:5000/dashboard/search?q={alert['search_query'] or ''}" style="background: #2456ff; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">View Opportunity</a>
+                                </div>
+                                <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0 20px;">
+                                <p style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+                                    You are receiving this because you enabled email alerts for your saved search on Talent Khoj.<br>
+                                    <a href="http://127.0.0.1:5000/dashboard/saved" style="color: #2456ff; text-decoration: underline;">Manage Alert Settings</a>
+                                </p>
+                            </div>
+                            """
+                            
+                            EmailService.send_email(
+                                to=alert["user_email"],
+                                subject=f"Job Alert: New {opportunity_type.capitalize()} matching your search - {title}",
+                                html=alert_email_html
+                            )
         except Exception as alert_err:
             print(f"Failed to process job alert notifications: {alert_err}")
         
@@ -3355,6 +3441,70 @@ def api_unread_count():
         cursor.execute("SELECT COUNT(*) as count FROM messages WHERE receiver_id = %s AND is_read = 0", (user_id,))
         row = cursor.fetchone()
     return jsonify({"success": True, "unread_count": row["count"] if row else 0})
+
+@app.route("/api/notifications", methods=["GET"])
+@login_required
+def api_get_notifications():
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, title, message, link, is_read, created_at
+            FROM notifications
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+            LIMIT 20
+        """, (user_id,))
+        notifications = cursor.fetchall()
+
+    for notif in notifications:
+        if notif.get("created_at"):
+            notif["created_at"] = notif["created_at"].strftime("%Y-%m-%d %H:%M")
+
+    return jsonify({"success": True, "notifications": notifications})
+
+
+@app.route("/api/notifications/unread-count", methods=["GET"])
+@login_required
+def api_get_unread_notifications_count():
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT COUNT(*) as unread_count
+            FROM notifications
+            WHERE user_id = %s AND is_read = 0
+        """, (user_id,))
+        row = cursor.fetchone()
+    return jsonify({"success": True, "unread_count": row["unread_count"] if row else 0})
+
+
+@app.route("/api/notifications/read-all", methods=["POST"])
+@login_required
+def api_mark_all_notifications_read():
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            UPDATE notifications
+            SET is_read = 1
+            WHERE user_id = %s
+        """, (user_id,))
+    return jsonify({"success": True, "message": "All notifications marked as read."})
+
+
+@app.route("/api/notifications/read/<int:notif_id>", methods=["POST"])
+@login_required
+def api_mark_notification_read(notif_id):
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            UPDATE notifications
+            SET is_read = 1
+            WHERE id = %s AND user_id = %s
+        """, (notif_id, user_id))
+    return jsonify({"success": True, "message": "Notification marked as read."})
 
 @app.route("/reviews/submit", methods=["POST"])
 @login_required

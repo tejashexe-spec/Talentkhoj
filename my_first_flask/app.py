@@ -1680,7 +1680,103 @@ def dashboard_saved():
         ORDER BY b.created_at DESC
     """, (session["user_id"],))
     bookmarks = cursor.fetchall()
-    return render_template("dashboard_saved.html", bookmarks=bookmarks)
+    
+    cursor.execute("""
+        SELECT id, search_query, opportunity_type, location, experience_level, email_alerts, created_at
+        FROM saved_searches
+        WHERE user_id = %s
+        ORDER BY created_at DESC
+    """, (session["user_id"],))
+    saved_searches = cursor.fetchall()
+    
+    return render_template("dashboard_saved.html", bookmarks=bookmarks, saved_searches=saved_searches)
+
+
+@app.route("/dashboard/saved-searches/save", methods=["POST"])
+@login_required
+def save_search():
+    if session.get("account_type") != "individual":
+        return jsonify({"success": False, "message": "Only candidate accounts can save searches."}), 403
+        
+    data = request.get_json() or {}
+    query = data.get("query", "").strip() or None
+    opp_type = data.get("type", "").strip() or None
+    location = data.get("location", "").strip() or None
+    experience = data.get("experience", "").strip() or None
+    email_alerts = 1 if data.get("email_alerts") else 0
+
+    if not query and not opp_type and not location and not experience:
+        return jsonify({"success": False, "message": "Cannot save an empty search. Please specify at least one filter."}), 400
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        # Check if already exists
+        cursor.execute("""
+            SELECT id FROM saved_searches 
+            WHERE user_id = %s 
+              AND (search_query = %s OR (search_query IS NULL AND %s IS NULL))
+              AND (opportunity_type = %s OR (opportunity_type IS NULL AND %s IS NULL))
+              AND (location = %s OR (location IS NULL AND %s IS NULL))
+              AND (experience_level = %s OR (experience_level IS NULL AND %s IS NULL))
+        """, (session["user_id"], query, query, opp_type, opp_type, location, location, experience, experience))
+        
+        if cursor.fetchone():
+            return jsonify({"success": False, "message": "You have already saved this search!"})
+
+        cursor.execute("""
+            INSERT INTO saved_searches (user_id, search_query, opportunity_type, location, experience_level, email_alerts)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (session["user_id"], query, opp_type, location, experience, email_alerts))
+
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("Save Search", f"Candidate {session['user_name']} saved a new search with filters: query={query}, type={opp_type}, location={location}, experience={experience}, email_alerts={email_alerts}")
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "message": "Search saved successfully!"})
+
+
+@app.route("/dashboard/saved-searches/delete/<int:search_id>", methods=["POST"])
+@login_required
+def delete_saved_search(search_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM saved_searches WHERE id = %s AND user_id = %s", (search_id, session["user_id"]))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "Saved search not found."}), 404
+
+        cursor.execute("DELETE FROM saved_searches WHERE id = %s AND user_id = %s", (search_id, session["user_id"]))
+
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("Delete Saved Search", f"Candidate {session['user_name']} deleted saved search ID {search_id}")
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "message": "Saved search deleted successfully."})
+
+
+@app.route("/dashboard/saved-searches/toggle-alert/<int:search_id>", methods=["POST"])
+@login_required
+def toggle_search_alert(search_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT email_alerts FROM saved_searches WHERE id = %s AND user_id = %s", (search_id, session["user_id"]))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Saved search not found."}), 404
+
+        new_status = 0 if row["email_alerts"] else 1
+        cursor.execute("UPDATE saved_searches SET email_alerts = %s WHERE id = %s AND user_id = %s", (new_status, search_id, session["user_id"]))
+
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("Toggle Search Alert", f"Candidate {session['user_name']} toggled email alerts to {new_status} for saved search ID {search_id}")
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "email_alerts": bool(new_status), "message": "Alert preference updated successfully."})
 
 
 
@@ -2400,7 +2496,7 @@ def query_gemini_resume_analysis(resume_text, job_description=""):
     if not config.GEMINI_API_KEY:
         return {"error": "Gemini API key is not configured in settings."}
         
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={config.GEMINI_API_KEY}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={config.GEMINI_API_KEY}"
     
     prompt = f"""
     You are an expert ATS (Applicant Tracking System) scanner and career coach.
@@ -2681,6 +2777,105 @@ def dashboard_create_event():
                 error = f"An error occurred: {str(e)}"
                 
     return render_template("dashboard_create_event.html", form_data=form_data, error=error)
+
+
+@app.route("/dashboard/events/edit/<int:event_id>", methods=["GET", "POST"])
+@login_required
+def dashboard_edit_event(event_id):
+    if session.get("account_type") != "company":
+        return redirect(url_for("dashboard_events"))
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+
+    if not company:
+        flash("Company profile not found.", "error")
+        return redirect(url_for("dashboard_events"))
+
+    company_id = company["id"]
+
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM events WHERE id = %s AND company_id = %s", (event_id, company_id))
+        event = cursor.fetchone()
+
+    if not event:
+        flash("Event not found or unauthorized.", "error")
+        return redirect(url_for("dashboard_events"))
+
+    error = None
+    form_data = {
+        "title": event["title"],
+        "description": event["description"],
+        "event_date": event["event_date"].strftime("%Y-%m-%dT%H:%M") if event["event_date"] else "",
+        "location": event["location"],
+        "registration_link": event["registration_link"]
+    }
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        event_date_str = request.form.get("event_date", "").strip()
+        location = request.form.get("location", "").strip()
+        registration_link = request.form.get("registration_link", "").strip() or None
+
+        form_data = {
+            "title": title,
+            "description": description,
+            "event_date": event_date_str,
+            "location": location,
+            "registration_link": registration_link
+        }
+
+        if not title:
+            error = "Event title is required."
+        elif not description:
+            error = "Event description is required."
+        elif not event_date_str:
+            error = "Event date and time is required."
+        elif not location:
+            error = "Event location is required."
+        else:
+            try:
+                event_date = datetime.strptime(event_date_str, "%Y-%m-%dT%H:%M")
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE events SET title = %s, description = %s, event_date = %s, location = %s, registration_link = %s WHERE id = %s AND company_id = %s",
+                        (title, description, event_date, location, registration_link, event_id, company_id)
+                    )
+                flash("Event updated successfully!", "success")
+                return redirect(url_for("dashboard_events"))
+            except ValueError:
+                error = "Invalid date and time format."
+            except Exception as e:
+                error = f"An error occurred: {str(e)}"
+
+    return render_template("dashboard_create_event.html", form_data=form_data, error=error, is_edit=True, event_id=event_id)
+
+
+@app.route("/dashboard/events/delete/<int:event_id>", methods=["POST"])
+@login_required
+def dashboard_delete_event(event_id):
+    if session.get("account_type") != "company":
+        return redirect(url_for("dashboard_events"))
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+
+    if not company:
+        flash("Company profile not found.", "error")
+        return redirect(url_for("dashboard_events"))
+
+    company_id = company["id"]
+
+    with conn.cursor() as cursor:
+        cursor.execute("DELETE FROM events WHERE id = %s AND company_id = %s", (event_id, company_id))
+
+    flash("Event deleted successfully!", "success")
+    return redirect(url_for("dashboard_events"))
 
 
 @app.route("/dashboard/post-opportunity", methods=["GET", "POST"])
@@ -3150,6 +3345,17 @@ def submit_review():
         return redirect(url_for("company_profile", user_id=reviewee_id))
     else:
         return redirect(url_for("user_profile", user_id=reviewee_id))
+
+
+def log_admin_action(action, target_type, target_id, details):
+    """Helper function to log admin operations into the database."""
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO admin_logs (admin_name, action, target_type, target_id, details) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (session.get("user_name", "System"), action, target_type, target_id, details)
+        )
 
 
 # ─── ADMIN DASHBOARD ─────────────────────────────────────────────────────────

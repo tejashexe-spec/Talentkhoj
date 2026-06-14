@@ -4345,6 +4345,45 @@ def admin_settings():
 
 
 
+@app.route("/dashboard/ats/notify", methods=["POST"])
+@login_required
+def dashboard_ats_notify():
+    if session.get("account_type") != "company":
+        return jsonify({"success": False, "message": "Unauthorized access."}), 403
+        
+    data = request.get_json() or {}
+    target_user_id = data.get("user_id")
+    title = data.get("title", "").strip()
+    message = data.get("message", "").strip()
+    
+    if not target_user_id or not title or not message:
+        return jsonify({"success": False, "message": "Missing recipient, title, or message."}), 400
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        if not company:
+            return jsonify({"success": False, "message": "Company profile incomplete."}), 400
+            
+        cursor.execute("""
+            SELECT a.id 
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.id
+            WHERE a.user_id = %s AND j.company_id = %s
+        """, (target_user_id, company["id"]))
+        
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "Unauthorized: recipient has not applied to your opportunities."}), 403
+            
+        cursor.execute("""
+            INSERT INTO notifications (user_id, title, message, link)
+            VALUES (%s, %s, %s, %s)
+        """, (target_user_id, title, message, "/dashboard/applications"))
+        
+    return jsonify({"success": True, "message": "Notification successfully sent to candidate."})
+
+
 # ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
 
 @app.route("/admin/announcement/send", methods=["POST"])
@@ -4366,6 +4405,21 @@ def send_announcement():
             "INSERT INTO announcements (title, message, target, created_by) VALUES (%s, %s, %s, %s)",
             (title, message, target, session["user_id"])
         )
+        
+        # Dispatch in-app push notifications to targeted users
+        if target == "all":
+            cursor.execute("SELECT id FROM users WHERE is_banned = 0")
+        elif target == "verified":
+            cursor.execute("SELECT id FROM users WHERE verified = 1 AND is_banned = 0")
+        elif target == "new":
+            cursor.execute("SELECT id FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND is_banned = 0")
+            
+        target_users = cursor.fetchall()
+        for u in target_users:
+            cursor.execute("""
+                INSERT INTO notifications (user_id, title, message, link)
+                VALUES (%s, %s, %s, %s)
+            """, (u["id"], f"Announcement: {title}", message, "/feed"))
 
     return jsonify({"success": True, "message": "Announcement sent successfully!"})
 

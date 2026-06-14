@@ -31,6 +31,7 @@ class Database:
             self._init_tables()
             self._run_migrations()
             self._seed_mock_events()
+            self._seed_mock_saved_searches()
             print("Database connected successfully!")
 
         except pymysql.MySQLError as e:
@@ -477,4 +478,22 @@ class Database:
                         company_id, datetime.now() + timedelta(days=10)
                     ))
                     print("Mock events seeded successfully!")
+
+    def _seed_mock_saved_searches(self):
+        """Seed mock saved searches if the saved_searches table is empty."""
+        with self.__connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) as cnt FROM saved_searches")
+            if cursor.fetchone()["cnt"] == 0:
+                # Find an individual candidate to attach the saved searches to
+                cursor.execute("SELECT id FROM users WHERE account_type = 'individual' LIMIT 1")
+                user = cursor.fetchone()
+                if user:
+                    user_id = user["id"]
+                    cursor.execute("""
+                        INSERT INTO saved_searches (user_id, search_query, opportunity_type, location, experience_level, email_alerts)
+                        VALUES 
+                        (%s, 'Python', 'job', 'Kathmandu (Onsite)', 'Entry', 1),
+                        (%s, 'React', 'internship', 'Remote', 'All Levels', 0)
+                    """, (user_id, user_id))
+                    print("Mock saved searches seeded successfully!")
 

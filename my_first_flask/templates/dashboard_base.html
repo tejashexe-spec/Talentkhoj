@@ -214,6 +214,17 @@
 
             {% endif %}
 
+            <a href="/dashboard/notifications" class="sidebar-item {% if active == 'notifications' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                </span>
+                Notifications
+                <span id="sidebar-notifications-badge" style="display: none; background: #ef4444; color: white; border-radius: 50%; font-size: 10px; font-weight: 700; width: 18px; height: 18px; align-items: center; justify-content: center; margin-left: auto;">0</span>
+            </a>
+
         </nav>
 
         {% if session.get('user_id') %}
@@ -509,10 +520,32 @@
             })
             .catch(err => console.error('Error fetching unread count:', err));
     }
+
+    function updateNotificationsCount() {
+        fetch('/api/notifications/unread-count')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const count = data.unread_count;
+                    const badge = document.getElementById('sidebar-notifications-badge');
+                    if (badge) {
+                        if (count > 0) {
+                            badge.innerText = count;
+                            badge.style.display = 'inline-flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error('Error fetching notifications count:', err));
+    }
     
     document.addEventListener('DOMContentLoaded', () => {
         updateUnreadCount();
+        updateNotificationsCount();
         setInterval(updateUnreadCount, 10000); // Check every 10 seconds
+        setInterval(updateNotificationsCount, 10000); // Check every 10 seconds
     });
 </script>
 

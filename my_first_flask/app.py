@@ -2972,6 +2972,88 @@ def dashboard_post_opportunity():
             log_activity("Post Opportunity", f"Company '{company['company_name']}' (ID: {company['id']}) posted a new {opportunity_type}: '{title}' at {location}")
         except Exception as log_err:
             print(f"Failed to write post job log: {log_err}")
+
+        # Check matching saved searches for job alerts
+        try:
+            with conn.cursor() as cursor:
+                # Get all saved searches with email alerts active
+                cursor.execute("""
+                    SELECT s.*, u.email as user_email, u.full_name as user_name
+                    FROM saved_searches s
+                    JOIN users u ON s.user_id = u.id
+                    WHERE s.email_alerts = 1 AND u.is_banned = 0
+                """)
+                active_alerts = cursor.fetchall()
+                
+                for alert in active_alerts:
+                    match = True
+                    
+                    # 1. Match search query (case-insensitive) against job title, description, skills
+                    if alert.get("search_query"):
+                        sq = alert["search_query"].lower()
+                        # check title, description, skills
+                        in_title = sq in title.lower()
+                        in_desc = sq in description.lower()
+                        in_skills = sq in (skills_required or "").lower()
+                        if not (in_title or in_desc or in_skills):
+                            match = False
+                            
+                    # 2. Match opportunity type
+                    if match and alert.get("opportunity_type"):
+                        if alert["opportunity_type"].lower() != opportunity_type.lower():
+                            match = False
+                            
+                    # 3. Match location (fuzzy search/substring matching)
+                    if match and alert.get("location"):
+                        # check if alert location matches job location
+                        if alert["location"].lower() not in location.lower():
+                            match = False
+                            
+                    # 4. Match experience level
+                    if match and alert.get("experience_level"):
+                        # check if alert experience_level matches job experience_level
+                        if alert["experience_level"].lower() not in experience_level.lower():
+                            match = False
+                            
+                    if match:
+                        # Send email alert to user!
+                        # Prepare HTML content
+                        alert_email_html = f"""
+                        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+                            <div style="text-align: center; border-bottom: 2px solid #2456ff; padding-bottom: 15px; margin-bottom: 20px;">
+                                <h1 style="color: #05154b; font-size: 24px; margin: 0;">Talent Khoj</h1>
+                                <p style="color: #64748b; font-size: 14px; margin: 5px 0 0;">New Opportunity Match Alert!</p>
+                            </div>
+                            <p style="font-size: 16px; color: #1e293b;">Hi {alert['user_name']},</p>
+                            <p style="font-size: 15px; color: #334155; line-height: 1.6;">
+                                A new opportunity matching your saved search preferences has been posted on Talent Khoj.
+                            </p>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                                <h2 style="font-size: 18px; color: #0f172a; margin: 0 0 10px;">{title}</h2>
+                                <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Company:</strong> {company['company_name']}</p>
+                                <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Location:</strong> {location}</p>
+                                <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Type:</strong> <span style="text-transform: capitalize;">{opportunity_type}</span></p>
+                                <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Salary:</strong> {salary}</p>
+                                <p style="margin: 0; font-size: 14px; color: #475569;"><strong>Required Experience:</strong> {experience_level}</p>
+                            </div>
+                            <div style="text-align: center; margin-top: 30px;">
+                                <a href="http://127.0.0.1:5000/dashboard/search?q={alert['search_query'] or ''}" style="background: #2456ff; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">View Opportunity</a>
+                            </div>
+                            <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0 20px;">
+                            <p style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+                                You are receiving this because you enabled email alerts for your saved search on Talent Khoj.<br>
+                                <a href="http://127.0.0.1:5000/dashboard/saved" style="color: #2456ff; text-decoration: underline;">Manage Alert Settings</a>
+                            </p>
+                        </div>
+                        """
+                        
+                        EmailService.send_email(
+                            to=alert["user_email"],
+                            subject=f"Job Alert: New {opportunity_type.capitalize()} matching your search - {title}",
+                            html=alert_email_html
+                        )
+        except Exception as alert_err:
+            print(f"Failed to process job alert notifications: {alert_err}")
         
         flash("Opportunity successfully published!", "success")
         return redirect(url_for("dashboard"))

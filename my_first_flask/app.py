@@ -47,6 +47,7 @@ google = oauth.register(
 
 # Initialize database once
 db = Database()
+EmailService._db = db
 
 
 @app.context_processor

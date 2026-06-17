@@ -3040,7 +3040,14 @@ def dashboard_post_opportunity():
                             (job_id, fq, fa)
                         )
         except pymysql.MySQLError as db_err:
-            raise db_err
+            print(f"[DATABASE ERROR] Failed to insert job/faqs: {db_err}")
+            try:
+                from my_first_flask.utils.logger import log_activity
+                log_activity("Database Error", f"Failed to post opportunity '{title}': {db_err}")
+            except Exception:
+                pass
+            flash("A database error occurred while publishing the opportunity. Please try again.", "error")
+            return render_template("dashboard_post_opportunity.html")
             
         # Log job posting event
         print(f"[JOB LOG] User {session['user_id']} ({company['company_name']}) posted a new {opportunity_type}: '{title}' at {location}")

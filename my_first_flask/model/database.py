@@ -299,6 +299,17 @@ class Database:
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS follows (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    follower_id INT NOT NULL,
+                    followed_id INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (followed_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_follow (follower_id, followed_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
     def _run_migrations(self):
         """Add any missing columns to existing tables."""
         # Users table migrations
@@ -442,6 +453,20 @@ class Database:
                     is_read TINYINT(1) DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+
+        # Create follows if it doesn't exist (migration)
+        with self.__connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS follows (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    follower_id INT NOT NULL,
+                    followed_id INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (followed_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_follow (follower_id, followed_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
 

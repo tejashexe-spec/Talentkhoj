@@ -1589,6 +1589,11 @@ def dashboard_apply(job_id):
         if not user_profile or not user_profile.get("cv_path"):
             return jsonify({"success": False, "message": "Your profile is incomplete. You must build a professional CV first before applying!"})
 
+        # Verify job exists
+        cursor.execute("SELECT id FROM jobs WHERE id = %s", (job_id,))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "The opportunity you are applying for does not exist."}), 404
+
         # Check if already applied
         cursor.execute("SELECT id FROM applications WHERE user_id = %s AND job_id = %s", (session["user_id"], job_id))
         existing = cursor.fetchone()

@@ -3008,35 +3008,39 @@ def dashboard_post_opportunity():
             flash("Please complete your company profile before posting an opportunity.", "error")
             return redirect(url_for("profile"))
             
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link, questions)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                company["id"],
-                title,
-                opportunity_type,
-                location,
-                salary,
-                experience_level,
-                skills_required or None,
-                description,
-                apply_link or None,
-                questions_json
-            ))
-            job_id = cursor.lastrowid
+        import pymysql
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link, questions)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    company["id"],
+                    title,
+                    opportunity_type,
+                    location,
+                    salary,
+                    experience_level,
+                    skills_required or None,
+                    description,
+                    apply_link or None,
+                    questions_json
+                ))
+                job_id = cursor.lastrowid
 
-            # Parse and insert FAQs
-            faq_qs = request.form.getlist("faq_questions[]")
-            faq_as = request.form.getlist("faq_answers[]")
-            for i in range(min(len(faq_qs), len(faq_as))):
-                fq = faq_qs[i].strip()
-                fa = faq_as[i].strip()
-                if fq and fa:
-                    cursor.execute(
-                        "INSERT INTO job_faqs (job_id, question, answer) VALUES (%s, %s, %s)",
-                        (job_id, fq, fa)
-                    )
+                # Parse and insert FAQs
+                faq_qs = request.form.getlist("faq_questions[]")
+                faq_as = request.form.getlist("faq_answers[]")
+                for i in range(min(len(faq_qs), len(faq_as))):
+                    fq = faq_qs[i].strip()
+                    fa = faq_as[i].strip()
+                    if fq and fa:
+                        cursor.execute(
+                            "INSERT INTO job_faqs (job_id, question, answer) VALUES (%s, %s, %s)",
+                            (job_id, fq, fa)
+                        )
+        except pymysql.MySQLError as db_err:
+            raise db_err
             
         # Log job posting event
         print(f"[JOB LOG] User {session['user_id']} ({company['company_name']}) posted a new {opportunity_type}: '{title}' at {location}")

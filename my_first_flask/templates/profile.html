@@ -9,6 +9,12 @@
     <p>Manage your account profile, contact details, residence information, and uploaded resume.</p>
 </div>
 
+{% if name_message %}
+    <div style="background: #dcfce7; border: 1px solid #bbf7d0; color: #16a34a; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; font-size: 13.5px; max-width: 1128px; margin-left: auto; margin-right: auto;">
+        {{ name_message }}
+    </div>
+{% endif %}
+
 <div class="profile-dashboard-layout">
     
     <!-- LEFT SUB-NAV BAR -->
@@ -46,12 +52,7 @@
         <div class="profile-card tab-panel-content active" id="panel-about">
             <h2 class="card-title">About yourself</h2>
             <p class="card-subtitle">Fill out your primary personal information.</p>
-            
-            {% if name_message %}
-                <div style="background: #dcfce7; border: 1px solid #bbf7d0; color: #16a34a; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; font-size: 13.5px;">
-                    {{ name_message }}
-                </div>
-            {% endif %}
+
 
             <!-- Avatar Uploader Block -->
             <div class="profile-avatar-edit-container">
@@ -377,6 +378,25 @@
 </div>
 
 <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const activeTab = "{{ active_tab or 'about' }}";
+        const btns = document.querySelectorAll(".sub-nav-item");
+        let targetBtn = null;
+        btns.forEach(btn => {
+            if (btn.getAttribute("onclick") && btn.getAttribute("onclick").includes(`'${activeTab}'`)) {
+                targetBtn = btn;
+            }
+        });
+        if (targetBtn) {
+            document.querySelectorAll(".sub-nav-item").forEach(btn => btn.classList.remove("active"));
+            document.querySelectorAll(".tab-panel-content").forEach(panel => panel.classList.remove("active"));
+            
+            targetBtn.classList.add("active");
+            const panel = document.getElementById(`panel-${activeTab}`);
+            if (panel) panel.classList.add("active");
+        }
+    });
+
     // Tab switching client logic
     function switchSubTab(event, tabId) {
         // Remove active class from buttons

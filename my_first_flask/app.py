@@ -565,9 +565,17 @@ def profile():
     name_message = None
     password_message = None
     password_errors = []
+    active_tab = "about"
 
     if request.method == "POST":
         action = request.form.get("action")
+        if action in ["about", "address", "socials", "headhunting", "change_password", "upload_avatar"]:
+            if action == "change_password":
+                active_tab = "security"
+            elif action == "upload_avatar":
+                active_tab = "about"
+            else:
+                active_tab = action
 
         # ── About Details ───────────────────────────────────────────────────
         if action == "about":
@@ -779,7 +787,8 @@ def profile():
         profile=user_profile,
         name_message=name_message,
         password_message=password_message,
-        password_errors=password_errors
+        password_errors=password_errors,
+        active_tab=active_tab
     )
 
 

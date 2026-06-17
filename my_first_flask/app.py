@@ -3001,6 +3001,22 @@ def dashboard_post_opportunity():
             flash("Opportunity title and detailed description are required.", "error")
             return render_template("dashboard_post_opportunity.html")
             
+        if opportunity_type not in ["job", "internship"]:
+            flash("Invalid opportunity type selection.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
+        if not city:
+            flash("City location is required.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
+        if not min_salary:
+            flash("Minimum salary compensation is required.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
+        if opportunity_type == "job" and not min_exp:
+            flash("Minimum experience requirement is required for Job posts.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
         conn = get_db()
         with conn.cursor() as cursor:
             cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (session["user_id"],))

@@ -6,6 +6,7 @@ from my_first_flask.model.database import Database
 
 class EmailService:
     _db = None
+    mail = None
     
     @staticmethod
     def _get_db():
@@ -33,14 +34,15 @@ class EmailService:
         
         print(f"Attempting to send email to {to} with subject: {subject} via Google SMTP")
         
-        # Resolve the Mail instance from current_app or fall back to importing from app.py
-        mail = None
-        try:
-            if current_app:
-                mail = current_app.extensions.get('mail')
-        except RuntimeError:
-            pass
-            
+        # Resolve the Mail instance from EmailService.mail, current_app or fall back to importing from app.py
+        mail = EmailService.mail
+        if not mail:
+            try:
+                if current_app:
+                    mail = current_app.extensions.get('mail')
+            except RuntimeError:
+                pass
+                
         if not mail:
             try:
                 from my_first_flask.app import mail

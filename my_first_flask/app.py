@@ -33,6 +33,7 @@ app.config['MAIL_USERNAME'] = config.MAIL_USERNAME
 app.config['MAIL_PASSWORD'] = config.MAIL_PASSWORD
 app.config['MAIL_DEFAULT_SENDER'] = config.MAIL_DEFAULT_SENDER
 mail = Mail(app)
+EmailService.mail = mail
 
 # ── Google OAuth ──────────────────────────────────────────────────────────────
 oauth = OAuth(app)

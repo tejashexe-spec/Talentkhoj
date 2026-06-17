@@ -3111,13 +3111,15 @@ def dashboard_post_opportunity():
                     # 3. Match location (fuzzy search/substring matching)
                     if match and alert.get("location"):
                         # check if alert location matches job location
-                        if alert["location"].lower() not in location.lower():
+                        alert_loc = alert["location"].strip().lower()
+                        if alert_loc and alert_loc not in location.lower():
                             match = False
                             
                     # 4. Match experience level
                     if match and alert.get("experience_level"):
                         # check if alert experience_level matches job experience_level
-                        if alert["experience_level"].lower() not in experience_level.lower():
+                        alert_exp = alert["experience_level"].strip().lower()
+                        if alert_exp and alert_exp not in experience_level.lower():
                             match = False
                             
                     if match:

@@ -13,6 +13,7 @@ from flask_mail import Mail, Message
 from my_first_flask import config
 from my_first_flask.model.database import Database
 from my_first_flask.services.email_service import EmailService
+import pymysql
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -3031,7 +3032,6 @@ def dashboard_post_opportunity():
             flash("Please complete your company profile before posting an opportunity.", "error")
             return redirect(url_for("profile"))
             
-        import pymysql
         try:
             with conn.cursor() as cursor:
                 cursor.execute("""

@@ -1317,10 +1317,7 @@
         })
         .then(response => response.json())
         .then(data => {
-            if (!data.success) {
-                alert(data.message || "Could not toggle bookmark.");
-                return;
-            }
+            if (data.success) {
                 const opp = window.currentSelectedOpportunity;
                 if (opp && opp.id === jobId) {
                     opp.is_bookmarked = data.bookmarked;
@@ -1372,7 +1369,7 @@
                     toast.classList.remove('show');
                 }, 3000);
             } else {
-                alert(data.message || "An error occurred.");
+                alert(data.message || "Could not toggle bookmark.");
             }
         })
         .catch(err => {

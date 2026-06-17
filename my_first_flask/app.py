@@ -1020,6 +1020,10 @@ def dashboard():
     conn = get_db()
     stats = {}
     my_opportunities = []
+    recent_applications = []
+    activities = []
+    applications = []
+    bookmarks = []
     
     if session.get("account_type") == "company":
         with conn.cursor() as cursor:
@@ -1142,7 +1146,8 @@ def dashboard():
                                recent_applications=recent_applications, 
                                activities=activities,
                                applications=applications,
-                               bookmarks=bookmarks)
+                               bookmarks=bookmarks,
+                               opportunities=my_opportunities)
 
 
 

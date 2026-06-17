@@ -123,7 +123,13 @@ def get_feed():
         cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id = %s", (user_id,))
         user_profile = cursor.fetchone()
         
-        cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id != %s ORDER BY RAND() LIMIT 3", (user_id,))
+        cursor.execute("""
+            SELECT u.id, u.full_name, u.avatar, u.bio, u.account_type,
+                   EXISTS(SELECT 1 FROM follows WHERE follower_id = %s AND followed_id = u.id) AS is_following
+            FROM users u
+            WHERE u.id != %s 
+            ORDER BY RAND() LIMIT 3
+        """, (user_id, user_id))
         suggestions = cursor.fetchall()
     return render_template("feed.html", user_profile=user_profile, suggestions=suggestions)
 

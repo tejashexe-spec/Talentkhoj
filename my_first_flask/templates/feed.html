@@ -782,6 +782,16 @@
         border-color: #0f172a;
         color: #0f172a;
     }
+    .widget-follow-btn.following {
+        background: #2456ff;
+        border-color: #2456ff;
+        color: white;
+    }
+    .widget-follow-btn.following:hover {
+        background: #ef4444;
+        border-color: #ef4444;
+        color: white;
+    }
 </style>
 
 <div class="feed-container">
@@ -934,9 +944,13 @@
                                             {{ sug.account_type | capitalize }} on Talent Khoj
                                         {% endif %}
                                     </span>
-                                    <button class="widget-follow-btn">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                        Follow
+                                    <button class="widget-follow-btn {% if sug.is_following %}following{% endif %}" data-user-id="{{ sug.id }}">
+                                        {% if sug.is_following %}
+                                            Following
+                                        {% else %}
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                            Follow
+                                        {% endif %}
                                     </button>
                                 </div>
                             </div>
@@ -973,6 +987,43 @@
                 if (!loadingPosts && hasMorePosts) {
                     loadFeed(false);
                 }
+            }
+        // Follow/Unfollow button click handler
+        document.addEventListener("click", function(e) {
+            const followBtn = e.target.closest(".widget-follow-btn");
+            if (followBtn) {
+                if (!isLoggedIn) {
+                    window.location.href = "/login";
+                    return;
+                }
+                const targetId = followBtn.getAttribute("data-user-id");
+                followBtn.disabled = true;
+                
+                fetch(`/user/follow/${targetId}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                })
+                .then(res => res.json())
+                .then(data => {
+                    followBtn.disabled = false;
+                    if (data.success) {
+                        if (data.following) {
+                            followBtn.classList.add("following");
+                            followBtn.innerHTML = "Following";
+                        } else {
+                            followBtn.classList.remove("following");
+                            followBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Follow`;
+                        }
+                    } else {
+                        alert(data.message || "Failed to toggle follow status.");
+                    }
+                })
+                .catch(err => {
+                    followBtn.disabled = false;
+                    console.error("Error toggling follow:", err);
+                });
             }
         });
     });

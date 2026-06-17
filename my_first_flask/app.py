@@ -798,6 +798,11 @@ def profile():
 def user_profile(user_id):
     conn = get_db()
     with conn.cursor() as cursor:
+        cursor.execute("SELECT account_type FROM users WHERE id = %s", (user_id,))
+        u = cursor.fetchone()
+        if u and u["account_type"] == "company":
+            return redirect(url_for("company_profile", user_id=user_id))
+            
         cursor.execute(
             "SELECT id, full_name, avatar, bio, location, skills, cv_path, active_status, headhunting_mode FROM users WHERE id = %s AND account_type = 'individual'",
             (user_id,)
@@ -841,6 +846,11 @@ def user_profile(user_id):
 @app.route("/user/follow/<int:target_id>", methods=["POST"])
 @login_required
 def toggle_follow(target_id):
+    """
+    Toggles the follow status between the logged-in user and a target user.
+    If already following, deletes the relationship (unfollow).
+    If not following, inserts a new follow record.
+    """
     follower_id = session.get("user_id")
     if follower_id == target_id:
         return jsonify({"success": False, "message": "You cannot follow yourself."})
@@ -869,6 +879,11 @@ def toggle_follow(target_id):
 def company_profile(user_id):
     conn = get_db()
     with conn.cursor() as cursor:
+        cursor.execute("SELECT account_type FROM users WHERE id = %s", (user_id,))
+        u = cursor.fetchone()
+        if u and u["account_type"] == "individual":
+            return redirect(url_for("user_profile", user_id=user_id))
+
         cursor.execute(
             "SELECT c.*, u.id as user_id FROM companies c JOIN users u ON c.user_id = u.id WHERE c.user_id = %s",
             (user_id,)
@@ -1183,13 +1198,13 @@ def dashboard():
                         "time": "Recent"
                     })
             
-        return render_template("dashboard.html", 
-                               stats=stats, 
-                               recent_applications=recent_applications, 
-                               activities=activities,
-                               applications=applications,
-                               bookmarks=bookmarks,
-                               opportunities=my_opportunities)
+    return render_template("dashboard.html", 
+                           stats=stats, 
+                           recent_applications=recent_applications, 
+                           activities=activities,
+                           applications=applications,
+                           bookmarks=bookmarks,
+                           opportunities=my_opportunities)
 
 
 

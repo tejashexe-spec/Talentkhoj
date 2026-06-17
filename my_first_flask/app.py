@@ -823,6 +823,33 @@ def user_profile(user_id):
     return render_template("user_profile.html", user=user, reviews=reviews, avg_rating=avg_rating, review_count=review_count, accepted_badges=accepted_badges)
 
 
+@app.route("/user/follow/<int:target_id>", methods=["POST"])
+@login_required
+def toggle_follow(target_id):
+    follower_id = session.get("user_id")
+    if follower_id == target_id:
+        return jsonify({"success": False, "message": "You cannot follow yourself."})
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM follows WHERE follower_id = %s AND followed_id = %s", (follower_id, target_id))
+        follow = cursor.fetchone()
+        
+        if follow:
+            cursor.execute("DELETE FROM follows WHERE follower_id = %s AND followed_id = %s", (follower_id, target_id))
+            is_following = False
+            message = "Unfollowed successfully."
+        else:
+            try:
+                cursor.execute("INSERT INTO follows (follower_id, followed_id) VALUES (%s, %s)", (follower_id, target_id))
+                is_following = True
+                message = "Followed successfully."
+            except pymysql.err.IntegrityError:
+                return jsonify({"success": False, "message": "User to follow does not exist."})
+                
+    return jsonify({"success": True, "following": is_following, "message": message})
+
+
 @app.route("/company/<int:user_id>")
 def company_profile(user_id):
     conn = get_db()

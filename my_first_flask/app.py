@@ -3045,13 +3045,15 @@ def dashboard_post_opportunity():
                     questions_json
                 ))
                 job_id = cursor.lastrowid
+                if not job_id:
+                    raise pymysql.MySQLError("Failed to retrieve generated job ID.")
 
                 # Parse and insert FAQs
                 faq_qs = request.form.getlist("faq_questions[]")
                 faq_as = request.form.getlist("faq_answers[]")
                 for i in range(min(len(faq_qs), len(faq_as))):
-                    fq = faq_qs[i].strip()
-                    fa = faq_as[i].strip()
+                    fq = faq_qs[i].strip() if faq_qs[i] else ""
+                    fa = faq_as[i].strip() if faq_as[i] else ""
                     if fq and fa:
                         cursor.execute(
                             "INSERT INTO job_faqs (job_id, question, answer) VALUES (%s, %s, %s)",

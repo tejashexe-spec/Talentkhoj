@@ -168,6 +168,7 @@ class Database:
                     registration_link VARCHAR(255) DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS event_rsvps (

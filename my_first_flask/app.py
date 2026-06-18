@@ -861,6 +861,12 @@ def dashboard():
     stats = {}
     my_opportunities = []
     
+    # Initialize variables to avoid UnboundLocalError
+    recent_applications = []
+    activities = []
+    applications = []
+    bookmarks = []
+    
     if session.get("account_type") == "company":
         with conn.cursor() as cursor:
             # Get company details
@@ -977,12 +983,13 @@ def dashboard():
                         "time": "Recent"
                     })
             
-        return render_template("dashboard.html", 
-                               stats=stats, 
-                               recent_applications=recent_applications, 
-                               activities=activities,
-                               applications=applications,
-                               bookmarks=bookmarks)
+    return render_template("dashboard.html", 
+                           stats=stats, 
+                           recent_applications=recent_applications, 
+                           activities=activities,
+                           applications=applications,
+                           bookmarks=bookmarks,
+                           opportunities=my_opportunities)
 
 
 

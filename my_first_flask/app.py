@@ -2107,27 +2107,117 @@ def dashboard_cv_upload():
 def dashboard_events():
     conn = get_db()
     account_type = session.get("account_type")
+    user_id = session.get("user_id")
     
     with conn.cursor() as cursor:
         if account_type == "company":
             cursor.execute(
-                "SELECT e.*, c.company_name, c.logo "
+                "SELECT e.*, c.company_name, c.logo, "
+                "(SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id) AS rsvp_count "
                 "FROM events e "
                 "JOIN companies c ON e.company_id = c.id "
                 "WHERE c.user_id = %s "
                 "ORDER BY e.event_date ASC",
-                (session["user_id"],)
+                (user_id,)
             )
         else:
             cursor.execute(
-                "SELECT e.*, c.company_name, c.logo "
+                "SELECT e.*, c.company_name, c.logo, "
+                "EXISTS(SELECT 1 FROM event_rsvps WHERE event_id = e.id AND user_id = %s) AS has_rsvp "
                 "FROM events e "
                 "JOIN companies c ON e.company_id = c.id "
-                "ORDER BY e.event_date ASC"
+                "ORDER BY e.event_date ASC",
+                (user_id,)
             )
         events = cursor.fetchall()
         
     return render_template("dashboard_events.html", events=events)
+
+
+@app.route("/dashboard/events/rsvp/<int:event_id>", methods=["POST"])
+@login_required
+def dashboard_event_rsvp(event_id):
+    if session.get("account_type") != "individual":
+        return jsonify({"success": False, "error": "Only candidates can RSVP to events."}), 403
+        
+    conn = get_db()
+    user_id = session["user_id"]
+    
+    with conn.cursor() as cursor:
+        # Check if event exists
+        cursor.execute("SELECT e.id, e.title, e.event_date, c.company_name FROM events e JOIN companies c ON e.company_id = c.id WHERE e.id = %s", (event_id,))
+        event = cursor.fetchone()
+        if not event:
+            return jsonify({"success": False, "error": "Event not found."}), 404
+            
+        # Check if already RSVP'd
+        cursor.execute("SELECT id FROM event_rsvps WHERE event_id = %s AND user_id = %s", (event_id, user_id))
+        existing_rsvp = cursor.fetchone()
+        
+        if existing_rsvp:
+            # Cancel RSVP
+            cursor.execute("DELETE FROM event_rsvps WHERE event_id = %s AND user_id = %s", (event_id, user_id))
+            return jsonify({"success": True, "status": "not_attending", "message": "RSVP cancelled successfully!"})
+        else:
+            # Add RSVP
+            cursor.execute("INSERT INTO event_rsvps (event_id, user_id) VALUES (%s, %s)", (event_id, user_id))
+            
+            # Send confirmation email
+            try:
+                cursor.execute("SELECT email, full_name FROM users WHERE id = %s", (user_id,))
+                user = cursor.fetchone()
+                if user:
+                    date_str = event["event_date"].strftime("%B %d, %Y at %I:%M %p") if event["event_date"] else "TBD"
+                    subject = f"RSVP Confirmed: {event['title']}"
+                    html = f"""
+                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+                        <h2 style="color: #2456ff;">RSVP Confirmed!</h2>
+                        <p>Hi <strong>{user['full_name']}</strong>,</p>
+                        <p>You have successfully RSVP'd to the event: <strong>{event['title']}</strong> hosted by <strong>{event['company_name']}</strong>.</p>
+                        <p><strong>Date & Time:</strong> {date_str}</p>
+                        <p>We look forward to seeing you there!</p>
+                        <br>
+                        <hr style="border: 0; border-top: 1px solid #e2e8f0;">
+                        <p style="font-size: 12px; color: #64748b;">This is an automated notification from TalentKhoj.</p>
+                    </div>
+                    """
+                    EmailService.send_email(user["email"], subject, html)
+            except Exception as e:
+                print(f"Failed to send RSVP email: {e}")
+                
+            return jsonify({"success": True, "status": "attending", "message": "RSVP confirmed successfully! Check your email."})
+
+
+@app.route("/dashboard/events/<int:event_id>/registrations")
+@login_required
+def dashboard_event_registrations(event_id):
+    conn = get_db()
+    account_type = session.get("account_type")
+    
+    if account_type != "company":
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    with conn.cursor() as cursor:
+        # Check if active company owns the event
+        cursor.execute("SELECT e.id FROM events e JOIN companies c ON e.company_id = c.id WHERE e.id = %s AND c.user_id = %s", (event_id, session["user_id"]))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Unauthorized or event not found."}), 403
+            
+        # Get registrations
+        cursor.execute("""
+            SELECT u.full_name, u.email, u.avatar, r.created_at
+            FROM event_rsvps r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.event_id = %s
+            ORDER BY r.created_at DESC
+        """, (event_id,))
+        registrations = cursor.fetchall()
+        
+    for reg in registrations:
+        if reg.get("created_at"):
+            reg["created_at_str"] = reg["created_at"].strftime("%b %d, %Y at %I:%M %p")
+            
+    return jsonify({"success": True, "registrations": registrations})
 
 
 @app.route("/dashboard/events/create", methods=["GET", "POST"])

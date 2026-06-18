@@ -48,9 +48,38 @@ google = oauth.register(
 db = Database()
 
 
+def check_company_access(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (user_id,))
+        if cursor.fetchone():
+            return True
+        cursor.execute("SELECT id FROM company_team WHERE user_id = %s", (user_id,))
+        if cursor.fetchone():
+            return True
+    return False
+
+def get_company_for_user(conn, user_id):
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (user_id,))
+        comp = cursor.fetchone()
+        if comp:
+            return comp
+        cursor.execute("""
+            SELECT c.id, c.company_name 
+            FROM companies c
+            JOIN company_team t ON c.id = t.company_id
+            WHERE t.user_id = %s
+        """, (user_id,))
+        return cursor.fetchone()
+
 @app.context_processor
 def inject_session():
-    return dict(session=session)
+    has_company_access = False
+    if session.get("user_id"):
+        has_company_access = check_company_access(session["user_id"])
+    return dict(session=session, has_company_access=has_company_access)
+
 def get_db():
     return db.get_connection()
 

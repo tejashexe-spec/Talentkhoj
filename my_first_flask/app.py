@@ -2864,6 +2864,71 @@ def api_unread_count():
         row = cursor.fetchone()
     return jsonify({"success": True, "unread_count": row["count"] if row else 0})
 
+
+def create_notification(user_id, type_, title, message, link=None):
+    conn = get_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO notifications (user_id, type, title, message, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (user_id, type_, title, message, link))
+    except Exception as e:
+        print(f"Failed to create notification for user {user_id}: {e}")
+
+
+@app.route("/api/notifications", methods=["GET"])
+@login_required
+def api_get_notifications():
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, type, title, message, link, is_read, created_at
+            FROM notifications
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+        """, (user_id,))
+        notifications = cursor.fetchall()
+    
+    for n in notifications:
+        if n.get("created_at"):
+            n["created_at"] = n["created_at"].strftime("%Y-%m-%d %H:%M")
+            
+    return jsonify({"success": True, "notifications": notifications})
+
+
+@app.route("/api/notifications/unread-count", methods=["GET"])
+@login_required
+def api_notifications_unread_count():
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT COUNT(*) as count FROM notifications WHERE user_id = %s AND is_read = 0", (user_id,))
+        row = cursor.fetchone()
+    return jsonify({"success": True, "unread_count": row["count"] if row else 0})
+
+
+@app.route("/api/notifications/read/<int:notification_id>", methods=["POST"])
+@login_required
+def api_mark_notification_read(notification_id):
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE notifications SET is_read = 1 WHERE id = %s AND user_id = %s", (notification_id, user_id))
+    return jsonify({"success": True})
+
+
+@app.route("/api/notifications/read-all", methods=["POST"])
+@login_required
+def api_mark_all_notifications_read():
+    user_id = session["user_id"]
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE notifications SET is_read = 1 WHERE user_id = %s", (user_id,))
+    return jsonify({"success": True})
+
+
 @app.route("/reviews/submit", methods=["POST"])
 @login_required
 def submit_review():

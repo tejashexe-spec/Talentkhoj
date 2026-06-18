@@ -1460,6 +1460,15 @@ def dashboard_ats_update_status():
     with conn.cursor() as cursor:
         cursor.execute("UPDATE applications SET status = %s WHERE id = %s", (new_status, app_id))
         
+        # Trigger notification to candidate
+        create_notification(
+            application["user_id"],
+            "application_status",
+            f"Application Update: {application['job_title']}",
+            f"Your application status for '{application['job_title']}' has been updated to '{new_status}'.",
+            "/dashboard"
+        )
+        
     try:
         from my_first_flask.utils.logger import log_activity
         log_activity("ATS Update", f"Applicant '{application['full_name']}' (ID: {application['user_id']}) moved to '{new_status}' for job '{application['job_title']}' by Company (ID: {company_id})")

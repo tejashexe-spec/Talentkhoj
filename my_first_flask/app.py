@@ -2796,5 +2796,305 @@ def submit_review():
         return redirect(url_for("user_profile", user_id=reviewee_id))
 
 
+# ─── TEAM COLLABORATION ───────────────────────────────────────────────────────
+
+@app.route("/dashboard/team")
+@login_required
+def dashboard_team():
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
+        flash("Only company accounts and their team members can access the Team dashboard.", "error")
+        return redirect(url_for("dashboard"))
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        flash("Please complete your company profile first.", "error")
+        return redirect(url_for("profile"))
+        
+    with conn.cursor() as cursor:
+        # Fetch the company owner details
+        cursor.execute("""
+            SELECT u.id, u.full_name, u.email, u.avatar, 'Owner' as role 
+            FROM users u
+            JOIN companies c ON u.id = c.user_id
+            WHERE c.id = %s
+        """, (company["id"],))
+        owner = cursor.fetchone()
+        
+        # Fetch the team members details
+        cursor.execute("""
+            SELECT u.id, u.full_name, u.email, u.avatar, t.role, t.created_at
+            FROM users u
+            JOIN company_team t ON u.id = t.user_id
+            WHERE t.company_id = %s
+            ORDER BY t.created_at ASC
+        """, (company["id"],))
+        team_members = cursor.fetchall()
+        
+    return render_template("dashboard_team.html", owner=owner, team_members=team_members, company=company, active="team")
+
+
+@app.route("/dashboard/team/add", methods=["POST"])
+@login_required
+def dashboard_team_add():
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    email = request.form.get("email", "").strip().lower()
+    role = request.form.get("role", "Member").strip()
+    
+    if not email:
+        flash("Email is required.", "error")
+        return redirect(url_for("dashboard_team"))
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        flash("Company not found.", "error")
+        return redirect(url_for("dashboard_team"))
+        
+    with conn.cursor() as cursor:
+        # Check if user exists
+        cursor.execute("SELECT id, account_type FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+        
+        if not user:
+            flash(f"User with email '{email}' does not exist on Talent Khoj.", "error")
+            return redirect(url_for("dashboard_team"))
+            
+        # Check if already owner
+        cursor.execute("SELECT id FROM companies WHERE id = %s AND user_id = %s", (company["id"], user["id"]))
+        if cursor.fetchone():
+            flash(f"User with email '{email}' is the owner of this company.", "error")
+            return redirect(url_for("dashboard_team"))
+            
+        # Check if already in team
+        cursor.execute("SELECT id FROM company_team WHERE company_id = %s AND user_id = %s", (company["id"], user["id"]))
+        if cursor.fetchone():
+            flash(f"User with email '{email}' is already a team member.", "info")
+            return redirect(url_for("dashboard_team"))
+            
+        # Add to team
+        cursor.execute("""
+            INSERT INTO company_team (company_id, user_id, role)
+            VALUES (%s, %s, %s)
+        """, (company["id"], user["id"], role))
+        
+    flash(f"Teammate successfully added to your company team!", "success")
+    return redirect(url_for("dashboard_team"))
+
+
+@app.route("/dashboard/team/remove/<int:user_id>", methods=["POST"])
+@login_required
+def dashboard_team_remove(user_id):
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        flash("Company not found.", "error")
+        return redirect(url_for("dashboard_team"))
+        
+    with conn.cursor() as cursor:
+        cursor.execute("DELETE FROM company_team WHERE company_id = %s AND user_id = %s", (company["id"], user_id))
+        
+    flash("Team member successfully removed.", "success")
+    return redirect(url_for("dashboard_team"))
+
+
+# ─── INTERVIEWS ROUTING ───────────────────────────────────────────────────────
+
+@app.route("/dashboard/interviews")
+@login_required
+def dashboard_interviews():
+    conn = get_db()
+    account_type = session.get("account_type")
+    is_company = (account_type == "company" or check_company_access(session["user_id"]))
+    
+    with conn.cursor() as cursor:
+        if is_company:
+            company = get_company_for_user(conn, session["user_id"])
+            company_id = company["id"] if company else 0
+            cursor.execute("""
+                SELECT i.*, u.full_name as candidate_name, u.email as candidate_email, u.avatar as candidate_avatar, j.title as job_title
+                FROM interviews i
+                JOIN users u ON i.candidate_id = u.id
+                JOIN jobs j ON i.job_id = j.id
+                WHERE i.company_id = %s
+                ORDER BY i.interview_date ASC
+            """, (company_id,))
+        else:
+            cursor.execute("""
+                SELECT i.*, c.company_name, c.logo as company_logo, j.title as job_title
+                FROM interviews i
+                JOIN companies c ON i.company_id = c.id
+                JOIN jobs j ON i.job_id = j.id
+                WHERE i.candidate_id = %s
+                ORDER BY i.interview_date ASC
+            """, (session["user_id"],))
+            
+        interviews = cursor.fetchall()
+        
+    # Format dates
+    for iv in interviews:
+        if iv.get("interview_date"):
+            iv["interview_date_str"] = iv["interview_date"].strftime("%Y-%m-%d %I:%M %p")
+            iv["is_upcoming"] = iv["interview_date"] > datetime.now()
+            
+    return render_template("dashboard_interviews.html", interviews=interviews, active="interviews")
+
+
+@app.route("/api/interviews/schedule", methods=["POST"])
+@login_required
+def api_schedule_interview():
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    candidate_id = request.form.get("candidate_id")
+    job_id = request.form.get("job_id")
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    interview_date_str = request.form.get("interview_date")
+    location = request.form.get("location", "").strip()
+    
+    if not candidate_id or not job_id or not title or not interview_date_str or not location:
+        return jsonify({"success": False, "error": "All fields are required."}), 400
+        
+    try:
+        interview_date = datetime.strptime(interview_date_str, "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid date format."}), 400
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        return jsonify({"success": False, "error": "Company profile not found."}), 400
+        
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO interviews (company_id, candidate_id, job_id, title, description, interview_date, location, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'scheduled')
+        """, (company["id"], candidate_id, job_id, title, description or None, interview_date, location))
+        
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("Schedule Interview", f"Recruiter scheduled interview '{title}' with candidate ID {candidate_id} for job ID {job_id}")
+    except Exception:
+        pass
+        
+    return jsonify({"success": True, "message": "Interview scheduled successfully!"})
+
+
+@app.route("/api/interviews/cancel/<int:interview_id>", methods=["POST"])
+@login_required
+def api_cancel_interview(interview_id):
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    company_id = company["id"] if company else 0
+    
+    with conn.cursor() as cursor:
+        # Verify ownership / permissions
+        cursor.execute("SELECT id FROM interviews WHERE id = %s AND (company_id = %s OR candidate_id = %s)", (interview_id, company_id, session["user_id"]))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Interview not found or unauthorized."}), 403
+            
+        cursor.execute("UPDATE interviews SET status = 'cancelled' WHERE id = %s", (interview_id,))
+        
+    return jsonify({"success": True, "message": "Interview cancelled."})
+
+
+@app.route("/api/interviews/complete/<int:interview_id>", methods=["POST"])
+@login_required
+def api_complete_interview(interview_id):
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    company_id = company["id"] if company else 0
+    
+    if not company_id:
+         return jsonify({"success": False, "error": "Unauthorized"}), 403
+         
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM interviews WHERE id = %s AND company_id = %s", (interview_id, company_id))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Interview not found or unauthorized."}), 403
+            
+        cursor.execute("UPDATE interviews SET status = 'completed' WHERE id = %s", (interview_id,))
+        
+    return jsonify({"success": True, "message": "Interview marked as completed."})
+
+
+# ─── TEAM NOTES ───────────────────────────────────────────────────────────────
+
+@app.route("/api/applications/notes/<int:application_id>", methods=["GET"])
+@login_required
+def api_get_notes(application_id):
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT n.id, n.note_text, n.created_at, u.full_name as author_name, u.avatar as author_avatar
+            FROM application_notes n
+            JOIN users u ON n.author_id = u.id
+            WHERE n.application_id = %s
+            ORDER BY n.created_at DESC
+        """, (application_id,))
+        notes = cursor.fetchall()
+        
+    for n in notes:
+        if n.get("created_at"):
+            n["created_at_str"] = n["created_at"].strftime("%Y-%m-%d %I:%M %p")
+            
+    return jsonify({"success": True, "notes": notes})
+
+
+@app.route("/api/applications/notes/add", methods=["POST"])
+@login_required
+def api_add_note():
+    application_id = request.form.get("application_id")
+    note_text = request.form.get("note_text", "").strip()
+    
+    if not application_id or not note_text:
+        return jsonify({"success": False, "error": "Missing application ID or note text."}), 400
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO application_notes (application_id, author_id, note_text)
+            VALUES (%s, %s, %s)
+        """, (application_id, session["user_id"], note_text))
+        
+    return jsonify({"success": True, "message": "Note added successfully!"})
+
+
+@app.route("/api/applications/notes/delete/<int:note_id>", methods=["DELETE", "POST"])
+@login_required
+def api_delete_note(note_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT author_id FROM application_notes WHERE id = %s", (note_id,))
+        note = cursor.fetchone()
+        if not note:
+            return jsonify({"success": False, "error": "Note not found."}), 404
+            
+        if note["author_id"] != session["user_id"]:
+            return jsonify({"success": False, "error": "You can only delete your own notes."}), 403
+            
+        cursor.execute("DELETE FROM application_notes WHERE id = %s", (note_id,))
+        
+    return jsonify({"success": True, "message": "Note deleted."})
+
+
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1016,7 +1016,11 @@ def privacy():
 def dashboard():
     conn = get_db()
     stats = {}
-    my_opportunities = []
+    opportunities = []
+    recent_applications = []
+    activities = []
+    applications = []
+    bookmarks = []
     
     if session.get("account_type") == "company":
         with conn.cursor() as cursor:
@@ -1032,8 +1036,8 @@ def dashboard():
                     WHERE company_id = %s 
                     ORDER BY created_at DESC
                 """, (company["id"],))
-                my_opportunities = cursor.fetchall()
-                stats["posted_count"] = len(my_opportunities)
+                opportunities = cursor.fetchall()
+                stats["posted_count"] = len(opportunities)
     else:
         # Candidate metrics
         with conn.cursor() as cursor:
@@ -1136,6 +1140,7 @@ def dashboard():
             
         return render_template("dashboard.html", 
                                stats=stats, 
+                               opportunities=opportunities,
                                recent_applications=recent_applications, 
                                activities=activities,
                                applications=applications,

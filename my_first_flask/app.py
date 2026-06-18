@@ -1111,6 +1111,12 @@ def dashboard():
     applications = []
     bookmarks = []
     
+    # Initialize variables to avoid UnboundLocalError
+    recent_applications = []
+    activities = []
+    applications = []
+    bookmarks = []
+    
     if session.get("account_type") == "company":
         with conn.cursor() as cursor:
             # Get company details
@@ -1229,11 +1235,11 @@ def dashboard():
             
     return render_template("dashboard.html", 
                            stats=stats, 
-                           opportunities=opportunities,
-                           recent_applications=recent_applications, 
-                           activities=activities,
-                           applications=applications,
-                           bookmarks=bookmarks)
+                            opportunities=opportunities,
+                            recent_applications=recent_applications, 
+                            activities=activities,
+                            applications=applications,
+                            bookmarks=bookmarks)
 
 
 
@@ -2874,14 +2880,16 @@ def dashboard_resume_doctor_analyze():
 def dashboard_events():
     conn = get_db()
     account_type = session.get("account_type")
-    is_company = (account_type == "company" or check_company_access(session["user_id"]))
+    user_id = session.get("user_id")
+    is_company = (account_type == "company" or check_company_access(user_id))
     
     with conn.cursor() as cursor:
         if is_company:
-            company = get_company_for_user(conn, session["user_id"])
+            company = get_company_for_user(conn, user_id)
             company_id = company["id"] if company else 0
             cursor.execute(
-                "SELECT e.*, c.company_name, c.logo "
+                "SELECT e.*, c.company_name, c.logo, "
+                "(SELECT COUNT(*) FROM event_rsvps WHERE event_id = e.id) AS rsvp_count "
                 "FROM events e "
                 "JOIN companies c ON e.company_id = c.id "
                 "WHERE e.company_id = %s "
@@ -2890,14 +2898,102 @@ def dashboard_events():
             )
         else:
             cursor.execute(
-                "SELECT e.*, c.company_name, c.logo "
+                "SELECT e.*, c.company_name, c.logo, "
+                "EXISTS(SELECT 1 FROM event_rsvps WHERE event_id = e.id AND user_id = %s) AS has_rsvp "
                 "FROM events e "
                 "JOIN companies c ON e.company_id = c.id "
-                "ORDER BY e.event_date ASC"
+                "ORDER BY e.event_date ASC",
+                (user_id,)
             )
         events = cursor.fetchall()
         
     return render_template("dashboard_events.html", events=events)
+
+
+@app.route("/dashboard/events/rsvp/<int:event_id>", methods=["POST"])
+@login_required
+def dashboard_event_rsvp(event_id):
+    if session.get("account_type") != "individual":
+        return jsonify({"success": False, "error": "Only candidates can RSVP to events."}), 403
+        
+    conn = get_db()
+    user_id = session["user_id"]
+    
+    with conn.cursor() as cursor:
+        # Check if event exists
+        cursor.execute("SELECT e.id, e.title, e.event_date, c.company_name FROM events e JOIN companies c ON e.company_id = c.id WHERE e.id = %s", (event_id,))
+        event = cursor.fetchone()
+        if not event:
+            return jsonify({"success": False, "error": "Event not found."}), 404
+            
+        # Check if already RSVP'd
+        cursor.execute("SELECT id FROM event_rsvps WHERE event_id = %s AND user_id = %s", (event_id, user_id))
+        existing_rsvp = cursor.fetchone()
+        
+        if existing_rsvp:
+            # Cancel RSVP
+            cursor.execute("DELETE FROM event_rsvps WHERE event_id = %s AND user_id = %s", (event_id, user_id))
+            return jsonify({"success": True, "status": "not_attending", "message": "RSVP cancelled successfully!"})
+        else:
+            # Add RSVP
+            cursor.execute("INSERT INTO event_rsvps (event_id, user_id) VALUES (%s, %s)", (event_id, user_id))
+            
+            # Send confirmation email
+            try:
+                cursor.execute("SELECT email, full_name FROM users WHERE id = %s", (user_id,))
+                user = cursor.fetchone()
+                if user:
+                    date_str = event["event_date"].strftime("%B %d, %Y at %I:%M %p") if event["event_date"] else "TBD"
+                    subject = f"RSVP Confirmed: {event['title']}"
+                    html = f"""
+                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+                        <h2 style="color: #2456ff;">RSVP Confirmed!</h2>
+                        <p>Hi <strong>{user['full_name']}</strong>,</p>
+                        <p>You have successfully RSVP'd to the event: <strong>{event['title']}</strong> hosted by <strong>{event['company_name']}</strong>.</p>
+                        <p><strong>Date & Time:</strong> {date_str}</p>
+                        <p>We look forward to seeing you there!</p>
+                        <br>
+                        <hr style="border: 0; border-top: 1px solid #e2e8f0;">
+                        <p style="font-size: 12px; color: #64748b;">This is an automated notification from TalentKhoj.</p>
+                    </div>
+                    """
+                    EmailService.send_email(user["email"], subject, html)
+            except Exception as e:
+                print(f"Failed to send RSVP email: {e}")
+                
+            return jsonify({"success": True, "status": "attending", "message": "RSVP confirmed successfully! Check your email."})
+
+
+@app.route("/dashboard/events/<int:event_id>/registrations")
+@login_required
+def dashboard_event_registrations(event_id):
+    conn = get_db()
+    account_type = session.get("account_type")
+    
+    if account_type != "company":
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    with conn.cursor() as cursor:
+        # Check if active company owns the event
+        cursor.execute("SELECT e.id FROM events e JOIN companies c ON e.company_id = c.id WHERE e.id = %s AND c.user_id = %s", (event_id, session["user_id"]))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Unauthorized or event not found."}), 403
+            
+        # Get registrations
+        cursor.execute("""
+            SELECT u.full_name, u.email, u.avatar, r.created_at
+            FROM event_rsvps r
+            JOIN users u ON r.user_id = u.id
+            WHERE r.event_id = %s
+            ORDER BY r.created_at DESC
+        """, (event_id,))
+        registrations = cursor.fetchall()
+        
+    for reg in registrations:
+        if reg.get("created_at"):
+            reg["created_at_str"] = reg["created_at"].strftime("%b %d, %Y at %I:%M %p")
+            
+    return jsonify({"success": True, "registrations": registrations})
 
 
 @app.route("/dashboard/events/create", methods=["GET", "POST"])
@@ -3056,6 +3152,98 @@ def dashboard_delete_event(event_id):
 
     flash("Event deleted successfully!", "success")
     return redirect(url_for("dashboard_events"))
+
+
+@app.route("/dashboard/analytics")
+@login_required
+def dashboard_analytics():
+    if session.get("account_type") != "company":
+        flash("Only company accounts can access Hiring Analytics.", "error")
+        return redirect(url_for("dashboard"))
+        
+    conn = get_db()
+    company_id = 0
+    metrics = {
+        "posted_jobs": 0,
+        "total_applications": 0,
+        "status_applied": 0,
+        "status_reviewed": 0,
+        "status_shortlisted": 0,
+        "status_rejected": 0,
+        "shortlisted_rate": 0
+    }
+    popular_jobs = []
+    popular_events = []
+    
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+        if company:
+            company_id = company["id"]
+            
+            # 1. Total posted jobs
+            cursor.execute("SELECT COUNT(*) as cnt FROM jobs WHERE company_id = %s", (company_id,))
+            metrics["posted_jobs"] = cursor.fetchone()["cnt"]
+            
+            # 2. Application metrics
+            cursor.execute("""
+                SELECT a.status, COUNT(*) as cnt 
+                FROM applications a 
+                JOIN jobs j ON a.job_id = j.id 
+                WHERE j.company_id = %s 
+                GROUP BY a.status
+            """, (company_id,))
+            status_rows = cursor.fetchall()
+            
+            total_apps = 0
+            shortlisted_apps = 0
+            for row in status_rows:
+                status = row["status"]
+                cnt = row["cnt"]
+                total_apps += cnt
+                if status == "applied":
+                    metrics["status_applied"] = cnt
+                elif status == "reviewed":
+                    metrics["status_reviewed"] = cnt
+                elif status == "shortlisted":
+                    metrics["status_shortlisted"] = cnt
+                    shortlisted_apps = cnt
+                elif status == "rejected":
+                    metrics["status_rejected"] = cnt
+            
+            metrics["total_applications"] = total_apps
+            if total_apps > 0:
+                metrics["shortlisted_rate"] = round((shortlisted_apps / total_apps) * 100, 1)
+                
+            # 3. Popular jobs (by application count)
+            cursor.execute("""
+                SELECT j.title, COUNT(a.id) as app_count 
+                FROM jobs j 
+                LEFT JOIN applications a ON j.id = a.job_id 
+                WHERE j.company_id = %s 
+                GROUP BY j.id 
+                ORDER BY app_count DESC 
+                LIMIT 5
+            """, (company_id,))
+            popular_jobs = cursor.fetchall()
+            
+            # 4. Popular events (by RSVP count)
+            cursor.execute("""
+                SELECT e.title, COUNT(r.id) as rsvp_count 
+                FROM events e 
+                LEFT JOIN event_rsvps r ON e.id = r.event_id 
+                WHERE e.company_id = %s 
+                GROUP BY e.id 
+                ORDER BY rsvp_count DESC 
+                LIMIT 5
+            """, (company_id,))
+            popular_events = cursor.fetchall()
+            
+    return render_template("dashboard_analytics.html", 
+                           metrics=metrics, 
+                           popular_jobs=popular_jobs, 
+                           popular_events=popular_events)
 
 
 @app.route("/dashboard/post-opportunity", methods=["GET", "POST"])

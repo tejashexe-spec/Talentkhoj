@@ -302,6 +302,35 @@
                 <div id="modalAnswers" class="modal-answers-list"></div>
             </div>
 
+            <!-- Recruiter Notes Section -->
+            <div id="modalNotesSection" style="margin-bottom: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">
+                <h4 class="modal-section-title">Recruiter & Team Notes</h4>
+                <div id="modalNotesList" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; max-height: 200px; overflow-y: auto;"></div>
+                <form id="modalNotesForm" onsubmit="submitNote(event)" style="display: flex; gap: 8px; margin: 0;">
+                    <input type="hidden" id="noteApplicationId" name="application_id">
+                    <input type="text" id="noteText" placeholder="Add a collaborator note..." style="flex: 1; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none;" required>
+                    <button type="submit" style="background: #2456ff; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer;">Add Note</button>
+                </form>
+            </div>
+
+            <!-- Schedule Interview Section -->
+            <div id="modalScheduleInterviewSection" style="margin-bottom: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px;">
+                <h4 class="modal-section-title">Schedule Interview</h4>
+                <form id="modalScheduleForm" onsubmit="scheduleInterview(event)" style="display: flex; flex-direction: column; gap: 10px; margin: 0;">
+                    <input type="hidden" id="scheduleCandidateId" name="candidate_id">
+                    <input type="hidden" id="scheduleJobId" name="job_id">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <input type="text" id="interviewTitle" placeholder="Interview Title (e.g. Technical Round)" style="padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none;" required>
+                        <input type="datetime-local" id="interviewDate" style="padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none;" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px;">
+                        <input type="text" id="interviewLocation" placeholder="Location or Virtual Link (e.g. Google Meet)" style="padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none;" required>
+                        <textarea id="interviewDescription" placeholder="Optional notes or instructions..." rows="2" style="padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; resize: vertical;"></textarea>
+                    </div>
+                    <button type="submit" style="background: #22c55e; color: white; border: none; padding: 10px 16px; border-radius: 6px; font-size: 13.5px; font-weight: 700; cursor: pointer; align-self: flex-end;">Schedule Interview</button>
+                </form>
+            </div>
+
             <div
                 style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 10px; position: sticky; bottom: 0; background: white; z-index: 10;">
                 <a id="modalCVBtn" href="#" target="_blank" class="btn-action"
@@ -863,12 +892,133 @@
             cvBtn.style.display = "none";
         }
 
+        // Set up team notes and schedule interview details
+        document.getElementById("noteApplicationId").value = app.application_id;
+        document.getElementById("scheduleCandidateId").value = app.user_id;
+        document.getElementById("scheduleJobId").value = app.job_id;
+        loadNotes(app.application_id);
+
         // Open Modal
         document.getElementById("applicantModal").classList.add("open");
     }
 
     function closeModal() {
         document.getElementById("applicantModal").classList.remove("open");
+    }
+
+    function loadNotes(appId) {
+        const list = document.getElementById("modalNotesList");
+        list.innerHTML = '<div style="font-size: 12px; color: #64748b;">Loading notes...</div>';
+        
+        fetch(`/api/applications/notes/${appId}`)
+            .then(res => res.json())
+            .then(data => {
+                list.innerHTML = "";
+                if (data.success && data.notes.length > 0) {
+                    data.notes.forEach(note => {
+                        const avatar = note.author_avatar ? note.author_avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(note.author_name)}&size=24&rounded=true&background=2456ff&color=fff`;
+                        
+                        const item = document.createElement("div");
+                        item.style.cssText = "display: flex; gap: 8px; align-items: flex-start; background: #f8fafc; padding: 8px; border-radius: 6px; font-size: 12.5px; border: 1px solid #f1f5f9;";
+                        item.innerHTML = `
+                            <img src="${avatar}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                                    <span style="font-weight: 700; color: #1e293b;">${note.author_name}</span>
+                                    <span style="font-size: 10px; color: #94a3b8;">${note.created_at_str}</span>
+                                </div>
+                                <div style="color: #475569; margin-top: 2px;">${note.note_text}</div>
+                            </div>
+                            <button onclick="deleteNote(${note.id}, ${appId})" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 2px;">×</button>
+                        `;
+                        list.appendChild(item);
+                    });
+                } else {
+                    list.innerHTML = '<div style="font-size: 12px; color: #64748b;">No notes yet. Add one below to collaborate with your team!</div>';
+                }
+            })
+            .catch(err => {
+                list.innerHTML = '<div style="font-size: 12px; color: #ef4444;">Failed to load notes.</div>';
+                console.error(err);
+            });
+    }
+
+    function submitNote(e) {
+        e.preventDefault();
+        const appId = document.getElementById("noteApplicationId").value;
+        const textInput = document.getElementById("noteText");
+        const text = textInput.value.trim();
+        
+        if (!text) return;
+        
+        const formData = new FormData();
+        formData.append("application_id", appId);
+        formData.append("note_text", text);
+        
+        fetch("/api/applications/notes/add", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                textInput.value = "";
+                loadNotes(appId);
+            } else {
+                alert(data.error || "Failed to add note.");
+            }
+        })
+        .catch(err => console.error(err));
+    }
+
+    function deleteNote(noteId, appId) {
+        if (!confirm("Are you sure you want to delete this note?")) return;
+        
+        fetch(`/api/applications/notes/delete/${noteId}`, {
+            method: "DELETE"
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                loadNotes(appId);
+            } else {
+                alert(data.error || "Failed to delete note.");
+            }
+        })
+        .catch(err => console.error(err));
+    }
+
+    function scheduleInterview(e) {
+        e.preventDefault();
+        const candidateId = document.getElementById("scheduleCandidateId").value;
+        const jobId = document.getElementById("scheduleJobId").value;
+        const title = document.getElementById("interviewTitle").value.trim();
+        const date = document.getElementById("interviewDate").value;
+        const location = document.getElementById("interviewLocation").value.trim();
+        const desc = document.getElementById("interviewDescription").value.trim();
+        
+        const formData = new FormData();
+        formData.append("candidate_id", candidateId);
+        formData.append("job_id", jobId);
+        formData.append("title", title);
+        formData.append("interview_date", date);
+        formData.append("location", location);
+        if (desc) formData.append("description", desc);
+        
+        fetch("/api/interviews/schedule", {
+            method: "POST",
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("Interview scheduled successfully!");
+                document.getElementById("modalScheduleForm").reset();
+            } else {
+                alert(data.error || "Failed to schedule interview.");
+            }
+        })
+        .catch(err => console.error(err));
     }
 
     // Close modal on click outside modal content

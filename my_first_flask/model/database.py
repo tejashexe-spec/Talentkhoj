@@ -42,6 +42,19 @@ class Database:
         """Create tables if they don't exist."""
         with self.__connection.cursor() as cursor:
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    type VARCHAR(50) NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    message TEXT NOT NULL,
+                    is_read TINYINT(1) NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    INDEX idx_user_notifications (user_id, created_at DESC)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     full_name VARCHAR(255) NOT NULL,
@@ -356,9 +369,40 @@ class Database:
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
 
+        # Notifications table migrations
+        notifications_migrations = [
+            ("type", "ALTER TABLE notifications ADD COLUMN type VARCHAR(50) NOT NULL DEFAULT 'general'"),
+            ("link", "ALTER TABLE notifications ADD COLUMN link VARCHAR(255) DEFAULT NULL"),
+        ]
+        with self.__connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'notifications'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing_notifications = {row["COLUMN_NAME"] for row in cursor.fetchall()}
+
+        for col, sql in notifications_migrations:
+            if col not in existing_notifications:
+                with self.__connection.cursor() as cursor:
+                    cursor.execute(sql)
+
+
 
     def get_connection(self):
-        if self.__connection:
+        if not self.__connection:
+            try:
+                self.__connection = pymysql.connect(
+                    host=config.MYSQL_HOST,
+                    user=config.MYSQL_USER,
+                    password=config.MYSQL_PASSWORD,
+                    database=config.MYSQL_DATABASE,
+                    cursorclass=pymysql.cursors.DictCursor,
+                    autocommit=True,
+                )
+            except Exception as e:
+                print("Failed to establish database connection:", e)
+        else:
             try:
                 self.__connection.ping(reconnect=True)
             except Exception:
@@ -373,6 +417,7 @@ class Database:
                     )
                 except Exception as e:
                     print("Failed to reconnect to database:", e)
+                    self.__connection = None
         return self.__connection
 
     def _seed_mock_reviews(self):

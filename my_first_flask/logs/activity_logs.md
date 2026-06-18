@@ -21,3 +21,13 @@
 | 2026-06-03 21:18:11 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 8) applied to job ID 4 |
 | 2026-06-03 21:18:35 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'reviewed' for job 'UI/UX' by Company (ID: 1) |
 | 2026-06-03 21:18:37 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'rejected' for job 'UI/UX' by Company (ID: 1) |
+| 2026-06-18 20:52:23 | **ADD BOOKMARK** | Candidate Prasiddha Gautam bookmarked job ID 7 |
+| 2026-06-18 20:52:24 | **REMOVE BOOKMARK** | Candidate Prasiddha Gautam removed bookmark from job ID 7 |
+| 2026-06-18 20:52:53 | **ADD BOOKMARK** | Candidate Prasiddha Gautam bookmarked job ID 1 |
+| 2026-06-18 20:52:54 | **REMOVE BOOKMARK** | Candidate Prasiddha Gautam removed bookmark from job ID 1 |
+| 2026-06-18 21:00:09 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 1) posted a new job: 'Test Software Engineer' at Kathmandu (Onsite) |
+| 2026-06-18 21:00:16 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 1) posted a new internship: 'Test QA Intern' at Kathmandu (Onsite) |
+| 2026-06-18 21:00:21 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 1) posted a new internship: 'Test QA Intern with Questions' at Kathmandu (Onsite) |
+| 2026-06-18 21:01:03 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 1) posted a new internship: 'Test QA Intern with Questions' at Kathmandu (Onsite) |
+| 2026-06-18 21:02:22 | **ADD BOOKMARK** | Candidate Prasiddha Gautam bookmarked job ID 8 |
+| 2026-06-18 21:02:22 | **REMOVE BOOKMARK** | Candidate Prasiddha Gautam removed bookmark from job ID 8 |

@@ -152,15 +152,59 @@ def get_feed():
         cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id = %s", (user_id,))
         user_profile = cursor.fetchone()
         
+        # Suggested connects (individuals)
         cursor.execute("""
             SELECT u.id, u.full_name, u.avatar, u.bio, u.account_type,
                    EXISTS(SELECT 1 FROM follows WHERE follower_id = %s AND followed_id = u.id) AS is_following
             FROM users u
-            WHERE u.id != %s 
+            WHERE u.id != %s AND u.account_type = 'individual'
             ORDER BY RAND() LIMIT 3
         """, (user_id, user_id))
-        suggestions = cursor.fetchall()
-    return render_template("feed.html", user_profile=user_profile, suggestions=suggestions)
+        suggested_connects = cursor.fetchall()
+
+        # Companies to follow
+        cursor.execute("""
+            SELECT u.id, u.full_name, u.avatar, u.bio, u.account_type,
+                   EXISTS(SELECT 1 FROM follows WHERE follower_id = %s AND followed_id = u.id) AS is_following
+            FROM users u
+            WHERE u.id != %s AND u.account_type = 'company'
+            ORDER BY RAND() LIMIT 3
+        """, (user_id, user_id))
+        companies_to_follow = cursor.fetchall()
+
+        # Upcoming events
+        cursor.execute("""
+            SELECT e.id, e.title, e.event_date, c.company_name
+            FROM events e
+            JOIN companies c ON e.company_id = c.id
+            ORDER BY e.event_date DESC
+            LIMIT 3
+        """)
+        upcoming_events = cursor.fetchall()
+        for ev in upcoming_events:
+            if ev.get("event_date"):
+                ev["formatted_date"] = ev["event_date"].strftime("%b %d, %I:%M %p")
+
+        # Trending tags
+        cursor.execute("SELECT content FROM posts ORDER BY created_at DESC LIMIT 50")
+        recent_posts = cursor.fetchall()
+        import re
+        tags = set()
+        for p in recent_posts:
+            if p.get("content"):
+                found = re.findall(r"#\w+", p["content"])
+                for f in found:
+                    tags.add(f)
+        trending_tags = list(tags)[:6]
+        if not trending_tags:
+            trending_tags = ["#TechNepal", "#Hiring", "#FrontendDev", "#Internships", "#AIWorkshop"]
+
+    return render_template("feed.html", 
+                           user_profile=user_profile, 
+                           suggested_connects=suggested_connects, 
+                           companies_to_follow=companies_to_follow,
+                           upcoming_events=upcoming_events,
+                           trending_tags=trending_tags)
 
 
 def allowed_file(filename):
@@ -811,6 +855,26 @@ def profile():
                         user_profile[k] = v
         except Exception:
             pass
+
+    if user_profile:
+        skills_val = user_profile.get("skills")
+        if isinstance(skills_val, list):
+            skills_list = []
+            for item in skills_val:
+                if isinstance(item, dict):
+                    cat = item.get("category", "")
+                    lst = item.get("list", "")
+                    if cat:
+                        skills_list.append(cat)
+                    if lst:
+                        skills_list.extend([x.strip() for x in lst.split(",") if x.strip()])
+                elif isinstance(item, str):
+                    skills_list.append(item)
+            unique_skills = []
+            for s in skills_list:
+                if s not in unique_skills:
+                    unique_skills.append(s)
+            user_profile["skills"] = ", ".join(unique_skills)
 
     return render_template("profile.html",
         profile=user_profile,
@@ -1551,10 +1615,11 @@ def dashboard_ats_update_status():
     with conn.cursor() as cursor:
         cursor.execute("UPDATE applications SET status = %s WHERE id = %s", (new_status, app_id))
         cursor.execute("""
-            INSERT INTO notifications (user_id, title, message, link)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO notifications (user_id, type, title, message, link)
+            VALUES (%s, %s, %s, %s, %s)
         """, (
             application["user_id"],
+            "application_status",
             "Application Status Updated",
             f"Your application for '{application['job_title']}' has been updated to '{new_status.capitalize()}'.",
             "/dashboard"
@@ -2461,7 +2526,7 @@ def view_cv(user_id):
         cursor.execute("SELECT cv_path, cv_data, account_type FROM users WHERE id = %s", (user_id,))
         user = cursor.fetchone()
         
-    if not user or user["account_type"] != "individual":
+    if not user or user["account_type"] not in ("individual", "admin"):
         flash("CV not found.", "error")
         return redirect(url_for("home"))
         
@@ -2494,7 +2559,7 @@ def view_cv(user_id):
     if cv_path:
         full_path = os.path.join(BASE_DIR, cv_path.lstrip("/"))
         if os.path.exists(full_path):
-            if request.args.get("download") == "true":
+            if request.args.get("download") == "true" or request.args.get("print") == "true":
                 from flask import send_file
                 filename = os.path.basename(full_path)
                 return send_file(full_path, as_attachment=True, download_name=filename)
@@ -2747,8 +2812,61 @@ def query_gemini_resume_analysis(resume_text, job_description=""):
     try:
         with urllib.request.urlopen(req) as response:
             res_data = json.loads(response.read().decode("utf-8"))
-            text_response = res_data["candidates"][0]["content"]["parts"][0]["text"]
-            return json.loads(text_response)
+            text_response = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            
+            # Clean markdown code blocks if present
+            if text_response.startswith("```"):
+                lines = text_response.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                text_response = "\n".join(lines).strip()
+                
+            parsed = json.loads(text_response)
+            if isinstance(parsed, str):
+                parsed = json.loads(parsed)
+                
+            # Sanitize scores to be integers to prevent template division errors (500 errors)
+            if not isinstance(parsed, dict):
+                parsed = {}
+                
+            # overall_score
+            try:
+                parsed["overall_score"] = int(parsed.get("overall_score", 0))
+            except (ValueError, TypeError):
+                parsed["overall_score"] = 0
+                
+            # categories
+            if "categories" not in parsed or not isinstance(parsed["categories"], dict):
+                parsed["categories"] = {}
+            for cat in ["formatting", "impact", "skills", "experience"]:
+                try:
+                    parsed["categories"][cat] = int(parsed["categories"].get(cat, 0))
+                except (ValueError, TypeError):
+                    parsed["categories"][cat] = 0
+                    
+            # Ensure feedback structure exists
+            if "feedback" not in parsed or not isinstance(parsed["feedback"], dict):
+                parsed["feedback"] = {}
+            for cat in ["formatting", "impact", "skills", "experience"]:
+                if cat not in parsed["feedback"] or not isinstance(parsed["feedback"][cat], list):
+                    parsed["feedback"][cat] = []
+                    
+            # Ensure rewrites structure exists
+            if "rewrites" not in parsed or not isinstance(parsed["rewrites"], list):
+                parsed["rewrites"] = []
+                
+            # Ensure keyword_scan exists
+            if "keyword_scan" not in parsed or not isinstance(parsed["keyword_scan"], dict):
+                parsed["keyword_scan"] = {"matched_keywords": [], "missing_keywords": []}
+            else:
+                if "matched_keywords" not in parsed["keyword_scan"] or not isinstance(parsed["keyword_scan"]["matched_keywords"], list):
+                    parsed["keyword_scan"]["matched_keywords"] = []
+                if "missing_keywords" not in parsed["keyword_scan"] or not isinstance(parsed["keyword_scan"]["missing_keywords"], list):
+                    parsed["keyword_scan"]["missing_keywords"] = []
+                    
+            return parsed
     except Exception as e:
         print(f"Error querying Gemini API: {e}")
         return {"error": f"Failed to get analysis: {str(e)}"}
@@ -3351,6 +3469,8 @@ def dashboard_post_opportunity():
                             (job_id, fq, fa)
                         )
         except pymysql.MySQLError as db_err:
+            import traceback
+            traceback.print_exc()
             print(f"[DATABASE ERROR] Failed to insert job/faqs: {db_err}")
             try:
                 from my_first_flask.utils.logger import log_activity
@@ -3416,10 +3536,11 @@ def dashboard_post_opportunity():
                     if match:
                         # Create in-app notification
                         cursor.execute("""
-                            INSERT INTO notifications (user_id, title, message, link)
-                            VALUES (%s, %s, %s, %s)
+                            INSERT INTO notifications (user_id, type, title, message, link)
+                            VALUES (%s, %s, %s, %s, %s)
                         """, (
                             alert["user_id"],
+                            "general",
                             "Opportunity Match",
                             f"New {opportunity_type.capitalize()} '{title}' matching your saved search '{alert['search_query'] or ''}' has been posted by {company['company_name']}.",
                             f"/dashboard/search?q={alert['search_query'] or ''}"
@@ -4708,9 +4829,9 @@ def dashboard_ats_notify():
             return jsonify({"success": False, "message": "Unauthorized: recipient has not applied to your opportunities."}), 403
             
         cursor.execute("""
-            INSERT INTO notifications (user_id, title, message, link)
-            VALUES (%s, %s, %s, %s)
-        """, (target_user_id, title, message, "/dashboard/applications"))
+            INSERT INTO notifications (user_id, type, title, message, link)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (target_user_id, "general", title, message, "/dashboard/applications"))
         
     return jsonify({"success": True, "message": "Notification successfully sent to candidate."})
 
@@ -4748,9 +4869,9 @@ def send_announcement():
         target_users = cursor.fetchall()
         for u in target_users:
             cursor.execute("""
-                INSERT INTO notifications (user_id, title, message, link)
-                VALUES (%s, %s, %s, %s)
-            """, (u["id"], f"Announcement: {title}", message, "/feed"))
+                INSERT INTO notifications (user_id, type, title, message, link)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (u["id"], "general", f"Announcement: {title}", message, "/feed"))
 
     return jsonify({"success": True, "message": "Announcement sent successfully!"})
 

@@ -43,19 +43,6 @@ class Database:
         """Create tables if they don't exist."""
         with self.__connection.cursor() as cursor:
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS notifications (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT NOT NULL,
-                    type VARCHAR(50) NOT NULL,
-                    title VARCHAR(255) NOT NULL,
-                    message TEXT NOT NULL,
-                    is_read TINYINT(1) NOT NULL DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    INDEX idx_user_notifications (user_id, created_at DESC)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """)
-            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     full_name VARCHAR(255) NOT NULL,
@@ -551,6 +538,11 @@ class Database:
             if col not in existing_notifications:
                 with self.__connection.cursor() as cursor:
                     cursor.execute(sql)
+
+        # Ensure type column has a default value (fixes old schema where it was NOT NULL without default)
+        if "type" in existing_notifications:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE notifications MODIFY COLUMN type VARCHAR(50) NOT NULL DEFAULT 'general'")
 
         # Create company_team, interviews, application_notes migrations
         with self.__connection.cursor() as cursor:

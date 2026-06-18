@@ -635,6 +635,89 @@
             height: 500px;
         }
     }
+
+    /* ── MODALS STYLING ── */
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+    
+    .modal-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .opp-modal {
+        background: var(--surface);
+        border-radius: 20px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--border);
+        transform: translateY(-20px);
+        transition: transform 0.25s ease;
+        overflow: hidden;
+    }
+
+    .modal-backdrop.open .opp-modal {
+        transform: translateY(0);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .btn-close-modal {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-muted);
+        font-size: 24px;
+        line-height: 1;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+
+    .btn-close-modal:hover {
+        background: var(--surface-3);
+        color: var(--text);
+    }
+
+    .btn-modal-cancel {
+        background: var(--surface-3);
+        color: var(--text-2);
+        border: 1px solid var(--border-strong);
+        padding: 9px 20px;
+        border-radius: 20px;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-modal-cancel:hover {
+        background: var(--border-strong);
+    }
 </style>
 
 <div class="search-header-container">
@@ -723,7 +806,7 @@
         <div class="scrollable-list">
             {% if opportunities %}
                 {% for opp in opportunities %}
-                    <div class="compact-card {% if loop.first %}selected{% endif %}" id="card-{{ opp.id }}" onclick="selectOpportunity({{ opp|tojson|safe }})">
+                    <div class="compact-card {% if loop.first %}selected{% endif %}" id="card-{{ opp.id }}" onclick="selectOpportunity({{ opp.id }})">
                         <button class="btn-bookmark-toggle card-bookmark-btn {% if opp.is_bookmarked %}active{% endif %}" 
                                 onclick="toggleBookmark(event, {{ opp.id }})" 
                                 id="bookmark-card-{{ opp.id }}" 
@@ -980,8 +1063,14 @@
 </div>
 
 <script>
+    // Define global opportunities array safely
+    const opportunitiesData = {{ opportunities|tojson|safe if opportunities else '[]' }};
+
     // Selected opportunity details state updater
-    function selectOpportunity(opp) {
+    function selectOpportunity(oppId) {
+        const opp = opportunitiesData.find(o => o.id === oppId);
+        if (!opp) return;
+
         // Highlight active compact card
         document.querySelectorAll('.compact-card').forEach(card => {
             card.classList.remove('selected');
@@ -1472,8 +1561,7 @@
     // Auto-select first opportunity on load if lists aren't empty
     document.addEventListener('DOMContentLoaded', () => {
         {% if opportunities %}
-            const firstOpportunity = {{ opportunities[0]|tojson|safe }};
-            selectOpportunity(firstOpportunity);
+            selectOpportunity({{ opportunities[0].id }});
         {% endif %}
     });
 </script>

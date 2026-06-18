@@ -1,0 +1,109 @@
+/* Minimal admin stylesheet to satisfy template references and keep admin pages usable.
+   Admin pages use Bootstrap 5.3 (which has native dark mode via data-bs-theme).
+   This file adds token-aware overrides so admin surfaces flip with the global theme. */
+
+.sidebar {
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sidebar a {
+    text-decoration: none;
+}
+
+.sidebar a.active {
+    font-weight: 600;
+}
+
+.main-content {
+    background: #f8f9fa;
+}
+
+.card,
+.table,
+.modal-content {
+    border-radius: 16px;
+}
+
+.btn,
+.form-control,
+.form-select,
+.page-link,
+.badge {
+    border-radius: 10px;
+}
+
+/* ── DARK MODE (Bootstrap 5.3 native data-bs-theme) ──
+   When <html data-bs-theme="dark"> is set, flip the admin surfaces.
+   We mirror the token palette used across the rest of the site. */
+:root[data-bs-theme="dark"] body,
+:root[data-theme="dark"] body {
+    background: #0b1120 !important;
+    color: #e6edf7;
+}
+
+:root[data-bs-theme="dark"] .main-content,
+:root[data-theme="dark"] .main-content {
+    background: #0b1120 !important;
+}
+
+:root[data-bs-theme="dark"] .top-bar,
+:root[data-theme="dark"] .top-bar {
+    background: #151c2c !important;
+    border-bottom-color: #283449 !important;
+}
+
+:root[data-bs-theme="dark"] .page-title,
+:root[data-theme="dark"] .page-title {
+    color: #e6edf7 !important;
+}
+
+:root[data-bs-theme="dark"] .card,
+:root[data-theme="dark"] .card {
+    background-color: #151c2c !important;
+    border-color: #283449 !important;
+    color: #e6edf7;
+}
+
+:root[data-bs-theme="dark"] .table,
+:root[data-theme="dark"] .table {
+    --bs-table-bg: #151c2c;
+    --bs-table-color: #e6edf7;
+    --bs-table-border-color: #283449;
+    color: #e6edf7;
+}
+
+:root[data-bs-theme="dark"] .table > :not(caption) > * > *,
+:root[data-theme="dark"] .table > :not(caption) > * > * {
+    color: #e6edf7;
+    border-bottom-color: #283449;
+}
+
+:root[data-bs-theme="dark"] .form-control,
+:root[data-theme="dark"] .form-control,
+:root[data-bs-theme="dark"] .form-select,
+:root[data-theme="dark"] .form-select {
+    background-color: #1a2336 !important;
+    border-color: #3a4a63 !important;
+    color: #e6edf7 !important;
+}
+
+:root[data-bs-theme="dark"] .text-muted,
+:root[data-theme="dark"] .text-muted {
+    color: #94a3b8 !important;
+}
+
+:root[data-bs-theme="dark"] .text-dark,
+:root[data-theme="dark"] .text-dark {
+    color: #e6edf7 !important;
+}
+
+:root[data-bs-theme="dark"] .bg-light,
+:root[data-theme="dark"] .bg-light {
+    background-color: #1a2336 !important;
+}
+
+:root[data-bs-theme="dark"] .user-avatar,
+:root[data-theme="dark"] .user-avatar {
+    background: #222d44 !important;
+    color: #b8c4d6 !important;
+}

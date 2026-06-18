@@ -4,6 +4,126 @@
 {% block title %}My Profile | Talent Khoj{% endblock %}
 
 {% block content %}
+<style>
+    /* Premium Spacing & Typography upgrades for profile page */
+    .profile-dashboard-layout {
+        gap: 40px !important;
+        margin-top: 24px !important;
+    }
+    
+    .profile-card {
+        background: white !important;
+        border-radius: 20px !important;
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        padding: 40px !important;
+        box-shadow: 0 10px 30px rgba(5, 21, 75, 0.02) !important;
+        margin-bottom: 30px !important;
+    }
+    
+    .profile-card .card-title {
+        font-size: 24px !important;
+        font-weight: 800 !important;
+        color: #05154b !important;
+        margin-top: 0 !important;
+        margin-bottom: 6px !important;
+        letter-spacing: -0.5px;
+    }
+    
+    .profile-card .card-subtitle {
+        color: #64748b !important;
+        font-size: 14.5px !important;
+        margin-bottom: 30px !important;
+    }
+    
+    .profile-sub-nav {
+        background: white !important;
+        border-radius: 20px !important;
+        border: 1px solid rgba(0, 0, 0, 0.05) !important;
+        padding: 24px 20px !important;
+        gap: 8px !important;
+        box-shadow: 0 10px 30px rgba(5, 21, 75, 0.02) !important;
+    }
+    
+    .sub-nav-item {
+        padding: 12px 18px !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        border-radius: 12px !important;
+        color: #475569 !important;
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
+    .sub-nav-item:hover {
+        background: #f1f5f9 !important;
+        color: #0f172a !important;
+    }
+    
+    .sub-nav-item.active {
+        background: #2456ff !important;
+        color: white !important;
+        box-shadow: 0 4px 14px rgba(36, 86, 255, 0.25) !important;
+    }
+    
+    .profile-content-panel .form-row {
+        gap: 24px !important;
+        margin-bottom: 24px !important;
+    }
+    
+    .profile-content-panel .form-group {
+        margin-bottom: 24px !important;
+    }
+    
+    .profile-content-panel .form-group label,
+    .form-group-full label {
+        font-size: 13.5px !important;
+        font-weight: 700 !important;
+        color: #334155 !important;
+        margin-bottom: 10px !important;
+        display: block;
+    }
+    
+    .profile-content-panel .form-control {
+        padding: 14px 18px !important;
+        border: 1.5px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        font-size: 14.5px !important;
+        color: #0f172a !important;
+        background: #f8fafc !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .profile-content-panel .form-control:focus {
+        border-color: #2456ff !important;
+        background: white !important;
+        box-shadow: 0 0 0 4px rgba(36, 86, 255, 0.12) !important;
+    }
+    
+    .btn-save-profile {
+        background: #2456ff !important;
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 14.5px !important;
+        padding: 14px 32px !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 14px rgba(36, 86, 255, 0.2) !important;
+        transition: all 0.25s !important;
+    }
+    
+    .btn-save-profile:hover {
+        background: #1848d8 !important;
+        box-shadow: 0 6px 20px rgba(36, 86, 255, 0.3) !important;
+        transform: translateY(-1px);
+    }
+    
+    .profile-avatar-edit-container {
+        padding: 24px !important;
+        border-radius: 16px !important;
+        border: 1.5px dashed #e2e8f0 !important;
+        background: #fafbfe !important;
+        margin-bottom: 30px !important;
+    }
+</style>
+
 <div class="dashboard-header" style="margin-bottom: 20px;">
     <h1>My Profile</h1>
     <p>Manage your account profile, contact details, residence information, and uploaded resume.</p>

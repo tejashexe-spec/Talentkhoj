@@ -1,19 +1,158 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Talent Khoj{% endblock %}
+{% block title %}Talent Khoj — Nepal's Career & Internship Platform{% endblock %}
 
 {% block content %}
+
+<!-- ═══════════════ HERO ═══════════════ -->
 <section class="hero">
-    <div class="hero-left">
-        <h1>
-            Find internships, jobs, events,
-            and a professional community...
-        </h1>
-        <div class="search-box">
-            <input type="text" placeholder="Search roles, companies, or keywords">
-            <button>Search</button>
+    <span class="hero-eyebrow">
+        <span class="dot"></span>
+        Nepal's Career &amp; Internship Hub
+    </span>
+
+    <h1>
+        Find internships, jobs, and a<br>
+        <span class="grad">professional community</span> that grows with you.
+    </h1>
+
+    <p class="hero-sub">
+        Connect with top employers across Nepal, build your CV, get verified,
+        and discover events that move your career forward — all in one place.
+    </p>
+
+    <form class="search-box" action="/dashboard/search" method="GET">
+        <input type="text" name="q" placeholder="Search roles, companies, or keywords...">
+        <button type="submit">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Search
+        </button>
+    </form>
+
+</section>
+
+<!-- ═══════════════ STATS BAR ═══════════════ -->
+<div class="stats-bar">
+    <div class="stat-card">
+        <div class="stat-icon blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+        </div>
+        <div class="stat-value">1,200+</div>
+        <div class="stat-label">Open Jobs &amp; Internships</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>
+        </div>
+        <div class="stat-value">500+</div>
+        <div class="stat-label">Hiring Companies</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon amber">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+        <div class="stat-value">150+</div>
+        <div class="stat-label">Events &amp; Workshops</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <div class="stat-value">10K+</div>
+        <div class="stat-label">Active Professionals</div>
+    </div>
+</div>
+
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<section class="section">
+    <div class="section-head">
+        <h2>Everything you need, in one platform</h2>
+        <p>Powerful tools to help you find opportunities and stand out from the crowd.</p>
+    </div>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="ficon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </div>
+            <h3>Smart Search</h3>
+            <p>Discover internships and jobs filtered by role, location, skills, and company — instantly.</p>
+        </div>
+        <div class="feature-card">
+            <div class="ficon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            </div>
+            <h3>CV Builder &amp; ATS</h3>
+            <p>Build a polished resume, score it with our AI doctor, and track applications on a Kanban board.</p>
+        </div>
+        <div class="feature-card">
+            <div class="ficon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <h3>Events &amp; Networking</h3>
+            <p>Join workshops, career fairs, and a community feed to learn and connect with peers.</p>
+        </div>
+        <div class="feature-card">
+            <div class="ficon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+            </div>
+            <h3>Verified Badges</h3>
+            <p>Get skill-verified badges to prove your expertise and stand out to recruiters.</p>
         </div>
     </div>
+</section>
+
+<!-- ═══════════════ AUDIENCE SPLIT ═══════════════ -->
+<section class="section">
+    <div class="section-head">
+        <h2>Built for both sides of the journey</h2>
+        <p>Whether you're looking for your next role or your next great hire, we've got you covered.</p>
+    </div>
+    <div class="audience-split">
+        <div class="audience-card seek">
+            <div class="aicon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </div>
+            <h3>For Candidates</h3>
+            <p>Land your dream internship or job with the right tools and guidance.</p>
+            <ul>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Browse curated jobs &amp; internships</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> AI-powered CV scoring &amp; builder</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Earn skill-verified badges</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Track applications in one place</li>
+            </ul>
+            <a class="a-btn" href="/register">
+                Get Started
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </a>
+        </div>
+        <div class="audience-card hire">
+            <div class="aicon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path><rect x="9" y="9" width="2" height="2"></rect><rect x="9" y="13" width="2" height="2"></rect><rect x="9" y="17" width="2" height="2"></rect></svg>
+            </div>
+            <h3>For Employers</h3>
+            <p>Hire the best talent in Nepal faster with powerful sourcing and tracking tools.</p>
+            <ul>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Post opportunities &amp; reach talent</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> ATS Kanban to manage candidates</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Headhunting with smart filters</li>
+                <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Hiring analytics &amp; insights</li>
+            </ul>
+            <a class="a-btn" href="/register">
+                Hire Talent
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════ CTA BAND ═══════════════ -->
+<section class="cta-band">
+    <h2>Ready to take the next step?</h2>
+    <p>Join thousands of professionals and employers building the future of work in Nepal.</p>
+    <a class="a-btn" href="/register">
+        Create your free account
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+    </a>
 </section>
 
 {% endblock %}

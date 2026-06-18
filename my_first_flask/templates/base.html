@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,81 +8,18 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <!-- Anti-FOUC: apply saved theme before first paint -->
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('talentkhoj-theme');
+                if (t) document.documentElement.setAttribute('data-theme', t);
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
-
-<!-- NAVBAR -->
-<nav class="navbar">
-    <a class="nav-logo" href="/">Talent Khoj</a>
-
-    <ul class="nav-links">
-        <li><a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a></li>
-        <li><a href="/dashboard/search?type=internship" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'internship' %}active{% endif %}">Internships</a></li>
-        <li><a href="/dashboard/search?type=job" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'job' %}active{% endif %}">Jobs</a></li>
-        <li><a href="/dashboard/events" class="{% if request.path == '/dashboard/events' %}active{% endif %}">Events</a></li>
-        <li><a href="/feed" class="{% if request.path == '/feed' %}active{% endif %}">Community</a></li>
-    </ul>
-
-    <div style="display: flex; align-items: center; gap: 16px;">
-        <div class="nav-search-box">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
-                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <form action="/dashboard/search" method="GET" style="display: flex; width: 100%;">
-                <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q', '') }}">
-            </form>
-        </div>
-
-        {% if session.get('user_id') %}
-            <!-- Notification Bell Menu -->
-            <div class="profile-menu" style="position: relative; margin-right: 4px;">
-                <button class="profile-trigger" onclick="toggleNotificationDropdown(event)" style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; padding: 0; background: #f1f5f9; border: none; cursor: pointer; transition: background 0.2s;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    <span id="nav-notif-badge" style="display: none; position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; font-size: 9px; font-weight: 700; border-radius: 50%; min-width: 16px; height: 16px; align-items: center; justify-content: center; line-height: 1; border: 2px solid white; padding: 1px;">0</span>
-                </button>
-                <div class="dropdown" id="notificationDropdown" style="width: 320px; max-height: 420px; overflow-y: auto; padding: 0;">
-                    <div style="padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
-                        <span style="font-weight: 700; color: #0f172a; font-size: 14px;">Notifications</span>
-                        <button onclick="markAllNotificationsRead(event)" style="background: none; border: none; color: #2456ff; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0;">Mark all as read</button>
-                    </div>
-                    <div id="nav-notifications-list" style="max-height: 300px; overflow-y: auto;">
-                        <div style="padding: 24px; text-align: center; color: #64748b; font-size: 13px;">No notifications.</div>
-                    </div>
-                    <div style="padding: 10px; border-top: 1px solid #f1f5f9; text-align: center; background: #f8fafc;">
-                        <a href="/dashboard/notifications" style="display: block; font-size: 12.5px; font-weight: 700; color: #2456ff; text-decoration: none;">View all notifications</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="profile-menu">
-                <button class="profile-trigger" onclick="toggleDropdown(event)">
-                    {% if session.get('user_avatar') %}
-                        <img src="{{ session['user_avatar'] }}" alt="profile">
-                    {% else %}
-                        <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=34&rounded=true&background=2456ff&color=fff" alt="profile">
-                    {% endif %}
-                    {{ session['user_name'] }}
-                    <span style="font-size:10px; color:#888; margin-left:2px;">&#9660;</span>
-                </button>
-                <div class="dropdown" id="profileDropdown">
-                    {% if session.get('account_type') == 'admin' %}
-                        <a href="/admin/dashboard" style="font-weight: bold; color: #ef4444;">Admin Panel</a>
-                    {% endif %}
-                    <a href="/dashboard">Dashboard</a>
-                    <a href="/profile">My Profile</a>
-                    <a href="/reset-password">Reset Password</a>
-                    <a href="/verify-email">Verify Email</a>
-                    <a href="/logout">Logout</a>
-                </div>
-            </div>
-        {% else %}
-            <a class="nav-btn" href="/login">Sign In</a>
-        {% endif %}
-    </div>
-</nav>
+{% include "partials/navbar.html" %}
 
 {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -100,16 +37,38 @@
 
 <!-- FOOTER -->
 <footer class="footer">
-    <div>
+    <div class="footer-brand">
+        <img class="footer-logo" src="{{ url_for('static', filename='favicon.png') }}" alt="Talent Khoj logo">
         <h3>Talent Khoj</h3>
-        <p>Empowering the next generation of professionals in Nepal.</p>
+        <p>Empowering the next generation of professionals in Nepal. Find internships, jobs, events and a community that helps you grow.</p>
+        <div class="footer-social">
+            <a href="#" aria-label="Facebook" title="Facebook"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg></a>
+            <a href="#" aria-label="LinkedIn" title="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+            <a href="#" aria-label="Instagram" title="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></a>
+        </div>
     </div>
     <div>
-        <h3>Platform</h3>
+        <h4>Platform</h4>
         <ul>
             <li><a href="/about">About Us</a></li>
             <li><a href="/contact">Contact Support</a></li>
             <li><a href="/privacy">Privacy Policy</a></li>
+        </ul>
+    </div>
+    <div>
+        <h4>Opportunities</h4>
+        <ul>
+            <li><a href="/dashboard/search?type=internship">Internships</a></li>
+            <li><a href="/dashboard/search?type=job">Jobs</a></li>
+            <li><a href="/dashboard/events">Events</a></li>
+        </ul>
+    </div>
+    <div>
+        <h4>Account</h4>
+        <ul>
+            <li><a href="/login">Sign In</a></li>
+            <li><a href="/register">Register</a></li>
+            <li><a href="/feed">Community</a></li>
         </ul>
     </div>
 </footer>
@@ -117,124 +76,6 @@
     <p>&copy; 2026 Talent Khoj Nepal. Empowering the next generation.</p>
 </div>
 
-<script>
-    function toggleDropdown(e) {
-        e.stopPropagation();
-        const pd = document.getElementById('profileDropdown');
-        const nd = document.getElementById('notificationDropdown');
-        if (nd) nd.classList.remove('open');
-        if (pd) pd.classList.toggle('open');
-    }
-    
-    function toggleNotificationDropdown(e) {
-        e.stopPropagation();
-        const pd = document.getElementById('profileDropdown');
-        const nd = document.getElementById('notificationDropdown');
-        if (pd) pd.classList.remove('open');
-        if (nd) {
-            nd.classList.toggle('open');
-            if (nd.classList.contains('open')) {
-                loadHeaderNotifications();
-            }
-        }
-    }
-    
-    document.addEventListener('click', function() {
-        var pd = document.getElementById('profileDropdown');
-        if (pd) pd.classList.remove('open');
-        var nd = document.getElementById('notificationDropdown');
-        if (nd) nd.classList.remove('open');
-    });
-
-    function updateHeaderNotificationBell() {
-        fetch('/api/notifications/unread-count')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const count = data.unread_count;
-                    const badge = document.getElementById('nav-notif-badge');
-                    if (badge) {
-                        if (count > 0) {
-                            badge.innerText = count;
-                            badge.style.display = 'inline-flex';
-                        } else {
-                            badge.style.display = 'none';
-                        }
-                    }
-                }
-            })
-            .catch(err => console.error('Error fetching unread count:', err));
-    }
-
-    function loadHeaderNotifications() {
-        fetch('/api/notifications')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    const container = document.getElementById('nav-notifications-list');
-                    if (!container) return;
-                    
-                    const notifs = data.notifications;
-                    if (!notifs || notifs.length === 0) {
-                        container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b; font-size: 13px;">No notifications yet.</div>';
-                        return;
-                    }
-                    
-                    let html = '';
-                    notifs.slice(0, 5).forEach(notif => {
-                        const bgStyle = notif.is_read ? 'background: white;' : 'background: #f4f7ff;';
-                        const dotHtml = notif.is_read ? '' : '<span style="width: 6px; height: 6px; background: #2456ff; border-radius: 50%; display: inline-block; margin-left: 6px;"></span>';
-                        html += `
-                            <a href="#" onclick="handleHeaderNotifClick(event, ${notif.id}, '${notif.link || '/dashboard'}')" style="display: block; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; text-decoration: none; color: inherit; transition: background 0.2s; ${bgStyle}">
-                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
-                                    <span style="font-weight: 700; font-size: 13px; color: #0f172a;">${notif.title}${dotHtml}</span>
-                                    <span style="font-size: 11px; color: #94a3b8;">${notif.created_at || ''}</span>
-                                </div>
-                                <p style="margin: 0; font-size: 12.5px; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${notif.message}</p>
-                            </a>
-                        `;
-                    });
-                    container.innerHTML = html;
-                }
-            })
-            .catch(err => console.error('Error fetching notifications:', err));
-    }
-
-    function handleHeaderNotifClick(e, id, link) {
-        e.preventDefault();
-        fetch('/api/notifications/read/' + id, { method: 'POST' })
-            .then(() => {
-                window.location.href = link;
-            })
-            .catch(err => {
-                console.error(err);
-                window.location.href = link;
-            });
-    }
-
-    function markAllNotificationsRead(e) {
-        if (e) {
-            e.stopPropagation();
-            e.preventDefault();
-        }
-        fetch('/api/notifications/read-all', { method: 'POST' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    updateHeaderNotificationBell();
-                    loadHeaderNotifications();
-                }
-            })
-            .catch(err => console.error('Error marking notifications read:', err));
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        {% if session.get('user_id') %}
-            updateHeaderNotificationBell();
-            setInterval(updateHeaderNotificationBell, 10000); // Check every 10 seconds
-        {% endif %}
-    });
-</script>
 
 <!-- Floating Chat Widget -->
 {% if session.get('user_id') %}
@@ -457,6 +298,9 @@
     }
 </script>
 {% endif %}
+
+<!-- Theme controller (toggle + persistence + inline-color mapper) -->
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 
 </body>
 </html>

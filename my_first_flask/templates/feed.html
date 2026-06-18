@@ -1,26 +1,27 @@
-{% extends "dashboard_base.html" %}
+{% extends "base.html" %}
 {% set active = "community" %}
 
 {% block title %}Social Feed | Talent Khoj{% endblock %}
 
 {% block content %}
 <style>
+    /* ── GENERAL & CONTAINERS ── */
     .feed-container {
-        max-width: 1128px;
-        margin: 0 auto;
-        padding: 24px 16px;
+        max-width: 1180px;
+        margin: 100px auto 40px;
+        padding: 0 16px;
     }
 
     .feed-grid {
         display: grid;
-        grid-template-columns: 225px 1fr 290px;
+        grid-template-columns: 240px 1fr 290px;
         gap: 24px;
         align-items: start;
     }
 
     @media (max-width: 992px) {
         .feed-grid {
-            grid-template-columns: 225px 1fr;
+            grid-template-columns: 240px 1fr;
         }
         .feed-right-col {
             display: none;
@@ -36,123 +37,243 @@
             display: none;
         }
         .feed-container {
-            padding: 12px 8px;
+            padding: 10px 8px;
         }
     }
 
-    .skeleton-card {
-        background: white;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
+    /* ── WIDGETS & CARDS ── */
+    .widget-card {
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
         padding: 20px;
-        color: #64748b;
-        font-size: 13px;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        margin-bottom: 20px;
+        overflow: hidden;
     }
 
-    /* Left Profile Widget styling */
-    .profile-card {
-        background: white;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        overflow: hidden;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        margin-bottom: 16px;
-    }
-    .profile-card-banner {
-        height: 56px;
-        background: linear-gradient(135deg, #05154b 0%, #2456ff 100%);
-    }
-    .profile-card-header {
-        text-align: center;
-        padding: 0 12px 16px 12px;
-        border-bottom: 1px solid #f1f5f9;
-        position: relative;
-    }
-    .profile-card-avatar {
-        width: 72px;
-        height: 72px;
-        border-radius: 50%;
-        border: 2px solid white;
-        object-fit: cover;
-        margin-top: -36px;
-        background: white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .profile-card-name {
-        font-size: 16px;
+    .widget-title {
+        font-size: 15px;
         font-weight: 700;
-        color: #0f172a;
-        margin-top: 8px;
+        color: var(--text);
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Left Sidebar Menu */
+    .community-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .community-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 16px;
+        border-radius: 12px;
+        color: var(--text-3);
+        text-decoration: none;
+        font-size: 13.5px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .community-menu-item:hover {
+        background: var(--brand-tint-2);
+        color: var(--brand);
+    }
+
+    .community-menu-item.active {
+        background: var(--brand-tint);
+        color: var(--brand);
+    }
+
+    /* Suggested Connects */
+    .suggested-connects-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .suggested-connect-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .suggested-connect-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid var(--border);
+    }
+
+    .suggested-connect-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .suggested-connect-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
         text-decoration: none;
         display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    .profile-card-name:hover {
+
+    .suggested-connect-name:hover {
+        color: var(--brand);
         text-decoration: underline;
     }
-    .profile-card-headline {
-        font-size: 12px;
-        color: #64748b;
-        margin-top: 4px;
-        line-height: 1.4;
+
+    .suggested-connect-title {
+        font-size: 11px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
     }
-    .profile-card-stats {
-        padding: 12px;
-        border-bottom: 1px solid #f1f5f9;
-    }
-    .profile-card-stat-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 12px;
-        padding: 4px 0;
-    }
-    .profile-card-stat-label {
-        color: #64748b;
-    }
-    .profile-card-stat-value {
-        font-weight: 700;
-        color: #2456ff;
-    }
-    .profile-card-footer {
-        padding: 12px;
-        font-size: 12px;
-        font-weight: 600;
-        text-align: center;
-        background: #f8fafc;
-    }
-    .profile-card-footer a {
-        color: #475569;
-        text-decoration: none;
+
+    .suggested-connect-btn {
+        background: var(--brand-tint-2);
+        border: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
-        transition: color 0.2s;
-    }
-    .profile-card-footer a:hover {
-        color: #2456ff;
+        color: var(--brand);
+        cursor: pointer;
+        transition: all 0.2s;
     }
 
-    .feed-header {
-        margin-bottom: 16px;
-        display: none;
+    .suggested-connect-btn:hover {
+        background: var(--brand);
+        color: white;
+    }
+    
+    .suggested-connect-btn.following {
+        background: var(--success-soft);
+        color: var(--success);
     }
 
-    .post-card {
-        background: white;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        padding: 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    /* ── POST CREATOR BOX ── */
+    .post-creator-trigger-card {
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        padding: 20px;
+        margin-bottom: 20px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        transition: box-shadow 0.2s;
+        gap: 16px;
     }
+
+    .post-creator-top {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .post-creator-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid var(--border);
+    }
+
+    .post-creator-bar {
+        flex: 1;
+        background: var(--surface-2);
+        border: 1px solid var(--border-strong);
+        border-radius: 24px;
+        padding: 12px 18px;
+        font-size: 13.5px;
+        color: var(--text-muted);
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.2s;
+        outline: none;
+    }
+
+    .post-creator-bar:hover {
+        background: var(--surface-3);
+        border-color: var(--brand);
+    }
+
+    .post-creator-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+    }
+
+    .creator-option-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-muted);
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .creator-option-btn:hover {
+        background: var(--brand-tint-2);
+        color: var(--text);
+    }
+
+    .btn-submit-post-direct {
+        background: var(--brand);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 6px 18px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-submit-post-direct:hover {
+        background: var(--brand-strong);
+        transform: translateY(-1px);
+    }
+
+    /* ── POST CARDS ── */
+    .post-card {
+        background: var(--surface);
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        padding: 20px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        transition: all 0.2s;
+    }
+
     .post-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
     }
 
     .post-header {
@@ -162,61 +283,76 @@
     }
 
     .post-avatar {
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         object-fit: cover;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border);
     }
 
     .post-author-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .post-author-name-row {
         display: flex;
-        flex-direction: column;
-        gap: 1px;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
     }
 
     .post-author-name {
-        font-size: 15px;
+        font-size: 14.5px;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--text);
         text-decoration: none;
     }
 
     .post-author-name:hover {
-        color: #2456ff;
+        color: var(--brand);
         text-decoration: underline;
     }
 
-    .post-meta {
-        font-size: 12px;
-        color: #64748b;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
     .badge-user-type {
-        font-size: 9.5px;
+        font-size: 9px;
         font-weight: 700;
-        padding: 1px 5px;
-        border-radius: 4px;
+        padding: 2px 6px;
+        border-radius: 6px;
         text-transform: uppercase;
         letter-spacing: 0.3px;
     }
-    .badge-user-type.candidate { background: #eff6ff; color: #1e40af; }
+
+    .badge-user-type.candidate { background: var(--brand-tint-2); color: var(--brand); }
     .badge-user-type.company { background: #fff7ed; color: #c2410c; }
+
+    .post-meta {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 2px;
+    }
+
+    .post-dots {
+        color: var(--text-faint);
+        cursor: pointer;
+        padding: 4px;
+        font-size: 16px;
+    }
 
     .post-content {
         font-size: 14px;
-        color: #1e293b;
+        color: var(--text-2);
         line-height: 1.5;
         word-break: break-word;
         white-space: pre-wrap;
     }
 
     .post-see-more {
-        color: #64748b;
-        font-weight: 600;
+        color: var(--brand);
+        font-weight: 700;
         cursor: pointer;
         border: none;
         background: none;
@@ -224,30 +360,25 @@
         font-size: 14px;
         margin-left: 4px;
     }
-    .post-see-more:hover {
-        color: #2456ff;
-        text-decoration: underline;
-    }
 
     .post-image {
-        width: calc(100% + 32px);
-        margin: 4px -16px;
+        width: 100%;
         max-height: 480px;
         object-fit: cover;
-        border-top: 1px solid #f1f5f9;
-        border-bottom: 1px solid #f1f5f9;
+        border-radius: 12px;
+        border: 1px solid var(--border);
     }
 
-    /* Stats Bar below post */
     .post-stats-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
         font-size: 12px;
-        color: #64748b;
-        padding: 4px 0 8px 0;
-        border-bottom: 1px solid #f1f5f9;
+        color: var(--text-muted);
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border);
     }
+
     .post-stats-left {
         display: flex;
         align-items: center;
@@ -256,10 +387,15 @@
 
     .post-actions {
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        gap: 24px;
-        padding-top: 12px;
-        border-top: 1px solid #f1f5f9;
+        padding-top: 4px;
+    }
+
+    .post-actions-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
     }
 
     .action-btn {
@@ -271,92 +407,200 @@
         gap: 6px;
         font-size: 13.5px;
         font-weight: 600;
-        color: #64748b;
+        color: var(--text-muted);
         transition: all 0.2s;
         padding: 6px 12px;
-        border-radius: 6px;
+        border-radius: 8px;
     }
 
     .action-btn:hover {
-        background: #f8fafc;
-        color: #0f172a;
+        background: var(--surface-2);
+        color: var(--text);
     }
 
     .action-btn.liked {
-        color: #ef4444;
+        color: var(--danger);
     }
 
     .action-btn.liked svg {
-        fill: #ef4444;
-        stroke: #ef4444;
+        fill: var(--danger);
+        stroke: var(--danger);
     }
 
-    .post-creator-trigger-card {
-        background: white;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        padding: 12px 16px;
+    .apply-btn-inline {
+        background: var(--brand-tint);
+        color: var(--brand);
+        border: none;
+        border-radius: 18px;
+        padding: 6px 16px;
+        font-size: 12.5px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .apply-btn-inline:hover {
+        background: var(--brand);
+        color: white;
+    }
+
+    /* ── RIGHT COLUMN DECORATIVE CARDS ── */
+    .events-list {
         display: flex;
         flex-direction: column;
         gap: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
     }
-    .post-creator-top {
+
+    .event-item {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 10px;
+    }
+
+    .event-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .event-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        text-decoration: none;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .event-title:hover {
+        color: var(--brand);
+    }
+
+    .event-time {
+        font-size: 11px;
+        color: var(--text-muted);
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 4px;
     }
-    .post-creator-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 1px solid #e2e8f0;
+
+    .view-all-link {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--brand);
+        text-decoration: none;
+        display: block;
+        margin-top: 12px;
+        transition: all 0.2s;
     }
-    .post-creator-bar {
-        flex: 1;
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        border-radius: 35px;
-        padding: 12px 16px;
-        font-size: 14px;
+
+    .view-all-link:hover {
+        text-decoration: underline;
+    }
+
+    /* Trending topics */
+    .trending-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .tag-pill {
+        background: var(--brand-tint-2);
+        color: var(--brand);
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
         font-weight: 600;
-        color: #64748b;
-        cursor: pointer;
-        text-align: left;
-        transition: background 0.2s, border-color 0.2s;
+        transition: all 0.2s;
+        border: 1px solid transparent;
     }
-    .post-creator-bar:hover {
-        background: #f1f5f9;
-        border-color: #94a3b8;
+
+    .tag-pill:hover {
+        background: var(--brand);
+        color: white;
+        transform: translateY(-1px);
     }
-    .post-creator-options {
+
+    /* Companies To Follow */
+    .company-follow-item {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        padding-top: 4px;
-        border-top: 1px solid #f1f5f9;
+        justify-content: space-between;
+        gap: 10px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
     }
-    .creator-option-btn {
+
+    .company-follow-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    .company-follow-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .company-logo-badge {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--brand-tint-2);
+        color: var(--brand);
+        font-weight: 800;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .company-follow-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        text-decoration: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .company-follow-name:hover {
+        color: var(--brand);
+    }
+
+    .company-follow-industry {
+        font-size: 11px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .company-follow-btn {
         background: none;
         border: none;
+        color: var(--brand);
+        font-size: 12.5px;
+        font-weight: 700;
         cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #64748b;
-        padding: 8px 12px;
+        padding: 4px 8px;
         border-radius: 6px;
-        transition: background 0.2s;
+        transition: all 0.2s;
     }
-    .creator-option-btn:hover {
-        background: #f8fafc;
-        color: #0f172a;
+
+    .company-follow-btn:hover {
+        background: var(--brand-tint-2);
     }
     
-    /* Post Modal styling */
+    .company-follow-btn.following {
+        color: var(--success);
+    }
+
+    /* ── POST MODAL STYLING ── */
     .post-modal {
         position: fixed;
         top: 0;
@@ -368,7 +612,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        z-index: 1000;
+        z-index: 10000;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.25s ease;
@@ -379,13 +623,14 @@
     }
     .post-modal-content {
         background: white;
-        border-radius: 12px;
+        border-radius: 20px;
         width: 100%;
         max-width: 552px;
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+        box-shadow: var(--shadow-lg);
         transform: translateY(-20px);
         transition: transform 0.25s ease;
         overflow: hidden;
+        border: 1px solid var(--border);
     }
     .post-modal.open .post-modal-content {
         transform: translateY(0);
@@ -395,19 +640,19 @@
         justify-content: space-between;
         align-items: center;
         padding: 16px 24px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 1px solid var(--border);
     }
     .post-modal-header h2 {
         font-size: 18px;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--text);
         margin: 0;
     }
     .post-modal-close {
         background: none;
         border: none;
         cursor: pointer;
-        color: #64748b;
+        color: var(--text-muted);
         font-size: 24px;
         line-height: 1;
         padding: 4px;
@@ -420,8 +665,8 @@
         transition: background 0.2s;
     }
     .post-modal-close:hover {
-        background: #f1f5f9;
-        color: #0f172a;
+        background: var(--surface-3);
+        color: var(--text);
     }
     .post-modal-user {
         display: flex;
@@ -434,7 +679,7 @@
         height: 48px;
         border-radius: 50%;
         object-fit: cover;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border);
     }
     .post-modal-user-info {
         display: flex;
@@ -444,18 +689,18 @@
     .post-modal-user-name {
         font-size: 15px;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--text);
     }
     .post-modal-visibility {
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--border-strong);
         border-radius: 20px;
         padding: 2px 10px;
         font-size: 11px;
         font-weight: 600;
-        color: #64748b;
+        color: var(--text-muted);
         width: fit-content;
     }
     .post-modal-body {
@@ -468,7 +713,7 @@
         outline: none;
         resize: none;
         font-size: 15px;
-        color: #0f172a;
+        color: var(--text);
         line-height: 1.5;
         font-family: inherit;
     }
@@ -477,8 +722,8 @@
         justify-content: space-between;
         align-items: center;
         padding: 12px 24px;
-        border-top: 1px solid #f1f5f9;
-        background: #f8fafc;
+        border-top: 1px solid var(--border);
+        background: var(--surface-2);
     }
     .post-modal-actions {
         display: flex;
@@ -488,20 +733,20 @@
         background: none;
         border: none;
         cursor: pointer;
-        color: #64748b;
+        color: var(--text-muted);
         padding: 8px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.2s, color 0.2s;
+        transition: all 0.2s;
     }
     .post-modal-action-btn:hover {
-        background: #f1f5f9;
-        color: #2456ff;
+        background: var(--surface-3);
+        color: var(--brand);
     }
     .btn-submit-modal-post {
-        background: #2456ff;
+        background: var(--brand);
         color: white;
         border: none;
         padding: 8px 20px;
@@ -512,7 +757,7 @@
         transition: background 0.2s;
     }
     .btn-submit-modal-post:hover {
-        background: #1d4ed8;
+        background: var(--brand-strong);
     }
     .image-preview-container {
         display: none;
@@ -521,7 +766,7 @@
         max-height: 250px;
         border-radius: 8px;
         overflow: hidden;
-        border: 1px dashed #cbd5e1;
+        border: 1px dashed var(--border-strong);
         margin-top: 12px;
     }
     .image-preview {
@@ -563,12 +808,12 @@
         cursor: pointer;
     }
 
-    /* Threaded Comments Styling */
+    /* ── COMMENTS & REPLIES ── */
     .comments-section {
         display: none;
         margin-top: 12px;
         padding-top: 12px;
-        border-top: 1px solid #f1f5f9;
+        border-top: 1px solid var(--border);
         animation: fadeIn 0.2s ease-out;
     }
     @keyframes fadeIn {
@@ -582,20 +827,21 @@
     }
     .comment-input {
         flex: 1;
-        border: 1px solid #cbd5e1;
+        border: 1px solid var(--border-strong);
         border-radius: 20px;
         padding: 8px 16px;
         font-size: 13.5px;
         outline: none;
-        background: #f8fafc;
-        transition: border-color 0.2s, background 0.2s;
+        background: var(--surface-2);
+        color: var(--text-3);
+        transition: all 0.2s;
     }
     .comment-input:focus {
-        border-color: #2456ff;
-        background: white;
+        border-color: var(--brand);
+        background: var(--surface);
     }
     .btn-comment-submit {
-        background: #2456ff;
+        background: var(--brand);
         color: white;
         border: none;
         padding: 8px 16px;
@@ -606,7 +852,7 @@
         transition: background 0.2s;
     }
     .btn-comment-submit:hover {
-        background: #1d4ed8;
+        background: var(--brand-strong);
     }
     .comments-list {
         display: flex;
@@ -628,11 +874,11 @@
         height: 36px;
         border-radius: 50%;
         object-fit: cover;
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--border);
     }
     .comment-body {
         flex: 1;
-        background: #f1f5f9;
+        background: var(--surface-3);
         border-radius: 0 12px 12px 12px;
         padding: 10px 14px;
         box-shadow: 0 1px 2px rgba(0,0,0,0.01);
@@ -640,12 +886,12 @@
     .comment-author {
         font-size: 13px;
         font-weight: 700;
-        color: #0f172a;
+        color: var(--text);
         margin-bottom: 2px;
     }
     .comment-text {
         font-size: 13px;
-        color: #1e293b;
+        color: var(--text-2);
         line-height: 1.5;
         word-break: break-word;
     }
@@ -654,20 +900,20 @@
         gap: 12px;
         margin-top: 4px;
         font-size: 11px;
-        color: #64748b;
+        color: var(--text-muted);
         padding-left: 46px;
     }
     .comment-reply-btn {
         background: none;
         border: none;
-        color: #64748b;
+        color: var(--text-muted);
         cursor: pointer;
         font-weight: 600;
         padding: 0;
         transition: color 0.2s;
     }
     .comment-reply-btn:hover {
-        color: #2456ff;
+        color: var(--brand);
         text-decoration: underline;
     }
     .comment-replies {
@@ -675,195 +921,104 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
-        border-left: 2px solid #cbd5e1;
+        border-left: 2px solid var(--border-strong);
         padding-left: 12px;
         margin-top: 4px;
-    }
-
-    /* Right Column Widgets styling */
-    .widget-card {
-        background: white;
-        border-radius: 10px;
-        border: 1px solid #e2e8f0;
-        padding: 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        margin-bottom: 16px;
-    }
-    .widget-title {
-        font-size: 15px;
-        font-weight: 700;
-        color: #0f172a;
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    .widget-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-    .widget-item {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-    .widget-item-title {
-        font-size: 13px;
-        font-weight: 600;
-        color: #1e293b;
-        text-decoration: none;
-    }
-    .widget-item-title:hover {
-        color: #2456ff;
-        text-decoration: underline;
-    }
-    .widget-item-meta {
-        font-size: 11px;
-        color: #64748b;
-    }
-    .widget-recommendation {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .widget-rec-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 1px solid #e2e8f0;
-    }
-    .widget-rec-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 1px;
-        min-width: 0;
-    }
-    .widget-rec-name {
-        font-size: 13px;
-        font-weight: 700;
-        color: #0f172a;
-        text-decoration: none;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .widget-rec-name:hover {
-        color: #2456ff;
-        text-decoration: underline;
-    }
-    .widget-rec-headline {
-        font-size: 11px;
-        color: #64748b;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .widget-follow-btn {
-        background: none;
-        border: 1px solid #64748b;
-        border-radius: 20px;
-        padding: 4px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #64748b;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        transition: all 0.2s;
-        width: fit-content;
-        margin-top: 4px;
-    }
-    .widget-follow-btn:hover {
-        background: #f1f5f9;
-        border-color: #0f172a;
-        color: #0f172a;
-    }
-    .widget-follow-btn.following {
-        background: #2456ff;
-        border-color: #2456ff;
-        color: white;
-    }
-    .widget-follow-btn.following:hover {
-        background: #ef4444;
-        border-color: #ef4444;
-        color: white;
     }
 </style>
 
 <div class="feed-container">
     <div class="feed-grid">
-        <!-- Left column -->
+        <!-- ── LEFT COLUMN ── -->
         <aside class="feed-left-col">
-            {% if user_profile %}
-            <div class="profile-card">
-                <div class="profile-card-banner"></div>
-                <div class="profile-card-header">
-                    <a href="/profile">
-                        {% if user_profile.avatar %}
-                            <img src="{{ user_profile.avatar }}" class="profile-card-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=72&rounded=true&background=2456ff&color=fff';">
-                        {% else %}
-                            <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=72&rounded=true&background=2456ff&color=fff" class="profile-card-avatar" alt="avatar">
-                        {% endif %}
-                    </a>
-                    <a href="/profile" class="profile-card-name">{{ user_profile.full_name }}</a>
-                    <div class="profile-card-headline">
-                        {% if user_profile.bio %}
-                            {{ user_profile.bio }}
-                        {% else %}
-                            Professional at Talent Khoj
-                        {% endif %}
-                    </div>
+            <!-- Community Menu Navigation -->
+            <div class="widget-card" style="padding: 12px;">
+                <div class="widget-title" style="padding: 8px 16px 4px; margin-bottom: 8px;">
+                    <span style="font-size: 16px; font-weight: 800; color: var(--text);">Community</span>
                 </div>
-                <div class="profile-card-footer">
-                    <a href="/profile">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                        Edit Profile
+                <div class="community-menu">
+                    <a href="/feed" class="community-menu-item active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        <span>Feed</span>
+                    </a>
+                    <a href="#" class="community-menu-item" onclick="alert('Groups feature is coming soon!')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <span>Groups</span>
+                    </a>
+                    <a href="#" class="community-menu-item" onclick="alert('Discussions forum is coming soon!')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <span>Discussions</span>
+                    </a>
+                    <a href="#" class="community-menu-item" onclick="alert('Leaderboard coming soon!')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
+                        <span>Top Contributors</span>
                     </a>
                 </div>
             </div>
-            {% else %}
-            <div class="profile-card" style="padding: 20px; text-align: center; border: 1px solid #e2e8f0; border-radius: 10px; background: white;">
-                <h3 style="font-size: 15px; font-weight: 700; color: #05154b; margin-bottom: 8px; margin-top: 0;">Welcome to Community!</h3>
-                <p style="font-size: 12.5px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">Sign in to view your profile, post updates, and connect with other professionals.</p>
-                <a href="/login" class="btn-comment-submit" style="text-decoration: none; display: inline-block; padding: 8px 16px; font-size: 13px; font-weight: 600; background: #2456ff; color: white; border-radius: 20px;">Sign In</a>
+
+            <!-- Suggested Connects Card -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>Suggested Connects</span>
+                </div>
+                <div class="suggested-connects-list">
+                    {% if suggested_connects %}
+                        {% for sug in suggested_connects %}
+                        <div class="suggested-connect-item">
+                            {% if sug.avatar %}
+                                <img src="{{ sug.avatar }}" class="suggested-connect-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ sug.full_name|urlencode }}&background=2456ff&color=fff&size=38';">
+                            {% else %}
+                                <img src="https://ui-avatars.com/api/?name={{ sug.full_name }}&background=2456ff&color=fff&size=38" class="suggested-connect-avatar" alt="avatar">
+                            {% endif %}
+                            <div class="suggested-connect-info">
+                                <a href="/user/{{ sug.id }}" class="suggested-connect-name">{{ sug.full_name }}</a>
+                                <span class="suggested-connect-title">
+                                    {% if sug.bio %}
+                                        {{ sug.bio }}
+                                    {% else %}
+                                        Individual on Talent Khoj
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <button class="suggested-connect-btn widget-follow-btn {% if sug.is_following %}following{% endif %}" data-user-id="{{ sug.id }}" title="Connect">
+                                {% if sug.is_following %}
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                {% else %}
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+                                {% endif %}
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 10px 0;">No suggestions available</div>
+                    {% endif %}
+                </div>
             </div>
-            {% endif %}
         </aside>
 
-        <!-- Middle column -->
-        <main class="feed-middle-col" style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- ── MIDDLE COLUMN (FEED) ── -->
+        <main class="feed-middle-col" style="display: flex; flex-direction: column; gap: 4px;">
             {% if user_profile %}
             <!-- Start a Post Card -->
             <div class="post-creator-trigger-card">
                 <div class="post-creator-top">
                     {% if user_profile.avatar %}
-                        <img src="{{ user_profile.avatar }}" class="post-creator-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=48&rounded=true&background=2456ff&color=fff';">
+                        <img src="{{ user_profile.avatar }}" class="post-creator-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=44&rounded=true&background=2456ff&color=fff';">
                     {% else %}
-                        <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=48&rounded=true&background=2456ff&color=fff" class="post-creator-avatar" alt="avatar">
+                        <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=44&rounded=true&background=2456ff&color=fff" class="post-creator-avatar" alt="avatar">
                     {% endif %}
-                    <button class="post-creator-bar" onclick="openPostModal()">Start a post</button>
+                    <button class="post-creator-bar" onclick="openPostModal()">Share an update, ask a question, or post a job...</button>
                 </div>
                 <div class="post-creator-options">
                     <button class="creator-option-btn" onclick="openPostModalWithPhoto()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        <span>Photo</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2456ff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                        <span>Media</span>
                     </button>
                     <button class="creator-option-btn" onclick="openPostModal()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                        <span>Video</span>
-                    </button>
-                    <button class="creator-option-btn" onclick="openPostModal()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         <span>Event</span>
                     </button>
-                    <button class="creator-option-btn" onclick="openPostModal()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                        <span>Write article</span>
-                    </button>
+                    <button class="btn-submit-post-direct" onclick="openPostModal()">Post</button>
                 </div>
             </div>
  
@@ -911,52 +1066,99 @@
                     </form>
                 </div>
             </div>
+            {% else %}
+            <!-- Call to Sign In Card -->
+            <div class="post-creator-trigger-card" style="text-align: center; gap: 10px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--navy); margin: 0;">Welcome to Community!</h3>
+                <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 4px;">Sign in to view your profile, post updates, and connect with other professionals.</p>
+                <a href="/login" class="btn-submit-post-direct" style="text-decoration: none; display: inline-block; align-self: center;">Sign In</a>
+            </div>
             {% endif %}
 
             <!-- Feed Timeline -->
-            <div id="feed-timeline" style="display: flex; flex-direction: column; gap: 16px;">
+            <div id="feed-timeline" style="display: flex; flex-direction: column; gap: 16px; margin-top: 10px;">
                 <!-- Posts will be loaded here dynamically -->
             </div>
         </main>
 
-        <!-- Right column -->
+        <!-- ── RIGHT COLUMN ── -->
         <aside class="feed-right-col">
-            <!-- Follow Suggestions Widget -->
-            <div class="widget-card">
-                <div class="widget-title">
-                    <span>Add to your feed</span>
+            <!-- Upcoming Events Card -->
+            <div class="widget-card" style="background: var(--navy); color: white;">
+                <div class="widget-title" style="color: white; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 14px;">
+                    <span style="display: flex; align-items: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"></svg> Upcoming Events
+                    </span>
                 </div>
-                <div class="widget-list" style="gap: 16px;">
-                    {% if suggestions %}
-                        {% for sug in suggestions %}
-                            <div class="widget-recommendation">
-                                {% if sug.avatar %}
-                                    <img src="{{ sug.avatar }}" class="widget-rec-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ sug.full_name|urlencode }}&background=2456ff&color=fff&size=40';">
-                                {% else %}
-                                    <img src="https://ui-avatars.com/api/?name={{ sug.full_name }}&background=2456ff&color=fff&size=40" class="widget-rec-avatar" alt="avatar">
-                                {% endif %}
-                                <div class="widget-rec-info">
-                                    <a href="{% if sug.account_type == 'company' %}/company/{{ sug.id }}{% else %}/user/{{ sug.id }}{% endif %}" class="widget-rec-name">{{ sug.full_name }}</a>
-                                    <span class="widget-rec-headline">
-                                        {% if sug.bio %}
-                                            {{ sug.bio }}
-                                        {% else %}
-                                            {{ sug.account_type | capitalize }} on Talent Khoj
-                                        {% endif %}
-                                    </span>
-                                    <button class="widget-follow-btn {% if sug.is_following %}following{% endif %}" data-user-id="{{ sug.id }}">
-                                        {% if sug.is_following %}
-                                            Following
-                                        {% else %}
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                            Follow
-                                        {% endif %}
-                                    </button>
-                                </div>
-                            </div>
+                <div class="events-list">
+                    {% if upcoming_events %}
+                        {% for ev in upcoming_events %}
+                        <div class="event-item">
+                            <a href="/dashboard/events" class="event-title" style="color: white;">{{ ev.title }}</a>
+                            <span class="event-time" style="color: #cbd5e1;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                {{ ev.formatted_date or ev.event_date }}
+                            </span>
+                        </div>
                         {% endfor %}
                     {% else %}
-                        <div style="font-size: 12px; color: #64748b; text-align: center; padding: 10px 0;">No suggestions available</div>
+                        <div style="font-size: 12.5px; color: #cbd5e1; text-align: center; padding: 12px 0;">No upcoming events.</div>
+                    {% endif %}
+                </div>
+                <a href="/dashboard/events" class="view-all-link" style="color: #60a5fa;">View all events &rarr;</a>
+            </div>
+
+            <!-- Trending topics Card -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>Trending Now</span>
+                </div>
+                <div class="trending-tags">
+                    {% if trending_tags %}
+                        {% for tag in trending_tags %}
+                            <a href="/dashboard/search?q={{ tag|urlencode }}" class="tag-pill">{{ tag }}</a>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Companies to Follow Card -->
+            <div class="widget-card">
+                <div class="widget-title">
+                    <span>Companies to Follow</span>
+                </div>
+                <div class="suggested-connects-list">
+                    {% if companies_to_follow %}
+                        {% for comp in companies_to_follow %}
+                        <div class="company-follow-item">
+                            <div class="company-follow-left">
+                                {% if comp.avatar %}
+                                    <img src="{{ comp.avatar }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="logo" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ comp.full_name|urlencode }}&background=2456ff&color=fff&size=32';">
+                                {% else %}
+                                    <div class="company-logo-badge">{{ comp.full_name[0]|upper }}</div>
+                                {% endif %}
+                                <div style="min-width: 0; flex: 1; margin-left: 2px;">
+                                    <a href="/user/{{ comp.id }}" class="company-follow-name">{{ comp.full_name }}</a>
+                                    <div class="company-follow-industry">
+                                        {% if comp.bio %}
+                                            {{ comp.bio }}
+                                        {% else %}
+                                            Hiring Company
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="company-follow-btn widget-follow-btn {% if comp.is_following %}following{% endif %}" data-user-id="{{ comp.id }}">
+                                {% if comp.is_following %}
+                                    Following
+                                {% else %}
+                                    Follow
+                                {% endif %}
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 10px 0;">No suggested companies</div>
                     {% endif %}
                 </div>
             </div>
@@ -988,6 +1190,8 @@
                     loadFeed(false);
                 }
             }
+        });
+        
         // Follow/Unfollow button click handler
         document.addEventListener("click", function(e) {
             const followBtn = e.target.closest(".widget-follow-btn");
@@ -1011,10 +1215,18 @@
                     if (data.success) {
                         if (data.following) {
                             followBtn.classList.add("following");
-                            followBtn.innerHTML = "Following";
+                            if (followBtn.classList.contains("suggested-connect-btn")) {
+                                followBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                            } else {
+                                followBtn.innerHTML = "Following";
+                            }
                         } else {
                             followBtn.classList.remove("following");
-                            followBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Follow`;
+                            if (followBtn.classList.contains("suggested-connect-btn")) {
+                                followBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>`;
+                            } else {
+                                followBtn.innerHTML = "Follow";
+                            }
                         }
                     } else {
                         alert(data.message || "Failed to toggle follow status.");
@@ -1063,11 +1275,10 @@
                 if (spinner) spinner.remove();
 
                 if (reset && (!data.posts || data.posts.length === 0)) {
-                    timeline.innerHTML = `<div style="text-align: center; padding: 40px; color: #64748b; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">No posts in the feed yet. Be the first to share!</div>`;
+                    timeline.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted); background: var(--surface); border-radius: 20px; border: 1px solid var(--border);">No posts in the feed yet. Be the first to share!</div>`;
                     hasMorePosts = false;
                 } else if (data.posts && data.posts.length > 0) {
                     data.posts.forEach(post => {
-                        // Check if post already exists to prevent duplication
                         if (!document.getElementById(`post-${post.id}`)) {
                             timeline.appendChild(createPostHTML(post));
                         }
@@ -1085,7 +1296,7 @@
                 console.error("Error loading feed:", err);
                 const spinner = document.getElementById("loading-spinner");
                 if (spinner) {
-                    spinner.innerHTML = '<div style="color: #ef4444; padding: 10px; font-weight: 500;">Failed to load posts. Please refresh.</div>';
+                    spinner.innerHTML = '<div style="color: var(--danger); padding: 10px; font-weight: 500;">Failed to load posts. Please refresh.</div>';
                 }
                 loadingPosts = false;
             });
@@ -1111,7 +1322,7 @@
         }
 
         const isLiked = post.has_liked ? "liked" : "";
-        const avatarUrl = post.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.full_name)}&background=2456ff&color=fff&size=48`;
+        const avatarUrl = post.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.full_name)}&background=2456ff&color=fff&size=44`;
 
         let contentHtml = post.content;
         if (post.content && post.content.length > 280) {
@@ -1119,11 +1330,15 @@
             contentHtml = `<span class="truncated-text">${truncated}...</span><span class="full-text" style="display: none;">${post.content}</span><button class="post-see-more" onclick="showFullPostText(${post.id})">see more</button>`;
         }
 
+        // Determine if it is a job post to show the "Apply Now" button
+        const isHiring = post.content && (post.content.toLowerCase().includes('#hiring') || post.content.toLowerCase().includes('hiring') || post.content.toLowerCase().includes('job') || post.content.toLowerCase().includes('internship'));
+        const applyBtnHtml = isHiring ? `<a href="/dashboard/search" class="apply-btn-inline">Apply Now</a>` : "";
+
         div.innerHTML = `
             <div class="post-header">
-                <img src="${avatarUrl}" class="post-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(post.full_name) + '&background=2456ff&color=fff&size=48';">
+                <img src="${avatarUrl}" class="post-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(post.full_name) + '&background=2456ff&color=fff&size=44';">
                 <div class="post-author-info">
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="post-author-name-row">
                         <a href="/user/${post.user_id}" class="post-author-name">${post.full_name}</a>
                         <span class="badge-user-type ${post.account_type === 'company' ? 'company' : 'candidate'}">${post.account_type}</span>
                     </div>
@@ -1133,6 +1348,7 @@
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                     </div>
                 </div>
+                <div class="post-dots">&bull;&bull;&bull;</div>
             </div>
             <div class="post-content">${contentHtml}</div>
             ${imgHtml}
@@ -1146,14 +1362,17 @@
                 </div>
             </div>
             <div class="post-actions">
-                <button class="action-btn ${isLiked}" onclick="toggleLike(${post.id})">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
-                    <span>Like</span>
-                </button>
-                <button class="action-btn" onclick="toggleCommentsSection(${post.id})">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
-                    <span>Comment</span>
-                </button>
+                <div class="post-actions-left">
+                    <button class="action-btn ${isLiked}" onclick="toggleLike(${post.id})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+                        <span>Like</span>
+                    </button>
+                    <button class="action-btn" onclick="toggleCommentsSection(${post.id})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                        <span>Comment</span>
+                    </button>
+                </div>
+                ${applyBtnHtml}
             </div>
             <div class="comments-section" id="comments-section-${post.id}">
                 <form class="comment-form" onsubmit="submitComment(event, ${post.id})">
@@ -1260,7 +1479,7 @@
                     list.appendChild(createCommentHTML(comment, postId));
                 });
             } else {
-                list.innerHTML = `<div style="text-align: center; font-size: 13px; color: #64748b; padding: 10px 0;">No comments yet.</div>`;
+                list.innerHTML = `<div style="text-align: center; font-size: 13px; color: var(--text-muted); padding: 10px 0;">No comments yet.</div>`;
             }
         });
     }
@@ -1318,7 +1537,9 @@
                 <button type="submit" class="btn-comment-submit">Reply</button>
             </form>
         `;
-    }    function submitComment(e, postId) {
+    }
+
+    function submitComment(e, postId) {
         e.preventDefault();
         if (!isLoggedIn) {
             window.location.href = "/login";
@@ -1339,7 +1560,6 @@
             if (data.success) {
                 input.value = "";
                 loadComments(postId);
-                // Increment counter
                 const countSpan = document.querySelector(`#post-${postId} .comment-count`);
                 countSpan.textContent = parseInt(countSpan.textContent) + 1;
             }
@@ -1366,7 +1586,6 @@
         .then(data => {
             if (data.success) {
                 loadComments(postId);
-                // Increment counter
                 const countSpan = document.querySelector(`#post-${postId} .comment-count`);
                 countSpan.textContent = parseInt(countSpan.textContent) + 1;
             }

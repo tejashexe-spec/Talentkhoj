@@ -1,0 +1,258 @@
+<!-- NAVBAR -->
+<nav class="navbar">
+    <a class="nav-logo" href="/">Talent Khoj</a>
+
+    <ul class="nav-links">
+        <li><a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a></li>
+        <li><a href="/dashboard/search?type=internship" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'internship' %}active{% endif %}">Internships</a></li>
+        <li><a href="/dashboard/search?type=job" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'job' %}active{% endif %}">Jobs</a></li>
+        <li><a href="/dashboard/events" class="{% if request.path == '/dashboard/events' %}active{% endif %}">Events</a></li>
+        <li><a href="/feed" class="{% if request.path == '/feed' %}active{% endif %}">Community</a></li>
+    </ul>
+
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <button class="theme-toggle" type="button" aria-label="Toggle dark theme" title="Toggle theme">
+            <svg class="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <svg class="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+        <div class="nav-search-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <form action="/dashboard/search" method="GET" style="display: flex; width: 100%;">
+                <input type="text" name="q" placeholder="Search..." value="{{ request.args.get('q', '') }}">
+            </form>
+        </div>
+
+        {% if session.get('user_id') %}
+            <!-- Notification Bell Menu -->
+            <div class="profile-menu" style="position: relative; margin-right: 4px;">
+                <button class="profile-trigger" onclick="toggleNotificationDropdown(event)" style="position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; padding: 0; background: #f1f5f9; border: none; cursor: pointer; transition: background 0.2s;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <span id="nav-notif-badge" style="display: none; position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; font-size: 9px; font-weight: 700; border-radius: 50%; min-width: 16px; height: 16px; align-items: center; justify-content: center; line-height: 1; border: 2px solid white; padding: 1px;">0</span>
+                </button>
+                <div class="dropdown" id="notificationDropdown" style="width: 320px; max-height: 420px; overflow-y: auto; padding: 0;">
+                    <div style="padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+                        <span style="font-weight: 700; color: #0f172a; font-size: 14px;">Notifications</span>
+                        <button onclick="markAllNotificationsRead(event)" style="background: none; border: none; color: #2456ff; font-size: 12px; font-weight: 600; cursor: pointer; padding: 0;">Mark all as read</button>
+                    </div>
+                    <div id="nav-notifications-list" style="max-height: 300px; overflow-y: auto;">
+                        <div style="padding: 24px; text-align: center; color: #64748b; font-size: 13px;">No notifications.</div>
+                    </div>
+                    <div style="padding: 10px; border-top: 1px solid #f1f5f9; text-align: center; background: #f8fafc;">
+                        <a href="/dashboard/notifications" style="display: block; font-size: 12.5px; font-weight: 700; color: #2456ff; text-decoration: none;">View all notifications</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-menu">
+                <button class="profile-trigger" onclick="toggleDropdown(event)">
+                    {% if session.get('user_avatar') %}
+                        <img src="{{ session['user_avatar'] }}" alt="profile">
+                    {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=34&rounded=true&background=2456ff&color=fff" alt="profile">
+                    {% endif %}
+                    {{ session['user_name'] }}
+                    <span style="font-size:10px; color:#888; margin-left:2px;">&#9660;</span>
+                </button>
+                <div class="dropdown" id="profileDropdown">
+                    {% if session.get('account_type') == 'admin' %}
+                        <a href="/admin/dashboard" style="font-weight: bold; color: #ef4444;">Admin Panel</a>
+                    {% endif %}
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/profile">My Profile</a>
+                    <a href="/reset-password">Reset Password</a>
+                    <a href="/verify-email">Verify Email</a>
+                    <a href="/logout">Logout</a>
+                </div>
+            </div>
+        {% else %}
+            <a class="nav-btn" href="/login">Sign In</a>
+        {% endif %}
+    </div>
+</nav>
+
+<script>
+    function toggleDropdown(e) {
+        e.stopPropagation();
+        const pd = document.getElementById('profileDropdown');
+        const nd = document.getElementById('notificationDropdown');
+        if (nd) nd.classList.remove('open');
+        if (pd) pd.classList.toggle('open');
+    }
+    
+    function toggleNotificationDropdown(e) {
+        e.stopPropagation();
+        const pd = document.getElementById('profileDropdown');
+        const nd = document.getElementById('notificationDropdown');
+        if (pd) pd.classList.remove('open');
+        if (nd) {
+            nd.classList.toggle('open');
+            if (nd.classList.contains('open')) {
+                loadHeaderNotifications();
+            }
+        }
+    }
+    
+    document.addEventListener('click', function() {
+        var pd = document.getElementById('profileDropdown');
+        if (pd) pd.classList.remove('open');
+        var nd = document.getElementById('notificationDropdown');
+        if (nd) nd.classList.remove('open');
+    });
+
+    function updateHeaderNotificationBell() {
+        fetch('/api/notifications/unread-count')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const count = data.unread_count;
+                    const badge = document.getElementById('nav-notif-badge');
+                    if (badge) {
+                        if (count > 0) {
+                            badge.innerText = count;
+                            badge.style.display = 'inline-flex';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                }
+            })
+            .catch(err => console.error('Error fetching unread count:', err));
+    }
+
+    function loadHeaderNotifications() {
+        fetch('/api/notifications')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const container = document.getElementById('nav-notifications-list');
+                    if (!container) return;
+                    
+                    const notifs = data.notifications;
+                    if (!notifs || notifs.length === 0) {
+                        container.innerHTML = '<div style="padding: 24px; text-align: center; color: #64748b; font-size: 13px;">No notifications yet.</div>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    notifs.slice(0, 5).forEach(notif => {
+                        const bgStyle = notif.is_read ? 'background: white;' : 'background: #f4f7ff;';
+                        const dotHtml = notif.is_read ? '' : '<span style="width: 6px; height: 6px; background: #2456ff; border-radius: 50%; display: inline-block; margin-left: 6px;"></span>';
+                        html += `
+                            <a href="#" onclick="handleHeaderNotifClick(event, ${notif.id}, '${notif.link || '/dashboard'}')" style="display: block; padding: 12px 16px; border-bottom: 1px solid #f1f5f9; text-decoration: none; color: inherit; transition: background 0.2s; ${bgStyle}">
+                                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 2px;">
+                                    <span style="font-weight: 700; font-size: 13px; color: #0f172a;">${notif.title}${dotHtml}</span>
+                                    <span style="font-size: 11px; color: #94a3b8;">${notif.created_at || ''}</span>
+                                </div>
+                                <p style="margin: 0; font-size: 12.5px; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${notif.message}</p>
+                            </a>
+                        `;
+                    });
+                    container.innerHTML = html;
+                }
+            })
+            .catch(err => console.error('Error fetching notifications:', err));
+    }
+
+    function handleHeaderNotifClick(e, id, link) {
+        e.preventDefault();
+        fetch('/api/notifications/read/' + id, { method: 'POST' })
+            .then(() => {
+                window.location.href = link;
+            })
+            .catch(err => {
+                console.error(err);
+                window.location.href = link;
+            });
+    }
+
+    function markAllNotificationsRead(e) {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        fetch('/api/notifications/read-all', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    updateHeaderNotificationBell();
+                    loadHeaderNotifications();
+                }
+            })
+            .catch(err => console.error('Error marking notifications read:', err));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        {% if session.get('user_id') %}
+            updateHeaderNotificationBell();
+            setInterval(updateHeaderNotificationBell, 10000); // Check every 10 seconds
+        {% endif %}
+
+        // Only apply scroll hide/show to non-homepage pages
+        if (window.location.pathname !== '/') {
+            const navbar = document.querySelector('.navbar');
+            const sidebar = document.querySelector('.sidebar');
+            if (navbar) {
+                // Inject fixed navbar styling dynamically
+                const style = document.createElement('style');
+                if (sidebar) {
+                    // Dashboard pages (has sidebar)
+                    style.innerHTML = `
+                        .navbar {
+                            position: fixed !important;
+                            top: 10px !important;
+                            left: 260px !important;
+                            width: calc(98% - 260px) !important;
+                            margin: 0 !important;
+                            z-index: 100000 !important;
+                            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                        }
+                        .navbar.navbar-hidden {
+                            transform: translateY(-130%) !important;
+                        }
+                    `;
+                } else {
+                    // Other standard pages (no sidebar)
+                    style.innerHTML = `
+                        .navbar {
+                            position: fixed !important;
+                            top: 10px !important;
+                            left: 2% !important;
+                            right: 2% !important;
+                            width: 96% !important;
+                            margin: 0 auto !important;
+                            z-index: 100000 !important;
+                            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                        }
+                        .navbar.navbar-hidden {
+                            transform: translateY(-130%) !important;
+                        }
+                    `;
+                }
+                document.head.appendChild(style);
+
+                let lastScrollY = window.scrollY;
+                
+                window.addEventListener('scroll', () => {
+                    const currentScrollY = window.scrollY;
+                    if (currentScrollY > 60 && currentScrollY > lastScrollY) {
+                        navbar.classList.add('navbar-hidden');
+                    } else {
+                        navbar.classList.remove('navbar-hidden');
+                    }
+                    lastScrollY = currentScrollY;
+                });
+                
+                document.addEventListener('mousemove', (e) => {
+                    if (e.clientY < 50) {
+                        navbar.classList.remove('navbar-hidden');
+                    }
+                });
+            }
+        }
+    });
+</script>

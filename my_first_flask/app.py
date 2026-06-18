@@ -2280,6 +2280,99 @@ def dashboard_create_event():
     return render_template("dashboard_create_event.html", form_data=form_data, error=error)
 
 
+
+@app.route("/dashboard/analytics")
+@login_required
+def dashboard_analytics():
+    if session.get("account_type") != "company":
+        flash("Only company accounts can access Hiring Analytics.", "error")
+        return redirect(url_for("dashboard"))
+        
+    conn = get_db()
+    company_id = 0
+    metrics = {
+        "posted_jobs": 0,
+        "total_applications": 0,
+        "status_applied": 0,
+        "status_reviewed": 0,
+        "status_shortlisted": 0,
+        "status_rejected": 0,
+        "shortlisted_rate": 0
+    }
+    popular_jobs = []
+    popular_events = []
+    
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
+        if company:
+            company_id = company["id"]
+            
+            # 1. Total posted jobs
+            cursor.execute("SELECT COUNT(*) as cnt FROM jobs WHERE company_id = %s", (company_id,))
+            metrics["posted_jobs"] = cursor.fetchone()["cnt"]
+            
+            # 2. Application metrics
+            cursor.execute("""
+                SELECT a.status, COUNT(*) as cnt 
+                FROM applications a 
+                JOIN jobs j ON a.job_id = j.id 
+                WHERE j.company_id = %s 
+                GROUP BY a.status
+            """, (company_id,))
+            status_rows = cursor.fetchall()
+            
+            total_apps = 0
+            shortlisted_apps = 0
+            for row in status_rows:
+                status = row["status"]
+                cnt = row["cnt"]
+                total_apps += cnt
+                if status == "applied":
+                    metrics["status_applied"] = cnt
+                elif status == "reviewed":
+                    metrics["status_reviewed"] = cnt
+                elif status == "shortlisted":
+                    metrics["status_shortlisted"] = cnt
+                    shortlisted_apps = cnt
+                elif status == "rejected":
+                    metrics["status_rejected"] = cnt
+            
+            metrics["total_applications"] = total_apps
+            if total_apps > 0:
+                metrics["shortlisted_rate"] = round((shortlisted_apps / total_apps) * 100, 1)
+                
+            # 3. Popular jobs (by application count)
+            cursor.execute("""
+                SELECT j.title, COUNT(a.id) as app_count 
+                FROM jobs j 
+                LEFT JOIN applications a ON j.id = a.job_id 
+                WHERE j.company_id = %s 
+                GROUP BY j.id 
+                ORDER BY app_count DESC 
+                LIMIT 5
+            """, (company_id,))
+            popular_jobs = cursor.fetchall()
+            
+            # 4. Popular events (by RSVP count)
+            cursor.execute("""
+                SELECT e.title, COUNT(r.id) as rsvp_count 
+                FROM events e 
+                LEFT JOIN event_rsvps r ON e.id = r.event_id 
+                WHERE e.company_id = %s 
+                GROUP BY e.id 
+                ORDER BY rsvp_count DESC 
+                LIMIT 5
+            """, (company_id,))
+            popular_events = cursor.fetchall()
+            
+    return render_template("dashboard_analytics.html", 
+                           metrics=metrics, 
+                           popular_jobs=popular_jobs, 
+                           popular_events=popular_events)
+
+
 @app.route("/dashboard/post-opportunity", methods=["GET", "POST"])
 @login_required
 def dashboard_post_opportunity():

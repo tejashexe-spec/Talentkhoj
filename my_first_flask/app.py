@@ -1180,13 +1180,11 @@ def dashboard_ats():
 @app.route("/dashboard/ats/filter")
 @login_required
 def dashboard_ats_filter():
-    if session.get("account_type") != "company":
+    if session.get("account_type") != "company" and not check_company_access(session["user_id"]):
         return jsonify({"success": False, "message": "Unauthorized"}), 403
         
     conn = get_db()
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
-        company = cursor.fetchone()
+    company = get_company_for_user(conn, session["user_id"])
         
     if not company:
         return jsonify({"success": False, "message": "Company profile incomplete."})
@@ -1298,7 +1296,7 @@ def dashboard_ats_filter():
 @app.route("/dashboard/ats/update-status", methods=["POST"])
 @login_required
 def dashboard_ats_update_status():
-    if session.get("account_type") != "company":
+    if session.get("account_type") != "company" and not check_company_access(session["user_id"]):
         return jsonify({"success": False, "message": "Unauthorized access."}), 403
         
     data = request.get_json() or {}
@@ -1313,9 +1311,7 @@ def dashboard_ats_update_status():
         return jsonify({"success": False, "message": "Invalid status value."}), 400
         
     conn = get_db()
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
-        company = cursor.fetchone()
+    company = get_company_for_user(conn, session["user_id"])
         
     if not company:
         return jsonify({"success": False, "message": "Complete your company profile first."}), 400
@@ -1574,12 +1570,12 @@ def dashboard_settings():
 def dashboard_badges():
     conn = get_db()
     account_type = session.get("account_type")
+    is_company = (account_type == "company" or check_company_access(session["user_id"]))
     
-    if account_type == "company":
+    if is_company:
         with conn.cursor() as cursor:
             # Get company details
-            cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
-            company = cursor.fetchone()
+            company = get_company_for_user(conn, session["user_id"])
             
             if not company:
                 flash("Only registered companies can view or issue badges.", "error")
@@ -2260,16 +2256,19 @@ def dashboard_cv_upload():
 def dashboard_events():
     conn = get_db()
     account_type = session.get("account_type")
+    is_company = (account_type == "company" or check_company_access(session["user_id"]))
     
     with conn.cursor() as cursor:
-        if account_type == "company":
+        if is_company:
+            company = get_company_for_user(conn, session["user_id"])
+            company_id = company["id"] if company else 0
             cursor.execute(
                 "SELECT e.*, c.company_name, c.logo "
                 "FROM events e "
                 "JOIN companies c ON e.company_id = c.id "
-                "WHERE c.user_id = %s "
+                "WHERE e.company_id = %s "
                 "ORDER BY e.event_date ASC",
-                (session["user_id"],)
+                (company_id,)
             )
         else:
             cursor.execute(
@@ -2286,7 +2285,8 @@ def dashboard_events():
 @app.route("/dashboard/events/create", methods=["GET", "POST"])
 @login_required
 def dashboard_create_event():
-    if session.get("account_type") != "company":
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
         return redirect(url_for("dashboard_events"))
         
     error = None
@@ -2319,9 +2319,7 @@ def dashboard_create_event():
             try:
                 event_date = datetime.strptime(event_date_str, "%Y-%m-%dT%H:%M")
                 conn = get_db()
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
-                    company = cursor.fetchone()
+                company = get_company_for_user(conn, session["user_id"])
                 
                 if not company:
                     error = "Company profile not found. Please register as a company first."
@@ -2346,7 +2344,8 @@ def dashboard_create_event():
 @app.route("/dashboard/post-opportunity", methods=["GET", "POST"])
 @login_required
 def dashboard_post_opportunity():
-    if session.get("account_type") != "company":
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
         flash("Only company accounts can post opportunities.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2392,9 +2391,7 @@ def dashboard_post_opportunity():
             return render_template("dashboard_post_opportunity.html")
             
         conn = get_db()
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (session["user_id"],))
-            company = cursor.fetchone()
+        company = get_company_for_user(conn, session["user_id"])
             
         if not company:
             flash("Please complete your company profile before posting an opportunity.", "error")

@@ -1,0 +1,104 @@
+{% extends "dashboard_base.html" %}
+{% set active = "interviews" %}
+
+{% block title %}Interviews | Talent Khoj{% endblock %}
+
+{% block content %}
+<div class="dashboard-header" style="margin-bottom: 24px;">
+    <h1>Interviews</h1>
+    <p>Manage and track all virtual and onsite interviews scheduled between recruiters and candidate applicants.</p>
+</div>
+
+<div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
+    <h3 style="margin-bottom: 20px; font-size: 1.1rem; color: #0f172a; font-weight: 700;">Interview Schedule</h3>
+    
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+        {% for iv in interviews %}
+        <div style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 8px; border: 1.5px solid {% if iv.status == 'scheduled' %}#3b82f6{% elif iv.status == 'completed' %}#22c55e{% else %}#ef4444{% endif %}; background: white;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
+                <div>
+                    <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: {% if iv.status == 'scheduled' %}#dbeafe; color: #1e40af;{% elif iv.status == 'completed' %}#dcfce7; color: #15803d;{% else %}#fee2e2; color: #b91c1c;{% endif %} padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 8px;">
+                        {{ iv.status }}
+                    </span>
+                    <h4 style="font-size: 1.1rem; font-weight: 700; color: #0f172a; margin: 0 0 4px 0;">{{ iv.title }}</h4>
+                    <p style="font-size: 0.85rem; color: #2456ff; font-weight: 600; margin: 0 0 8px 0;">Job: {{ iv.job_title }}</p>
+                </div>
+                
+                <div style="display: flex; gap: 8px;">
+                    {% if session.get('account_type') == 'company' or has_company_access %}
+                        {% if iv.status == 'scheduled' %}
+                        <button onclick="updateInterviewStatus({{ iv.id }}, 'complete')" style="background: #22c55e; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: background 0.2s;">
+                            Mark Completed
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                    {% if iv.status == 'scheduled' %}
+                    <button onclick="updateInterviewStatus({{ iv.id }}, 'cancel')" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: background 0.2s;">
+                        Cancel
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 12px; font-size: 0.9rem; color: #334155;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">📅</span>
+                    <span><strong>Date & Time:</strong> {{ iv.interview_date_str }}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">📍</span>
+                    <span><strong>Location / Link:</strong> 
+                        {% if iv.location.startswith('http') %}
+                            <a href="{{ iv.location }}" target="_blank" style="color: #2456ff; text-decoration: underline;">Join Meeting</a>
+                        {% else %}
+                            {{ iv.location }}
+                        {% endif %}
+                    </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">👤</span>
+                    <span>
+                        {% if session.get('account_type') == 'company' or has_company_access %}
+                            <strong>Candidate:</strong> {{ iv.candidate_name }} ({{ iv.candidate_email }})
+                        {% else %}
+                            <strong>Company:</strong> {{ iv.company_name }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% if iv.description %}
+            <div style="background: #f8fafc; padding: 10px; border-radius: 6px; font-size: 0.85rem; color: #64748b; margin-top: 8px;">
+                <strong>Notes:</strong> {{ iv.description }}
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div style="text-align: center; color: #64748b; font-size: 0.95rem; padding: 40px 0;">
+            No interviews scheduled at this time.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+function updateInterviewStatus(interviewId, action) {
+    if (!confirm(`Are you sure you want to ${action} this interview?`)) return;
+    
+    fetch(`/api/interviews/${action}/${interviewId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || "Failed to update interview status.");
+        }
+    })
+    .catch(err => console.error(err));
+}
+</script>
+{% endblock %}

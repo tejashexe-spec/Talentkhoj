@@ -2822,6 +2822,15 @@ def api_send_message():
             "INSERT INTO messages (sender_id, receiver_id, message_text) VALUES (%s, %s, %s)",
             (session["user_id"], receiver_id, message_text)
         )
+        
+        # Trigger notification
+        create_notification(
+            receiver_id,
+            "message",
+            f"New message from {session['user_name']}",
+            message_text[:100] + ("..." if len(message_text) > 100 else ""),
+            f"/dashboard/inbox?chat_with={session['user_id']}"
+        )
     return jsonify({"success": True, "message": "Message sent!"})
 
 

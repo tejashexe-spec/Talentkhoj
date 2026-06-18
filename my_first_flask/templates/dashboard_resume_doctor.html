@@ -1,0 +1,586 @@
+{% extends "dashboard_base.html" %}
+{% set active = "resume_doctor" %}
+
+{% block title %}AI Resume Doctor | Talent Khoj{% endblock %}
+
+{% block content %}
+<style>
+    .doctor-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 30px;
+    }
+
+    .doctor-card {
+        background: white;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .doctor-header-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #f0ede8;
+        padding-bottom: 16px;
+    }
+
+    .doctor-header-bar h2 {
+        font-size: 20px;
+        color: #05154b;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .status-badge {
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 20px;
+        background: #f0f4ff;
+        color: #2456ff;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: #475569;
+    }
+
+    .form-group textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 12px 16px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 10px;
+        font-size: 14px;
+        color: #1e293b;
+        outline: none;
+        font-family: inherit;
+        background: #f8fafc;
+        transition: all 0.25s ease;
+        resize: vertical;
+    }
+
+    .form-group textarea:focus {
+        border-color: #2456ff;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(36, 86, 255, 0.1);
+    }
+
+    .btn-primary {
+        background: #2456ff;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 14px rgba(36, 86, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-primary:hover {
+        background: #1848d8;
+        transform: translateY(-2px);
+    }
+
+    .loader-spinner {
+        width: 16px;
+        height: 16px;
+        border: 2.5px solid rgba(255,255,255,0.4);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Diagnostics UI styling */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 30px;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .score-circle-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 40px 20px;
+        border: 1px dashed #e2e8f0;
+    }
+
+    .circle-wrap {
+        margin: 20px auto;
+        width: 150px;
+        height: 150px;
+        background: #e2e8f0;
+        border-radius: 50%;
+        position: relative;
+    }
+
+    .circle-wrap .circle .mask,
+    .circle-wrap .circle .fill {
+        width: 150px;
+        height: 150px;
+        position: absolute;
+        border-radius: 50%;
+    }
+
+    .circle-wrap .circle .mask {
+        clip: rect(0px, 150px, 150px, 75px);
+    }
+
+    .circle-wrap .inside-circle {
+        width: 122px;
+        height: 122px;
+        border-radius: 50%;
+        background: white;
+        line-height: 120px;
+        text-align: center;
+        margin-top: 14px;
+        margin-left: 14px;
+        color: #05154b;
+        position: absolute;
+        z-index: 100;
+        font-weight: 700;
+        font-size: 2em;
+    }
+
+    .mask .fill {
+        clip: rect(0px, 75px, 150px, 0px);
+        background-color: #2456ff;
+    }
+
+    .mask.full,
+    .circle .fill {
+        animation: fill ease-in-out 3s;
+        transform: rotate(135deg);
+    }
+
+    .category-rating-bar {
+        width: 100%;
+        margin-top: 15px;
+    }
+
+    .category-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 600;
+        color: #475569;
+        margin-bottom: 6px;
+    }
+
+    .progress-bar-bg {
+        width: 100%;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: #2456ff;
+        border-radius: 4px;
+        transition: width 1s ease-in-out;
+    }
+
+    /* Expandable Diagnostics Feedback */
+    .diagnostics-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .diag-item {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+
+    .diag-header {
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+        background: #f8fafc;
+        transition: background 0.2s;
+    }
+
+    .diag-header:hover {
+        background: #f1f5f9;
+    }
+
+    .diag-title-area {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .diag-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+
+    .diag-body {
+        padding: 20px;
+        border-top: 1px solid #e2e8f0;
+        display: none;
+    }
+
+    .suggestion-card {
+        padding: 14px;
+        border-left: 4px solid #f59e0b;
+        background: #fffbeb;
+        border-radius: 4px;
+        margin-bottom: 12px;
+    }
+
+    .suggestion-card.correct {
+        border-left-color: #10b981;
+        background: #ecfdf5;
+    }
+
+    .ats-keywords-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .keyword-tag {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .keyword-tag.matched {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .keyword-tag.missing {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+</style>
+
+<div class="dashboard-header">
+    <h1>AI Resume Doctor</h1>
+    <p>Upload a target job description and get detailed diagnosis, scores, and improvements for your resume powered by Google Gemini AI.</p>
+</div>
+
+<div class="doctor-container">
+    <div class="doctor-card">
+        <div class="doctor-header-bar">
+            <h2>Resume Diagnostic Center</h2>
+            <span class="status-badge">Powered by Gemini 1.5 Flash</span>
+        </div>
+
+        <form action="/dashboard/resume-doctor/analyze" method="POST" id="analysisForm">
+            <div class="form-group">
+                <label for="jobDescription">Target Job Description (Optional but Recommended for ATS Check)</label>
+                <textarea id="jobDescription" name="job_description" placeholder="Paste the job description you are targeting (e.g., Senior Full Stack Developer, required skills: React, Node.js, AWS...) to run an ATS compatibility scan."></textarea>
+            </div>
+            
+            <div class="action-bar">
+                <button type="submit" class="btn-primary" id="analyzeBtn">
+                    <span class="btn-text">Analyze Active Resume</span>
+                    <span class="loader-spinner" style="display: none;"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Area (Initial Skeleton) -->
+    {% if analysis %}
+    <div class="results-container" style="margin-top: 30px;">
+        <div class="dashboard-grid">
+            <!-- Left Side: Circular score & category breakdown -->
+            <div class="score-circle-container">
+                <h3 style="font-size:16px; font-weight:700; color:#05154b; margin-bottom:10px;">Overall ATS Score</h3>
+                <div class="circle-wrap">
+                    <div class="circle">
+                        <div class="mask full" style="transform: rotate({{ (analysis.overall_score / 100) * 180 }}deg);">
+                            <div class="fill" style="transform: rotate({{ (analysis.overall_score / 100) * 180 }}deg);"></div>
+                        </div>
+                        <div class="mask half">
+                            <div class="fill" style="transform: rotate({{ (analysis.overall_score / 100) * 180 }}deg);"></div>
+                        </div>
+                        <div class="inside-circle">{{ analysis.overall_score }}%</div>
+                    </div>
+                </div>
+                
+                <!-- Sub Category Scores -->
+                <div class="category-rating-bar">
+                    <div class="category-label">
+                        <span>Formatting & Design</span>
+                        <span>{{ analysis.categories.formatting }}/100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ analysis.categories.formatting }}%;"></div>
+                    </div>
+                </div>
+                <div class="category-rating-bar">
+                    <div class="category-label">
+                        <span>Impact & Action Verbs</span>
+                        <span>{{ analysis.categories.impact }}/100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ analysis.categories.impact }}%;"></div>
+                    </div>
+                </div>
+                <div class="category-rating-bar">
+                    <div class="category-label">
+                        <span>Skills & Keywords</span>
+                        <span>{{ analysis.categories.skills }}/100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ analysis.categories.skills }}%;"></div>
+                    </div>
+                </div>
+                <div class="category-rating-bar">
+                    <div class="category-label">
+                        <span>Work Experience Depth</span>
+                        <span>{{ analysis.categories.experience }}/100</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" style="width: {{ analysis.categories.experience }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Side: Expandable diagnostics list -->
+            <div class="diagnostics-list">
+                <!-- Formatting Diagnostics -->
+                <div class="diag-item">
+                    <div class="diag-header" onclick="toggleDiag('formatting')">
+                        <div class="diag-title-area">
+                            <div class="diag-icon" style="background:#e0f2fe; color:#0369a1;">📄</div>
+                            <span>Formatting & Structure Review</span>
+                        </div>
+                        <span id="formatting-chevron">▼</span>
+                    </div>
+                    <div class="diag-body" id="formatting-body">
+                        {% if analysis.feedback.formatting %}
+                        <ul style="margin: 0; padding-left: 20px;">
+                            {% for item in analysis.feedback.formatting %}
+                            <li style="margin-bottom: 8px; color: #475569;">{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p style="color: #64748b; margin: 0;">No formatting issues detected.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Impact Diagnostics -->
+                <div class="diag-item">
+                    <div class="diag-header" onclick="toggleDiag('impact')">
+                        <div class="diag-title-area">
+                            <div class="diag-icon" style="background:#fef3c7; color:#d97706;">⚡</div>
+                            <span>Impact, Tone & Action Verbs</span>
+                        </div>
+                        <span id="impact-chevron">▼</span>
+                    </div>
+                    <div class="diag-body" id="impact-body">
+                        {% if analysis.feedback.impact %}
+                        <ul style="margin: 0; padding-left: 20px;">
+                            {% for item in analysis.feedback.impact %}
+                            <li style="margin-bottom: 8px; color: #475569;">{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p style="color: #64748b; margin: 0;">No impact issues detected.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Skills Diagnostics -->
+                <div class="diag-item">
+                    <div class="diag-header" onclick="toggleDiag('skills')">
+                        <div class="diag-title-area">
+                            <div class="diag-icon" style="background:#d1fae5; color:#059669;">🛠️</div>
+                            <span>Skills & Core Competencies</span>
+                        </div>
+                        <span id="skills-chevron">▼</span>
+                    </div>
+                    <div class="diag-body" id="skills-body">
+                        {% if analysis.feedback.skills %}
+                        <ul style="margin: 0; padding-left: 20px;">
+                            {% for item in analysis.feedback.skills %}
+                            <li style="margin-bottom: 8px; color: #475569;">{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p style="color: #64748b; margin: 0;">Skills structure looks perfect!</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Experience Diagnostics -->
+                <div class="diag-item">
+                    <div class="diag-header" onclick="toggleDiag('experience')">
+                        <div class="diag-title-area">
+                            <div class="diag-icon" style="background:#f3e8ff; color:#7c3aed;">💼</div>
+                            <span>Work History & Accomplishments</span>
+                        </div>
+                        <span id="experience-chevron">▼</span>
+                    </div>
+                    <div class="diag-body" id="experience-body">
+                        {% if analysis.feedback.experience %}
+                        <ul style="margin: 0; padding-left: 20px;">
+                            {% for item in analysis.feedback.experience %}
+                            <li style="margin-bottom: 8px; color: #475569;">{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p style="color: #64748b; margin: 0;">Experience reviews look clean.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- AI Rewrite Assistant -->
+                {% if analysis.rewrites %}
+                <div class="diag-item">
+                    <div class="diag-header" onclick="toggleDiag('rewrites')">
+                        <div class="diag-title-area">
+                            <div class="diag-icon" style="background:#fee2e2; color:#dc2626;">✨</div>
+                            <span>AI Bullet Point Rewrite Assistant</span>
+                        </div>
+                        <span id="rewrites-chevron">▼</span>
+                    </div>
+                    <div class="diag-body" id="rewrites-body">
+                        <p style="font-size:13px; color:#64748b; margin-top:0; margin-bottom:15px;">We identified some weak statements in your resume and generated high-impact, ATS-optimized alternatives:</p>
+                        {% for rewrite in analysis.rewrites %}
+                        <div class="suggestion-card">
+                            <div style="font-weight:700; font-size:12px; color:#b45309; margin-bottom:4px;">Original Statement:</div>
+                            <div style="font-style:italic; color:#475569; font-size:13.5px; margin-bottom:8px;">"{{ rewrite.original }}"</div>
+                            
+                            <div style="font-weight:700; font-size:12px; color:#047857; margin-bottom:4px;">Improved AI Suggestion:</div>
+                            <div style="font-weight:600; color:#065f46; font-size:14px; margin-bottom:8px;">"{{ rewrite.improved }}"</div>
+                            
+                            <div style="font-size:12px; color:#64748b;"><strong>Why:</strong> {{ rewrite.reason }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ATS Keyword Match Scanner -->
+                {% if analysis.keyword_scan %}
+                <div class="diag-item">
+                    <div class="diag-header" onclick="toggleDiag('keywords')">
+                        <div class="diag-title-area">
+                            <div class="diag-icon" style="background:#ccfbf1; color:#0d9488;">🎯</div>
+                            <span>ATS Keyword Scan Analysis</span>
+                        </div>
+                        <span id="keywords-chevron">▼</span>
+                    </div>
+                    <div class="diag-body" id="keywords-body">
+                        {% if analysis.keyword_scan.matched_keywords %}
+                        <div style="margin-bottom: 16px;">
+                            <div style="font-weight:700; font-size:13px; color:#065f46; margin-bottom:8px;">Matched Keywords ({{ analysis.keyword_scan.matched_keywords|length }}):</div>
+                            <div class="ats-keywords-container">
+                                {% for kw in analysis.keyword_scan.matched_keywords %}
+                                <span class="keyword-tag matched">✓ {{ kw }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if analysis.keyword_scan.missing_keywords %}
+                        <div>
+                            <div style="font-weight:700; font-size:13px; color:#991b1b; margin-bottom:8px;">Missing Keywords ({{ analysis.keyword_scan.missing_keywords|length }}):</div>
+                            <div class="ats-keywords-container">
+                                {% for kw in analysis.keyword_scan.missing_keywords %}
+                                <span class="keyword-tag missing">✗ {{ kw }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <p style="color: #059669; margin: 0; font-weight: 600;">✓ Amazing! Your resume matches all target job keywords.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function toggleDiag(id) {
+        const body = document.getElementById(id + '-body');
+        const chevron = document.getElementById(id + '-chevron');
+        if (body.style.display === 'block') {
+            body.style.display = 'none';
+            chevron.innerText = '▼';
+        } else {
+            body.style.display = 'block';
+            chevron.innerText = '▲';
+        }
+    }
+
+    document.getElementById('analysisForm').addEventListener('submit', function() {
+        const btn = document.getElementById('analyzeBtn');
+        const btnText = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.loader-spinner');
+        
+        btn.disabled = true;
+        btnText.innerText = "Analyzing Resume with AI (may take a few seconds)...";
+        if (spinner) {
+            spinner.style.display = "inline-block";
+        }
+    });
+</script>
+{% endblock %}
+
+

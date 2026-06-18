@@ -13,6 +13,7 @@ from flask_mail import Mail, Message
 from my_first_flask import config
 from my_first_flask.model.database import Database
 from my_first_flask.services.email_service import EmailService
+import pymysql
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -33,6 +34,7 @@ app.config['MAIL_USERNAME'] = config.MAIL_USERNAME
 app.config['MAIL_PASSWORD'] = config.MAIL_PASSWORD
 app.config['MAIL_DEFAULT_SENDER'] = config.MAIL_DEFAULT_SENDER
 mail = Mail(app)
+EmailService.mail = mail
 
 # ── Google OAuth ──────────────────────────────────────────────────────────────
 oauth = OAuth(app)
@@ -46,6 +48,7 @@ google = oauth.register(
 
 # Initialize database once
 db = Database()
+EmailService._db = db
 
 
 @app.context_processor
@@ -120,7 +123,13 @@ def get_feed():
         cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id = %s", (user_id,))
         user_profile = cursor.fetchone()
         
-        cursor.execute("SELECT id, full_name, avatar, bio, account_type FROM users WHERE id != %s ORDER BY RAND() LIMIT 3", (user_id,))
+        cursor.execute("""
+            SELECT u.id, u.full_name, u.avatar, u.bio, u.account_type,
+                   EXISTS(SELECT 1 FROM follows WHERE follower_id = %s AND followed_id = u.id) AS is_following
+            FROM users u
+            WHERE u.id != %s 
+            ORDER BY RAND() LIMIT 3
+        """, (user_id, user_id))
         suggestions = cursor.fetchall()
     return render_template("feed.html", user_profile=user_profile, suggestions=suggestions)
 
@@ -556,9 +565,17 @@ def profile():
     name_message = None
     password_message = None
     password_errors = []
+    active_tab = "about"
 
     if request.method == "POST":
         action = request.form.get("action")
+        if action in ["about", "address", "socials", "headhunting", "change_password", "upload_avatar"]:
+            if action == "change_password":
+                active_tab = "security"
+            elif action == "upload_avatar":
+                active_tab = "about"
+            else:
+                active_tab = action
 
         # ── About Details ───────────────────────────────────────────────────
         if action == "about":
@@ -770,7 +787,8 @@ def profile():
         profile=user_profile,
         name_message=name_message,
         password_message=password_message,
-        password_errors=password_errors
+        password_errors=password_errors,
+        active_tab=active_tab
     )
 
 
@@ -780,6 +798,11 @@ def profile():
 def user_profile(user_id):
     conn = get_db()
     with conn.cursor() as cursor:
+        cursor.execute("SELECT account_type FROM users WHERE id = %s", (user_id,))
+        u = cursor.fetchone()
+        if u and u["account_type"] == "company":
+            return redirect(url_for("company_profile", user_id=user_id))
+            
         cursor.execute(
             "SELECT id, full_name, avatar, bio, location, skills, cv_path, active_status, headhunting_mode FROM users WHERE id = %s AND account_type = 'individual'",
             (user_id,)
@@ -820,10 +843,47 @@ def user_profile(user_id):
     return render_template("user_profile.html", user=user, reviews=reviews, avg_rating=avg_rating, review_count=review_count, accepted_badges=accepted_badges)
 
 
+@app.route("/user/follow/<int:target_id>", methods=["POST"])
+@login_required
+def toggle_follow(target_id):
+    """
+    Toggles the follow status between the logged-in user and a target user.
+    If already following, deletes the relationship (unfollow).
+    If not following, inserts a new follow record.
+    """
+    follower_id = session.get("user_id")
+    if follower_id == target_id:
+        return jsonify({"success": False, "message": "You cannot follow yourself."})
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM follows WHERE follower_id = %s AND followed_id = %s", (follower_id, target_id))
+        follow = cursor.fetchone()
+        
+        if follow:
+            cursor.execute("DELETE FROM follows WHERE follower_id = %s AND followed_id = %s", (follower_id, target_id))
+            is_following = False
+            message = "Unfollowed successfully."
+        else:
+            try:
+                cursor.execute("INSERT INTO follows (follower_id, followed_id) VALUES (%s, %s)", (follower_id, target_id))
+                is_following = True
+                message = "Followed successfully."
+            except pymysql.err.IntegrityError:
+                return jsonify({"success": False, "message": "User to follow does not exist."})
+                
+    return jsonify({"success": True, "following": is_following, "message": message})
+
+
 @app.route("/company/<int:user_id>")
 def company_profile(user_id):
     conn = get_db()
     with conn.cursor() as cursor:
+        cursor.execute("SELECT account_type FROM users WHERE id = %s", (user_id,))
+        u = cursor.fetchone()
+        if u and u["account_type"] == "individual":
+            return redirect(url_for("user_profile", user_id=user_id))
+
         cursor.execute(
             "SELECT c.*, u.id as user_id FROM companies c JOIN users u ON c.user_id = u.id WHERE c.user_id = %s",
             (user_id,)
@@ -1138,13 +1198,13 @@ def dashboard():
                         "time": "Recent"
                     })
             
-        return render_template("dashboard.html", 
-                               stats=stats, 
-                               opportunities=opportunities,
-                               recent_applications=recent_applications, 
-                               activities=activities,
-                               applications=applications,
-                               bookmarks=bookmarks)
+    return render_template("dashboard.html", 
+                           stats=stats, 
+                           opportunities=opportunities,
+                           recent_applications=recent_applications, 
+                           activities=activities,
+                           applications=applications,
+                           bookmarks=bookmarks)
 
 
 
@@ -1459,6 +1519,15 @@ def dashboard_ats_update_status():
         
     with conn.cursor() as cursor:
         cursor.execute("UPDATE applications SET status = %s WHERE id = %s", (new_status, app_id))
+        cursor.execute("""
+            INSERT INTO notifications (user_id, title, message, link)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            application["user_id"],
+            "Application Status Updated",
+            f"Your application for '{application['job_title']}' has been updated to '{new_status.capitalize()}'.",
+            "/dashboard"
+        ))
         
         # Trigger notification to candidate
         create_notification(
@@ -1592,6 +1661,11 @@ def dashboard_apply(job_id):
         if not user_profile or not user_profile.get("cv_path"):
             return jsonify({"success": False, "message": "Your profile is incomplete. You must build a professional CV first before applying!"})
 
+        # Verify job exists
+        cursor.execute("SELECT id FROM jobs WHERE id = %s", (job_id,))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "The opportunity you are applying for does not exist."}), 404
+
         # Check if already applied
         cursor.execute("SELECT id FROM applications WHERE user_id = %s AND job_id = %s", (session["user_id"], job_id))
         existing = cursor.fetchone()
@@ -1694,7 +1768,123 @@ def dashboard_saved():
         ORDER BY b.created_at DESC
     """, (session["user_id"],))
     bookmarks = cursor.fetchall()
-    return render_template("dashboard_saved.html", bookmarks=bookmarks)
+    
+    cursor.execute("""
+        SELECT id, search_query, opportunity_type, location, experience_level, email_alerts, created_at
+        FROM saved_searches
+        WHERE user_id = %s
+        ORDER BY created_at DESC
+    """, (session["user_id"],))
+    saved_searches = cursor.fetchall()
+    
+    return render_template("dashboard_saved.html", bookmarks=bookmarks, saved_searches=saved_searches)
+
+
+@app.route("/dashboard/notifications")
+@login_required
+def dashboard_notifications():
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT id, title, message, link, is_read, created_at
+            FROM notifications
+            WHERE user_id = %s
+            ORDER BY created_at DESC
+        """, (session["user_id"],))
+        notifications = cursor.fetchall()
+    
+    for notif in notifications:
+        if notif.get("created_at"):
+            notif["created_at_str"] = notif["created_at"].strftime("%Y-%m-%d %H:%M")
+            
+    return render_template("dashboard_notifications.html", notifications=notifications, active="notifications")
+
+
+@app.route("/dashboard/saved-searches/save", methods=["POST"])
+@login_required
+def save_search():
+    if session.get("account_type") != "individual":
+        return jsonify({"success": False, "message": "Only candidate accounts can save searches."}), 403
+        
+    data = request.get_json() or {}
+    query = data.get("query", "").strip() or None
+    opp_type = data.get("type", "").strip() or None
+    location = data.get("location", "").strip() or None
+    experience = data.get("experience", "").strip() or None
+    email_alerts = 1 if data.get("email_alerts") else 0
+
+    if not query and not opp_type and not location and not experience:
+        return jsonify({"success": False, "message": "Cannot save an empty search. Please specify at least one filter."}), 400
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        # Check if already exists
+        cursor.execute("""
+            SELECT id FROM saved_searches 
+            WHERE user_id = %s 
+              AND (search_query = %s OR (search_query IS NULL AND %s IS NULL))
+              AND (opportunity_type = %s OR (opportunity_type IS NULL AND %s IS NULL))
+              AND (location = %s OR (location IS NULL AND %s IS NULL))
+              AND (experience_level = %s OR (experience_level IS NULL AND %s IS NULL))
+        """, (session["user_id"], query, query, opp_type, opp_type, location, location, experience, experience))
+        
+        if cursor.fetchone():
+            return jsonify({"success": False, "message": "You have already saved this search!"})
+
+        cursor.execute("""
+            INSERT INTO saved_searches (user_id, search_query, opportunity_type, location, experience_level, email_alerts)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (session["user_id"], query, opp_type, location, experience, email_alerts))
+
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("Save Search", f"Candidate {session['user_name']} saved a new search with filters: query={query}, type={opp_type}, location={location}, experience={experience}, email_alerts={email_alerts}")
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "message": "Search saved successfully!"})
+
+
+@app.route("/dashboard/saved-searches/delete/<int:search_id>", methods=["POST"])
+@login_required
+def delete_saved_search(search_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM saved_searches WHERE id = %s AND user_id = %s", (search_id, session["user_id"]))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "Saved search not found."}), 404
+
+        cursor.execute("DELETE FROM saved_searches WHERE id = %s AND user_id = %s", (search_id, session["user_id"]))
+
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("Delete Saved Search", f"Candidate {session['user_name']} deleted saved search ID {search_id}")
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "message": "Saved search deleted successfully."})
+
+
+@app.route("/dashboard/saved-searches/toggle-alert/<int:search_id>", methods=["POST"])
+@login_required
+def toggle_search_alert(search_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT email_alerts FROM saved_searches WHERE id = %s AND user_id = %s", (search_id, session["user_id"]))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({"success": False, "message": "Saved search not found."}), 404
+
+        new_status = 0 if row["email_alerts"] else 1
+        cursor.execute("UPDATE saved_searches SET email_alerts = %s WHERE id = %s AND user_id = %s", (new_status, search_id, session["user_id"]))
+
+    try:
+        from my_first_flask.utils.logger import log_activity
+        log_activity("Toggle Search Alert", f"Candidate {session['user_name']} toggled email alerts to {new_status} for saved search ID {search_id}")
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "email_alerts": bool(new_status), "message": "Alert preference updated successfully."})
 
 
 
@@ -2207,7 +2397,7 @@ def generate_cv_html(data):
 @app.route("/dashboard/cv", methods=["GET"])
 @login_required
 def dashboard_cv():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can access the CV Builder.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2286,7 +2476,7 @@ def view_cv(user_id):
 @app.route("/dashboard/cv/build", methods=["POST"])
 @login_required
 def dashboard_cv_build():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can build a CV.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2400,7 +2590,7 @@ def dashboard_cv_build():
 @app.route("/dashboard/cv/upload", methods=["POST"])
 @login_required
 def dashboard_cv_upload():
-    if session.get("account_type") != "individual":
+    if session.get("account_type") not in ("individual", "admin"):
         flash("Only individuals can upload a CV.", "error")
         return redirect(url_for("dashboard"))
         
@@ -2433,6 +2623,226 @@ def dashboard_cv_upload():
         flash("No file selected.", "error")
         
     return redirect(url_for("dashboard_cv"))
+
+
+def extract_text_from_pdf(filepath):
+    """Extracts text content from a PDF file using pypdf."""
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(filepath)
+        text = ""
+        for page in reader.pages:
+            content = page.extract_text()
+            if content:
+                text += content + "\n"
+        return text.strip()
+    except Exception as e:
+        print(f"Error parsing PDF: {e}")
+        return ""
+
+
+def query_gemini_resume_analysis(resume_text, job_description=""):
+    """Queries Gemini 1.5 Flash API to perform resume diagnostics returning JSON."""
+    import urllib.request
+    import json
+    
+    if not config.GEMINI_API_KEY:
+        return {"error": "Gemini API key is not configured in settings."}
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={config.GEMINI_API_KEY}"
+    
+    prompt = f"""
+    You are an expert ATS (Applicant Tracking System) scanner and career coach.
+    Analyze the following resume text and optionally the targeted job description.
+    
+    RESUME TEXT:
+    {resume_text}
+    
+    TARGET JOB DESCRIPTION:
+    {job_description}
+    
+    You must output a raw JSON object matching the following structure:
+    {{
+      "overall_score": <int 0 to 100>,
+      "categories": {{
+        "formatting": <int 0 to 100>,
+        "impact": <int 0 to 100>,
+        "skills": <int 0 to 100>,
+        "experience": <int 0 to 100>
+      }},
+      "feedback": {{
+        "formatting": [<strings of constructive feedback>],
+        "impact": [<strings of constructive feedback>],
+        "skills": [<strings of constructive feedback>],
+        "experience": [<strings of constructive feedback>]
+      }},
+      "rewrites": [
+        {{
+          "original": "<original weak line from the experience section>",
+          "improved": "<improved strong line using action verbs and quantifiable results>",
+          "reason": "<explanation of why the improvement works>"
+        }}
+      ],
+      "keyword_scan": {{
+        "matched_keywords": [<list of matching skills/keywords between resume and job description>],
+        "missing_keywords": [<list of critical missing skills/keywords based on the job description>]
+      }}
+    }}
+    
+    Ensure categories scoring is realistic (most resumes score between 50 and 85).
+    Ensure the JSON response is valid and strictly parsed.
+    Do not add any markup or markdown wraps around the JSON object.
+    """
+    
+    req_data = {
+        "contents": [{
+            "parts": [{
+                "text": prompt
+            }]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json"
+        }
+    }
+    
+    req_body = json.dumps(req_data).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=req_body,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            text_response = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            return json.loads(text_response)
+    except Exception as e:
+        print(f"Error querying Gemini API: {e}")
+        return {"error": f"Failed to get analysis: {str(e)}"}
+
+
+@app.route("/dashboard/resume-doctor", methods=["GET"])
+
+
+@login_required
+def dashboard_resume_doctor():
+    if session.get("account_type") not in ("individual", "admin"):
+        flash("Only individuals can access the Resume Doctor.", "error")
+        return redirect(url_for("dashboard"))
+        
+    import json
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT resume_analysis FROM users WHERE id = %s", (session["user_id"],))
+        user = cursor.fetchone()
+        
+    analysis = None
+    if user and user["resume_analysis"]:
+        try:
+            analysis = json.loads(user["resume_analysis"])
+        except Exception:
+            analysis = None
+            
+    return render_template("dashboard_resume_doctor.html", active="resume_doctor", analysis=analysis)
+
+
+@app.route("/dashboard/resume-doctor/analyze", methods=["POST"])
+@login_required
+def dashboard_resume_doctor_analyze():
+    """
+    POST route to trigger AI resume diagnostic analysis.
+    Extracts text content from either dynamically built resume JSON data 
+    or an uploaded PDF resume, queries the Gemini API, and saves the cached 
+    review JSON back to the user's DB entry.
+    """
+    if session.get("account_type") not in ("individual", "admin"):
+        flash("Only individuals can use the Resume Doctor.", "error")
+        return redirect(url_for("dashboard"))
+        
+    import json
+    
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT cv_path, cv_data FROM users WHERE id = %s", (session["user_id"],))
+        user = cursor.fetchone()
+        
+    if not user or (not user["cv_path"] and not user["cv_data"]):
+        flash("Please build or upload a CV first before using the Resume Doctor.", "error")
+        return redirect(url_for("dashboard_cv"))
+        
+    resume_text = ""
+    cv_data_str = user["cv_data"]
+    cv_path = user["cv_path"]
+    
+    if cv_data_str and cv_data_str != "{}":
+        try:
+            cv_dict = json.loads(cv_data_str)
+            resume_parts = []
+            if cv_dict.get("full_name"): resume_parts.append(f"Name: {cv_dict['full_name']}")
+            if cv_dict.get("email"): resume_parts.append(f"Email: {cv_dict['email']}")
+            if cv_dict.get("portfolio"): resume_parts.append(f"Portfolio: {cv_dict['portfolio']}")
+            if cv_dict.get("github"): resume_parts.append(f"GitHub: {cv_dict['github']}")
+            if cv_dict.get("linkedin"): resume_parts.append(f"LinkedIn: {cv_dict['linkedin']}")
+            
+            if cv_dict.get("education"):
+                resume_parts.append("\nEDUCATION:")
+                for edu in cv_dict["education"]:
+                    resume_parts.append(f"- {edu.get('degree')} at {edu.get('school')}. Details: {edu.get('details')}")
+                    
+            if cv_dict.get("experience"):
+                resume_parts.append("\nWORK EXPERIENCE:")
+                for exp in cv_dict["experience"]:
+                    resume_parts.append(f"- {exp.get('title')} at {exp.get('company')} ({exp.get('dates')}). Description: {exp.get('description')}")
+                    
+            if cv_dict.get("projects"):
+                resume_parts.append("\nPROJECTS:")
+                for proj in cv_dict["projects"]:
+                    resume_parts.append(f"- {proj.get('title')} [{proj.get('tag')}]. Link: {proj.get('link')}. Description: {proj.get('description')}")
+                    
+            if cv_dict.get("skills"):
+                resume_parts.append("\nSKILLS:")
+                for sk in cv_dict["skills"]:
+                    resume_parts.append(f"- {sk.get('category')}: {sk.get('list')}")
+                    
+            if cv_dict.get("certifications"):
+                resume_parts.append("\nCERTIFICATIONS:")
+                for cert in cv_dict["certifications"]:
+                    resume_parts.append(f"- {cert}")
+                    
+            resume_text = "\n".join(resume_parts)
+        except Exception as e:
+            print(f"Error parsing cv_data JSON: {e}")
+            
+    if not resume_text and cv_path:
+        full_path = os.path.join(BASE_DIR, cv_path.lstrip("/"))
+        if os.path.exists(full_path):
+            if cv_path.lower().endswith(".pdf"):
+                resume_text = extract_text_from_pdf(full_path)
+            else:
+                resume_text = f"Uploaded File: {os.path.basename(full_path)}"
+                
+    if not resume_text.strip():
+        flash("Could not extract readable text from your resume. If you uploaded an image or scanned document, please build it dynamically in the CV Builder.", "error")
+        return redirect(url_for("dashboard_resume_doctor"))
+        
+    job_description = request.form.get("job_description", "").strip()
+    
+    analysis_result = query_gemini_resume_analysis(resume_text, job_description)
+    
+    if "error" in analysis_result:
+        flash(analysis_result["error"], "error")
+        return redirect(url_for("dashboard_resume_doctor"))
+        
+    analysis_str = json.dumps(analysis_result)
+    with conn.cursor() as cursor:
+        cursor.execute("UPDATE users SET resume_analysis = %s WHERE id = %s", (analysis_str, session["user_id"]))
+        
+    flash("Resume diagnostic review successfully completed!", "success")
+    return redirect(url_for("dashboard_resume_doctor"))
+
+
 
 
 @app.route("/dashboard/events")
@@ -2522,6 +2932,105 @@ def dashboard_create_event():
     return render_template("dashboard_create_event.html", form_data=form_data, error=error)
 
 
+@app.route("/dashboard/events/edit/<int:event_id>", methods=["GET", "POST"])
+@login_required
+def dashboard_edit_event(event_id):
+    if session.get("account_type") != "company":
+        return redirect(url_for("dashboard_events"))
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+
+    if not company:
+        flash("Company profile not found.", "error")
+        return redirect(url_for("dashboard_events"))
+
+    company_id = company["id"]
+
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM events WHERE id = %s AND company_id = %s", (event_id, company_id))
+        event = cursor.fetchone()
+
+    if not event:
+        flash("Event not found or unauthorized.", "error")
+        return redirect(url_for("dashboard_events"))
+
+    error = None
+    form_data = {
+        "title": event["title"],
+        "description": event["description"],
+        "event_date": event["event_date"].strftime("%Y-%m-%dT%H:%M") if event["event_date"] else "",
+        "location": event["location"],
+        "registration_link": event["registration_link"]
+    }
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip()
+        event_date_str = request.form.get("event_date", "").strip()
+        location = request.form.get("location", "").strip()
+        registration_link = request.form.get("registration_link", "").strip() or None
+
+        form_data = {
+            "title": title,
+            "description": description,
+            "event_date": event_date_str,
+            "location": location,
+            "registration_link": registration_link
+        }
+
+        if not title:
+            error = "Event title is required."
+        elif not description:
+            error = "Event description is required."
+        elif not event_date_str:
+            error = "Event date and time is required."
+        elif not location:
+            error = "Event location is required."
+        else:
+            try:
+                event_date = datetime.strptime(event_date_str, "%Y-%m-%dT%H:%M")
+                with conn.cursor() as cursor:
+                    cursor.execute(
+                        "UPDATE events SET title = %s, description = %s, event_date = %s, location = %s, registration_link = %s WHERE id = %s AND company_id = %s",
+                        (title, description, event_date, location, registration_link, event_id, company_id)
+                    )
+                flash("Event updated successfully!", "success")
+                return redirect(url_for("dashboard_events"))
+            except ValueError:
+                error = "Invalid date and time format."
+            except Exception as e:
+                error = f"An error occurred: {str(e)}"
+
+    return render_template("dashboard_create_event.html", form_data=form_data, error=error, is_edit=True, event_id=event_id)
+
+
+@app.route("/dashboard/events/delete/<int:event_id>", methods=["POST"])
+@login_required
+def dashboard_delete_event(event_id):
+    if session.get("account_type") != "company":
+        return redirect(url_for("dashboard_events"))
+
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+
+    if not company:
+        flash("Company profile not found.", "error")
+        return redirect(url_for("dashboard_events"))
+
+    company_id = company["id"]
+
+    with conn.cursor() as cursor:
+        cursor.execute("DELETE FROM events WHERE id = %s AND company_id = %s", (event_id, company_id))
+
+    flash("Event deleted successfully!", "success")
+    return redirect(url_for("dashboard_events"))
+
+
 @app.route("/dashboard/post-opportunity", methods=["GET", "POST"])
 @login_required
 def dashboard_post_opportunity():
@@ -2570,6 +3079,22 @@ def dashboard_post_opportunity():
             flash("Opportunity title and detailed description are required.", "error")
             return render_template("dashboard_post_opportunity.html")
             
+        if opportunity_type not in ["job", "internship"]:
+            flash("Invalid opportunity type selection.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
+        if not city:
+            flash("City location is required.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
+        if not min_salary:
+            flash("Minimum salary compensation is required.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
+        if opportunity_type == "job" and not min_exp:
+            flash("Minimum experience requirement is required for Job posts.", "error")
+            return render_template("dashboard_post_opportunity.html")
+            
         conn = get_db()
         with conn.cursor() as cursor:
             cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (session["user_id"],))
@@ -2579,35 +3104,47 @@ def dashboard_post_opportunity():
             flash("Please complete your company profile before posting an opportunity.", "error")
             return redirect(url_for("profile"))
             
-        with conn.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link, questions)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                company["id"],
-                title,
-                opportunity_type,
-                location,
-                salary,
-                experience_level,
-                skills_required or None,
-                description,
-                apply_link or None,
-                questions_json
-            ))
-            job_id = cursor.lastrowid
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link, questions)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    company["id"],
+                    title,
+                    opportunity_type,
+                    location,
+                    salary,
+                    experience_level,
+                    skills_required or None,
+                    description,
+                    apply_link or None,
+                    questions_json
+                ))
+                job_id = cursor.lastrowid
+                if not job_id:
+                    raise pymysql.MySQLError("Failed to retrieve generated job ID.")
 
-            # Parse and insert FAQs
-            faq_qs = request.form.getlist("faq_questions[]")
-            faq_as = request.form.getlist("faq_answers[]")
-            for i in range(min(len(faq_qs), len(faq_as))):
-                fq = faq_qs[i].strip()
-                fa = faq_as[i].strip()
-                if fq and fa:
-                    cursor.execute(
-                        "INSERT INTO job_faqs (job_id, question, answer) VALUES (%s, %s, %s)",
-                        (job_id, fq, fa)
-                    )
+                # Parse and insert FAQs
+                faq_qs = request.form.getlist("faq_questions[]")
+                faq_as = request.form.getlist("faq_answers[]")
+                for i in range(min(len(faq_qs), len(faq_as))):
+                    fq = faq_qs[i].strip() if faq_qs[i] else ""
+                    fa = faq_as[i].strip() if faq_as[i] else ""
+                    if fq and fa:
+                        cursor.execute(
+                            "INSERT INTO job_faqs (job_id, question, answer) VALUES (%s, %s, %s)",
+                            (job_id, fq, fa)
+                        )
+        except pymysql.MySQLError as db_err:
+            print(f"[DATABASE ERROR] Failed to insert job/faqs: {db_err}")
+            try:
+                from my_first_flask.utils.logger import log_activity
+                log_activity("Database Error", f"Failed to post opportunity '{title}': {db_err}")
+            except Exception:
+                pass
+            flash("A database error occurred while publishing the opportunity. Please try again.", "error")
+            return render_template("dashboard_post_opportunity.html")
             
         # Log job posting event
         print(f"[JOB LOG] User {session['user_id']} ({company['company_name']}) posted a new {opportunity_type}: '{title}' at {location}")
@@ -2616,6 +3153,103 @@ def dashboard_post_opportunity():
             log_activity("Post Opportunity", f"Company '{company['company_name']}' (ID: {company['id']}) posted a new {opportunity_type}: '{title}' at {location}")
         except Exception as log_err:
             print(f"Failed to write post job log: {log_err}")
+
+        # Check matching saved searches for job alerts
+        try:
+            with conn.cursor() as cursor:
+                # Get all saved searches with email alerts active
+                # Get all saved searches for active matching notifications
+                cursor.execute("""
+                    SELECT s.*, u.email as user_email, u.full_name as user_name
+                    FROM saved_searches s
+                    JOIN users u ON s.user_id = u.id
+                    WHERE u.is_banned = 0
+                """)
+                active_alerts = cursor.fetchall()
+                
+                for alert in active_alerts:
+                    match = True
+                    
+                    # 1. Match search query (case-insensitive) against job title, description, skills
+                    if alert.get("search_query"):
+                        sq = alert["search_query"].lower()
+                        # check title, description, skills
+                        in_title = sq in title.lower()
+                        in_desc = sq in description.lower()
+                        in_skills = sq in (skills_required or "").lower()
+                        if not (in_title or in_desc or in_skills):
+                            match = False
+                            
+                    # 2. Match opportunity type
+                    if match and alert.get("opportunity_type"):
+                        if alert["opportunity_type"].lower() != opportunity_type.lower():
+                            match = False
+                            
+                    # 3. Match location (fuzzy search/substring matching)
+                    if match and alert.get("location"):
+                        # check if alert location matches job location
+                        alert_loc = alert["location"].strip().lower()
+                        if alert_loc and alert_loc not in location.lower():
+                            match = False
+                            
+                    # 4. Match experience level
+                    if match and alert.get("experience_level"):
+                        # check if alert experience_level matches job experience_level
+                        alert_exp = alert["experience_level"].strip().lower()
+                        if alert_exp and alert_exp not in experience_level.lower():
+                            match = False
+                            
+                    if match:
+                        # Create in-app notification
+                        cursor.execute("""
+                            INSERT INTO notifications (user_id, title, message, link)
+                            VALUES (%s, %s, %s, %s)
+                        """, (
+                            alert["user_id"],
+                            "Opportunity Match",
+                            f"New {opportunity_type.capitalize()} '{title}' matching your saved search '{alert['search_query'] or ''}' has been posted by {company['company_name']}.",
+                            f"/dashboard/search?q={alert['search_query'] or ''}"
+                        ))
+                        
+                        # Send email alert to user if enabled!
+                        if alert.get("email_alerts") == 1:
+                            # Prepare HTML content
+                            alert_email_html = f"""
+                            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+                                <div style="text-align: center; border-bottom: 2px solid #2456ff; padding-bottom: 15px; margin-bottom: 20px;">
+                                    <h1 style="color: #05154b; font-size: 24px; margin: 0;">Talent Khoj</h1>
+                                    <p style="color: #64748b; font-size: 14px; margin: 5px 0 0;">New Opportunity Match Alert!</p>
+                                </div>
+                                <p style="font-size: 16px; color: #1e293b;">Hi {alert['user_name']},</p>
+                                <p style="font-size: 15px; color: #334155; line-height: 1.6;">
+                                    A new opportunity matching your saved search preferences has been posted on Talent Khoj.
+                                </p>
+                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                                    <h2 style="font-size: 18px; color: #0f172a; margin: 0 0 10px;">{title}</h2>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Company:</strong> {company['company_name']}</p>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Location:</strong> {location}</p>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Type:</strong> <span style="text-transform: capitalize;">{opportunity_type}</span></p>
+                                    <p style="margin: 0 0 8px; font-size: 14px; color: #475569;"><strong>Salary:</strong> {salary}</p>
+                                    <p style="margin: 0; font-size: 14px; color: #475569;"><strong>Required Experience:</strong> {experience_level}</p>
+                                </div>
+                                <div style="text-align: center; margin-top: 30px;">
+                                    <a href="http://127.0.0.1:5000/dashboard/search?q={alert['search_query'] or ''}" style="background: #2456ff; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">View Opportunity</a>
+                                </div>
+                                <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 30px 0 20px;">
+                                <p style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.5;">
+                                    You are receiving this because you enabled email alerts for your saved search on Talent Khoj.<br>
+                                    <a href="http://127.0.0.1:5000/dashboard/saved" style="color: #2456ff; text-decoration: underline;">Manage Alert Settings</a>
+                                </p>
+                            </div>
+                            """
+                            
+                            EmailService.send_email(
+                                to=alert["user_email"],
+                                subject=f"Job Alert: New {opportunity_type.capitalize()} matching your search - {title}",
+                                html=alert_email_html
+                            )
+        except Exception as alert_err:
+            print(f"Failed to process job alert notifications: {alert_err}")
         
         flash("Opportunity successfully published!", "success")
         return redirect(url_for("dashboard"))
@@ -2927,7 +3561,6 @@ def api_unread_count():
         row = cursor.fetchone()
     return jsonify({"success": True, "unread_count": row["count"] if row else 0})
 
-
 def create_notification(user_id, type_, title, message, link=None):
     conn = get_db()
     try:
@@ -2990,8 +3623,6 @@ def api_mark_all_notifications_read():
     with conn.cursor() as cursor:
         cursor.execute("UPDATE notifications SET is_read = 1 WHERE user_id = %s", (user_id,))
     return jsonify({"success": True})
-
-
 @app.route("/reviews/submit", methods=["POST"])
 @login_required
 def submit_review():
@@ -3063,6 +3694,17 @@ def submit_review():
         return redirect(url_for("company_profile", user_id=reviewee_id))
     else:
         return redirect(url_for("user_profile", user_id=reviewee_id))
+
+
+def log_admin_action(action, target_type, target_id, details):
+    """Helper function to log admin operations into the database."""
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute(
+            "INSERT INTO admin_logs (admin_name, action, target_type, target_id, details) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (session.get("user_name", "System"), action, target_type, target_id, details)
+        )
 
 
 # ─── ADMIN DASHBOARD ─────────────────────────────────────────────────────────
@@ -3820,6 +4462,45 @@ def admin_settings():
 
 
 
+@app.route("/dashboard/ats/notify", methods=["POST"])
+@login_required
+def dashboard_ats_notify():
+    if session.get("account_type") != "company":
+        return jsonify({"success": False, "message": "Unauthorized access."}), 403
+        
+    data = request.get_json() or {}
+    target_user_id = data.get("user_id")
+    title = data.get("title", "").strip()
+    message = data.get("message", "").strip()
+    
+    if not target_user_id or not title or not message:
+        return jsonify({"success": False, "message": "Missing recipient, title, or message."}), 400
+        
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        if not company:
+            return jsonify({"success": False, "message": "Company profile incomplete."}), 400
+            
+        cursor.execute("""
+            SELECT a.id 
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.id
+            WHERE a.user_id = %s AND j.company_id = %s
+        """, (target_user_id, company["id"]))
+        
+        if not cursor.fetchone():
+            return jsonify({"success": False, "message": "Unauthorized: recipient has not applied to your opportunities."}), 403
+            
+        cursor.execute("""
+            INSERT INTO notifications (user_id, title, message, link)
+            VALUES (%s, %s, %s, %s)
+        """, (target_user_id, title, message, "/dashboard/applications"))
+        
+    return jsonify({"success": True, "message": "Notification successfully sent to candidate."})
+
+
 # ─── ANNOUNCEMENTS ────────────────────────────────────────────────────────────
 
 @app.route("/admin/announcement/send", methods=["POST"])
@@ -3841,6 +4522,21 @@ def send_announcement():
             "INSERT INTO announcements (title, message, target, created_by) VALUES (%s, %s, %s, %s)",
             (title, message, target, session["user_id"])
         )
+        
+        # Dispatch in-app push notifications to targeted users
+        if target == "all":
+            cursor.execute("SELECT id FROM users WHERE is_banned = 0")
+        elif target == "verified":
+            cursor.execute("SELECT id FROM users WHERE verified = 1 AND is_banned = 0")
+        elif target == "new":
+            cursor.execute("SELECT id FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND is_banned = 0")
+            
+        target_users = cursor.fetchall()
+        for u in target_users:
+            cursor.execute("""
+                INSERT INTO notifications (user_id, title, message, link)
+                VALUES (%s, %s, %s, %s)
+            """, (u["id"], f"Announcement: {title}", message, "/feed"))
 
     return jsonify({"success": True, "message": "Announcement sent successfully!"})
 

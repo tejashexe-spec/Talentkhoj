@@ -18,7 +18,7 @@ class AuthController:
 
             db = Database()
             user = db.fetch_one(
-                "SELECT id, full_name, email, password_hash, avatar FROM users WHERE email = %s",
+                "SELECT id, full_name, email, password_hash, avatar, account_type FROM users WHERE email = %s",
                 (email,)
             )
 
@@ -27,6 +27,7 @@ class AuthController:
                 session["user_name"] = user["full_name"]
                 session["user_email"] = user["email"]
                 session["user_avatar"] = user["avatar"]
+                session["account_type"] = user["account_type"]
                 return redirect(url_for("home"))
             else:
                 error = "Invalid email or password."

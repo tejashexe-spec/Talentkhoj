@@ -31,6 +31,7 @@ class Database:
             self._init_tables()
             self._run_migrations()
             self._seed_mock_events()
+            self._seed_mock_saved_searches()
             print("Database connected successfully!")
 
         except pymysql.MySQLError as e:
@@ -60,13 +61,14 @@ class Database:
                     full_name VARCHAR(255) NOT NULL,
                     email VARCHAR(255) NOT NULL UNIQUE,
                     password_hash VARCHAR(255) NOT NULL,
-                    account_type ENUM('individual', 'company') NOT NULL DEFAULT 'individual',
+                    account_type ENUM('individual', 'company', 'admin') NOT NULL DEFAULT 'individual',
                     avatar VARCHAR(255) DEFAULT NULL,
                     bio TEXT DEFAULT NULL,
                     location VARCHAR(255) DEFAULT NULL,
                     skills TEXT DEFAULT NULL,
                     cv_path VARCHAR(255) DEFAULT NULL,
                     cv_data TEXT DEFAULT NULL,
+                    resume_analysis LONGTEXT DEFAULT NULL,
                     email_verified TINYINT(1) NOT NULL DEFAULT 0,
                     verification_token VARCHAR(255) DEFAULT NULL,
                     verification_token_expires_at TIMESTAMP NULL DEFAULT NULL,
@@ -74,6 +76,8 @@ class Database:
                     reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL,
                     active_status ENUM('actively_looking', 'open_to_offers', 'not_looking') NOT NULL DEFAULT 'actively_looking',
                     headhunting_mode TINYINT(1) NOT NULL DEFAULT 1,
+                    verified TINYINT(1) NOT NULL DEFAULT 0,
+                    is_banned TINYINT(1) NOT NULL DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
@@ -261,6 +265,64 @@ class Database:
                     FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS reports (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NULL,
+                    type VARCHAR(255) NOT NULL,
+                    content TEXT NOT NULL,
+                    status ENUM('Pending', 'Resolved') NOT NULL DEFAULT 'Pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS admin_logs (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    admin_name VARCHAR(255) DEFAULT NULL,
+                    action VARCHAR(255) NOT NULL,
+                    target_type VARCHAR(255) DEFAULT NULL,
+                    target_id INT DEFAULT NULL,
+                    details TEXT DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS saved_searches (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    search_query VARCHAR(255) DEFAULT NULL,
+                    opportunity_type VARCHAR(50) DEFAULT NULL,
+                    location VARCHAR(255) DEFAULT NULL,
+                    experience_level VARCHAR(255) DEFAULT NULL,
+                    email_alerts TINYINT(1) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    message TEXT NOT NULL,
+                    link VARCHAR(255) DEFAULT NULL,
+                    is_read TINYINT(1) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS follows (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    follower_id INT NOT NULL,
+                    followed_id INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (followed_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_follow (follower_id, followed_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
     def _run_migrations(self):
         """Add any missing columns to existing tables."""
         # Users table migrations
@@ -271,7 +333,7 @@ class Database:
             ("skills",       "ALTER TABLE users ADD COLUMN skills TEXT DEFAULT NULL"),
             ("cv_path",      "ALTER TABLE users ADD COLUMN cv_path VARCHAR(255) DEFAULT NULL"),
             ("cv_data",      "ALTER TABLE users ADD COLUMN cv_data TEXT DEFAULT NULL"),
-            ("account_type", "ALTER TABLE users ADD COLUMN account_type ENUM('individual','company') NOT NULL DEFAULT 'individual'"),
+            ("account_type", "ALTER TABLE users ADD COLUMN account_type ENUM('individual','company','admin') NOT NULL DEFAULT 'individual'"),
             ("email_verified", "ALTER TABLE users ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0"),
             ("verification_token", "ALTER TABLE users ADD COLUMN verification_token VARCHAR(255) DEFAULT NULL"),
             ("verification_token_expires_at", "ALTER TABLE users ADD COLUMN verification_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
@@ -279,6 +341,9 @@ class Database:
             ("reset_password_token_expires_at", "ALTER TABLE users ADD COLUMN reset_password_token_expires_at TIMESTAMP NULL DEFAULT NULL"),
             ("active_status", "ALTER TABLE users ADD COLUMN active_status ENUM('actively_looking', 'open_to_offers', 'not_looking') NOT NULL DEFAULT 'actively_looking'"),
             ("headhunting_mode", "ALTER TABLE users ADD COLUMN headhunting_mode TINYINT(1) NOT NULL DEFAULT 1"),
+            ("resume_analysis", "ALTER TABLE users ADD COLUMN resume_analysis LONGTEXT DEFAULT NULL"),
+            ("verified",     "ALTER TABLE users ADD COLUMN verified TINYINT(1) NOT NULL DEFAULT 0"),
+            ("is_banned",    "ALTER TABLE users ADD COLUMN is_banned TINYINT(1) NOT NULL DEFAULT 0"),
         ]
         with self.__connection.cursor() as cursor:
             cursor.execute(
@@ -292,6 +357,10 @@ class Database:
             if col not in existing_users:
                 with self.__connection.cursor() as cursor:
                     cursor.execute(sql)
+
+        # Explicitly make sure ENUM list includes 'admin'
+        with self.__connection.cursor() as cursor:
+            cursor.execute("ALTER TABLE users MODIFY COLUMN account_type ENUM('individual', 'company', 'admin') NOT NULL DEFAULT 'individual'")
 
         # Companies table migrations
         companies_migrations = [
@@ -366,6 +435,51 @@ class Database:
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+        
+        # Create saved_searches if it doesn't exist (migration)
+        with self.__connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS saved_searches (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    search_query VARCHAR(255) DEFAULT NULL,
+                    opportunity_type VARCHAR(50) DEFAULT NULL,
+                    location VARCHAR(255) DEFAULT NULL,
+                    experience_level VARCHAR(255) DEFAULT NULL,
+                    email_alerts TINYINT(1) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+        
+        # Create notifications if it doesn't exist (migration)
+        with self.__connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    message TEXT NOT NULL,
+                    link VARCHAR(255) DEFAULT NULL,
+                    is_read TINYINT(1) DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+
+        # Create follows if it doesn't exist (migration)
+        with self.__connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS follows (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    follower_id INT NOT NULL,
+                    followed_id INT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (followed_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_follow (follower_id, followed_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
 
@@ -461,4 +575,22 @@ class Database:
                         company_id, datetime.now() + timedelta(days=10)
                     ))
                     print("Mock events seeded successfully!")
+
+    def _seed_mock_saved_searches(self):
+        """Seed mock saved searches if the saved_searches table is empty."""
+        with self.__connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) as cnt FROM saved_searches")
+            if cursor.fetchone()["cnt"] == 0:
+                # Find an individual candidate to attach the saved searches to
+                cursor.execute("SELECT id FROM users WHERE account_type = 'individual' LIMIT 1")
+                user = cursor.fetchone()
+                if user:
+                    user_id = user["id"]
+                    cursor.execute("""
+                        INSERT INTO saved_searches (user_id, search_query, opportunity_type, location, experience_level, email_alerts)
+                        VALUES 
+                        (%s, 'Python', 'job', 'Kathmandu (Onsite)', 'Entry', 1),
+                        (%s, 'React', 'internship', 'Remote', 'All Levels', 0)
+                    """, (user_id, user_id))
+                    print("Mock saved searches seeded successfully!")
 

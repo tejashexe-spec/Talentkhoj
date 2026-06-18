@@ -302,6 +302,18 @@
                 <div id="modalAnswers" class="modal-answers-list"></div>
             </div>
 
+            <!-- Send Notification Section -->
+            <div style="border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 15px; margin-bottom: 15px;">
+                <h4 class="modal-section-title">Send Custom In-App Notification</h4>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <input type="text" id="notifTitle" placeholder="Notification Title (e.g., Schedule Interview)" style="width: 100%; height: 38px; padding: 0 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 13.5px; outline: none;">
+                    <textarea id="notifMessage" rows="2" placeholder="Write notification message here..." style="width: 100%; height: 60px; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 13.5px; outline: none;"></textarea>
+                    <button type="button" class="btn-action" onclick="sendApplicantNotification()" style="align-self: flex-end; padding: 8px 16px; font-size: 13px; background: #2456ff; border-radius: 8px; color: white; border: none; cursor: pointer; font-weight: 600;">
+                        Send Notification
+                    </button>
+                </div>
+            </div>
+
             <div
                 style="display: flex; justify-content: flex-end; gap: 12px; border-top: 1px solid #f1f5f9; padding-top: 16px; margin-top: 10px; position: sticky; bottom: 0; background: white; z-index: 10;">
                 <a id="modalCVBtn" href="#" target="_blank" class="btn-action"
@@ -699,7 +711,9 @@
     }
 
     // --- MODAL PREVIEW ---
+    let activeModalAppId = null;
     function openApplicantDetailsDirect(appId) {
+        activeModalAppId = appId;
         const app = applicantsCache[appId];
         if (app) {
             openApplicantDetails(app);
@@ -877,5 +891,46 @@
             closeModal();
         }
     });
+
+    function sendApplicantNotification() {
+        const title = document.getElementById("notifTitle").value.trim();
+        const message = document.getElementById("notifMessage").value.trim();
+        if (!title || !message) {
+            alert("Please enter a title and message.");
+            return;
+        }
+        
+        const app = applicantsCache[activeModalAppId];
+        if (!app || !app.user_id) {
+            alert("Error locating candidate.");
+            return;
+        }
+        
+        fetch("/dashboard/ats/notify", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                user_id: app.user_id,
+                title: title,
+                message: message
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert("Notification sent successfully!");
+                document.getElementById("notifTitle").value = "";
+                document.getElementById("notifMessage").value = "";
+            } else {
+                alert(data.message || "Failed to send notification.");
+            }
+        })
+        .catch(err => {
+            console.error("Notification dispatch failed:", err);
+            alert("Failed to send notification. Network error.");
+        });
+    }
 </script>
 {% endblock %}

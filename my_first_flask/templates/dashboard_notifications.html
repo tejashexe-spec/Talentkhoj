@@ -1,0 +1,329 @@
+{% extends "dashboard_base.html" %}
+{% set active = "notifications" %}
+
+{% block title %}Notifications | Talent Khoj{% endblock %}
+
+{% block content %}
+<style>
+    .notif-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .notif-header-panel {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .notif-header-panel h1 {
+        font-size: 26px;
+        color: #0f172a;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .btn-mark-read {
+        background: #f1f5f9;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+        padding: 8px 16px;
+        font-size: 13.5px;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-mark-read:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+
+    .notif-list {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        overflow: hidden;
+    }
+
+    .notif-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 20px;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background-color 0.2s;
+        cursor: pointer;
+        position: relative;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .notif-item:last-child {
+        border-bottom: none;
+    }
+
+    .notif-item:hover {
+        background-color: #f8fafc;
+    }
+
+    .notif-item.unread {
+        background-color: #f4f7ff;
+    }
+
+    .notif-item.unread::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #2456ff;
+    }
+
+    .notif-icon-wrapper {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* Icon theme variations based on notification title/type */
+    .notif-icon-match {
+        background: #eff6ff;
+        color: #3b82f6;
+    }
+
+    .notif-icon-status {
+        background: #fff7ed;
+        color: #f97316;
+    }
+
+    .notif-icon-badge {
+        background: #ecfdf5;
+        color: #10b981;
+    }
+
+    .notif-icon-default {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .notif-details {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .notif-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 12px;
+        margin-bottom: 4px;
+    }
+
+    .notif-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .notif-item.unread .notif-title {
+        color: #0f172a;
+    }
+
+    .notif-time {
+        font-size: 12px;
+        color: #94a3b8;
+        white-space: nowrap;
+    }
+
+    .notif-message {
+        font-size: 13.5px;
+        color: #475569;
+        line-height: 1.5;
+        margin: 0;
+    }
+
+    .notif-item.unread .notif-message {
+        color: #1e293b;
+        font-weight: 500;
+    }
+
+    .unread-indicator-dot {
+        width: 8px;
+        height: 8px;
+        background: #2456ff;
+        border-radius: 50%;
+        margin-left: 8px;
+        display: inline-block;
+    }
+
+    .empty-notif-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        padding: 48px 24px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .empty-notif-card svg {
+        margin-bottom: 16px;
+        color: #cbd5e1;
+    }
+
+    .empty-notif-card h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 6px;
+    }
+
+    .empty-notif-card p {
+        font-size: 13.5px;
+        color: #64748b;
+        margin: 0;
+    }
+</style>
+
+<div class="notif-container">
+    <div class="notif-header-panel">
+        <h1>Notifications</h1>
+        {% if notifications %}
+            <button class="btn-mark-read" onclick="markAllAsRead()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Mark all as read
+            </button>
+        {% endif %}
+    </div>
+
+    {% if notifications %}
+        <div class="notif-list">
+            {% for notif in notifications %}
+                {% set icon_class = "notif-icon-default" %}
+                {% if "match" in notif.title|lower %}
+                    {% set icon_class = "notif-icon-match" %}
+                {% elif "status" in notif.title|lower %}
+                    {% set icon_class = "notif-icon-status" %}
+                {% elif "badge" in notif.title|lower %}
+                    {% set icon_class = "notif-icon-badge" %}
+                {% endif %}
+
+                <div class="notif-item {% if notif.is_read == 0 %}unread{% endif %}" 
+                     data-id="{{ notif.id }}" 
+                     onclick="handleNotifClick(event, {{ notif.id }}, '{{ notif.link or '/dashboard' }}')">
+                    
+                    <div class="notif-icon-wrapper {{ icon_class }}">
+                        {% if "match" in notif.title|lower %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        {% elif "status" in notif.title|lower %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                        {% elif "badge" in notif.title|lower %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                            </svg>
+                        {% else %}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                            </svg>
+                        {% endif %}
+                    </div>
+
+                    <div class="notif-details">
+                        <div class="notif-title-row">
+                            <span class="notif-title">
+                                {{ notif.title }}
+                                {% if notif.is_read == 0 %}
+                                    <span class="unread-indicator-dot" id="dot-{{ notif.id }}"></span>
+                                {% endif %}
+                            </span>
+                            <span class="notif-time">{{ notif.created_at_str }}</span>
+                        </div>
+                        <p class="notif-message">{{ notif.message }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-notif-card">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            <h3>All caught up!</h3>
+            <p>You have no notifications at this time.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    function handleNotifClick(event, id, link) {
+        event.preventDefault();
+        
+        // Asynchronously mark as read
+        fetch('/api/notifications/read/' + id, {
+            method: 'POST'
+        })
+        .then(() => {
+            window.location.href = link;
+        })
+        .catch(err => {
+            console.error('Error marking notification as read:', err);
+            window.location.href = link;
+        });
+    }
+
+    function markAllAsRead() {
+        fetch('/api/notifications/read-all', {
+            method: 'POST'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Update UI elements to look read
+                document.querySelectorAll('.notif-item.unread').forEach(item => {
+                    item.classList.remove('unread');
+                });
+                document.querySelectorAll('.unread-indicator-dot').forEach(dot => {
+                    dot.remove();
+                });
+                
+                // Update header badge and sidebar badge counts
+                updateSidebarBadge(0);
+                if (typeof updateHeaderNotificationBell === 'function') {
+                    updateHeaderNotificationBell();
+                }
+            }
+        })
+        .catch(err => console.error('Error marking all as read:', err));
+    }
+
+    function updateSidebarBadge(count) {
+        const sidebarBadge = document.getElementById('sidebar-notifications-badge');
+        if (sidebarBadge) {
+            if (count > 0) {
+                sidebarBadge.innerText = count;
+                sidebarBadge.style.display = 'inline-flex';
+            } else {
+                sidebarBadge.style.display = 'none';
+            }
+        }
+    }
+</script>
+{% endblock %}

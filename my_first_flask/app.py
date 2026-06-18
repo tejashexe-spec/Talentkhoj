@@ -1747,6 +1747,15 @@ def dashboard_badges():
                     VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')
                 """, (candidate["id"], company["id"], title, badge_type, description or None, start_date, end_date))
                 
+                # Trigger notification to candidate
+                create_notification(
+                    candidate["id"],
+                    "badge",
+                    "New Badge Issued",
+                    f"Company '{company['company_name']}' has issued a verification badge: '{title}'. Please review and accept/reject it.",
+                    "/dashboard/badges"
+                )
+                
                 flash(f"Verification badge successfully issued to {candidate['full_name']}!", "success")
                 return redirect(url_for("dashboard_badges"))
             
@@ -1798,6 +1807,24 @@ def accept_badge(badge_id):
         
         if badge:
             cursor.execute("UPDATE user_badges SET status = 'accepted' WHERE id = %s", (badge_id,))
+            
+            # Fetch company user ID
+            cursor.execute("""
+                SELECT b.title, c.user_id as company_user_id, u.full_name as candidate_name
+                FROM user_badges b
+                JOIN companies c ON b.company_id = c.id
+                JOIN users u ON b.user_id = u.id
+                WHERE b.id = %s
+            """, (badge_id,))
+            badge_details = cursor.fetchone()
+            if badge_details:
+                create_notification(
+                    badge_details["company_user_id"],
+                    "badge_status",
+                    "Badge Accepted",
+                    f"Candidate '{badge_details['candidate_name']}' has accepted your verification badge: '{badge_details['title']}'.",
+                    "/dashboard/badges"
+                )
             flash("Badge successfully accepted and added to your public profile!", "success")
         else:
             flash("Unable to accept badge.", "error")
@@ -1816,6 +1843,24 @@ def reject_badge(badge_id):
         
         if badge:
             cursor.execute("UPDATE user_badges SET status = 'rejected' WHERE id = %s", (badge_id,))
+            
+            # Fetch company user ID
+            cursor.execute("""
+                SELECT b.title, c.user_id as company_user_id, u.full_name as candidate_name
+                FROM user_badges b
+                JOIN companies c ON b.company_id = c.id
+                JOIN users u ON b.user_id = u.id
+                WHERE b.id = %s
+            """, (badge_id,))
+            badge_details = cursor.fetchone()
+            if badge_details:
+                create_notification(
+                    badge_details["company_user_id"],
+                    "badge_status",
+                    "Badge Rejected",
+                    f"Candidate '{badge_details['candidate_name']}' has rejected your verification badge request: '{badge_details['title']}'.",
+                    "/dashboard/badges"
+                )
             flash("Badge verification request rejected.", "info")
         else:
             flash("Unable to reject badge.", "error")

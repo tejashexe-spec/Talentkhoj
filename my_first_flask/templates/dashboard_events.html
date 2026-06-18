@@ -64,9 +64,6 @@
                             <h4 style="font-size: 14px; color: #0f172a; font-weight: 600; margin: 0;">{{ event.company_name }}</h4>
                             <span style="font-size: 11px; color: #94a3b8;">Host Organizer</span>
                         </div>
-                        {% if session.get('account_type') == 'company' %}
-                            <span style="position: absolute; top: 24px; right: 24px; background: #f0fdf4; color: #16a34a; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px;">Active</span>
-                        {% endif %}
                     </div>
 
                     <!-- Event Title & Desc -->
@@ -92,13 +89,33 @@
                         <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 250px;">{{ event.location }}</span>
                     </div>
 
-                    {% if event.registration_link %}
-                        <a href="{{ event.registration_link }}" target="_blank" class="submit-btn" style="text-decoration: none; display: block; text-align: center; padding: 10px; font-size: 13.5px; font-weight: 600; border-radius: 8px; background: #2456ff; color: white;">
-                            Register / Join Event
-                        </a>
+                    <!-- Company Actions -->
+                    {% if session.get('account_type') == 'company' %}
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <button onclick="openRegistrations({{ event.id }}, '{{ event.title | escape }}')" style="width: 100%; border: 1.5px solid #cbd5e1; background: white; color: #334155; padding: 10px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                View Registrations ({{ event.rsvp_count or 0 }})
+                            </button>
+                            {% if event.registration_link %}
+                                <a href="{{ event.registration_link }}" target="_blank" style="text-decoration: none; display: block; text-align: center; padding: 10px; font-size: 13px; font-weight: 600; border-radius: 8px; background: #f1f5f9; color: #475569;">
+                                    View Join Link
+                                </a>
+                            {% endif %}
+                        </div>
                     {% else %}
-                        <div style="background: #f8fafc; color: #94a3b8; font-size: 13px; font-weight: 500; text-align: center; padding: 10px; border-radius: 8px;">
-                            No Registration Required
+                        <!-- Candidate RSVP & Join Link -->
+                        <div style="display: flex; gap: 8px; flex-direction: column;">
+                            <button id="rsvp-btn-{{ event.id }}" onclick="toggleRSVP({{ event.id }})" 
+                                    style="width: 100%; padding: 10px; font-size: 13.5px; font-weight: 600; border-radius: 8px; border: none; cursor: pointer; transition: all 0.2s;
+                                           {% if event.has_rsvp %}background: #22c55e; color: white;{% else %}background: #2456ff; color: white;{% endif %}">
+                                {% if event.has_rsvp %}✓ RSVP'd (Attending){% else %}RSVP / Attend{% endif %}
+                            </button>
+
+                            {% if event.registration_link %}
+                                <a href="{{ event.registration_link }}" target="_blank" class="submit-btn" style="text-decoration: none; display: block; text-align: center; padding: 10px; font-size: 13.5px; font-weight: 600; border-radius: 8px; background: #f1f5f9; color: #334155; margin-top: 0; border: 1.5px solid #cbd5e1;">
+                                    Join Webinar Link
+                                </a>
+                            {% endif %}
                         </div>
                     {% endif %}
                 </div>
@@ -106,4 +123,117 @@
         {% endfor %}
     </div>
 {% endif %}
+
+<!-- COMPANY VIEW REGISTRATIONS MODAL -->
+<div id="regsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.25s ease;">
+    <div style="background: white; width: 100%; max-width: 500px; border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); overflow: hidden; transform: scale(0.95); transition: transform 0.25s ease;">
+        <div style="padding: 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0;">Event Registrations</h3>
+                <p id="modalEventTitle" style="font-size: 13px; color: #64748b; margin: 4px 0 0 0; font-weight: 500;"></p>
+            </div>
+            <button onclick="closeRegistrations()" style="background: #f1f5f9; border: none; border-radius: 50%; width: 32px; height: 32px; font-size: 18px; color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">×</button>
+        </div>
+        <div id="regsList" style="padding: 20px; max-height: 350px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+            <!-- Dynamic registration items -->
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleRSVP(eventId) {
+        const btn = document.getElementById(`rsvp-btn-${eventId}`);
+        if (!btn) return;
+        
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+        
+        fetch(`/dashboard/events/rsvp/${eventId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.success) {
+                if (data.status === 'attending') {
+                    btn.style.background = "#22c55e";
+                    btn.innerText = "✓ RSVP'd (Attending)";
+                } else {
+                    btn.style.background = "#2456ff";
+                    btn.innerText = "RSVP / Attend";
+                }
+            } else {
+                alert(data.error || "Failed to update RSVP status.");
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = "RSVP / Attend";
+            console.error(err);
+        });
+    }
+
+    function openRegistrations(eventId, eventTitle) {
+        const modal = document.getElementById("regsModal");
+        const list = document.getElementById("regsList");
+        document.getElementById("modalEventTitle").innerText = eventTitle;
+        
+        list.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 14px; padding: 20px;">Loading registrations...</div>';
+        
+        modal.style.display = "flex";
+        setTimeout(() => {
+            modal.style.opacity = "1";
+            modal.firstElementChild.style.transform = "scale(1)";
+        }, 10);
+        
+        fetch(`/dashboard/events/${eventId}/registrations`)
+            .then(res => res.json())
+            .then(data => {
+                list.innerHTML = "";
+                if (data.success && data.registrations.length > 0) {
+                    data.registrations.forEach(reg => {
+                        const avatar = reg.avatar ? reg.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(reg.full_name)}&size=36&rounded=true&background=2456ff&color=fff`;
+                        const item = document.createElement("div");
+                        item.style.cssText = "display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 8px; background: #f8fafc; border: 1px solid #f1f5f9;";
+                        item.innerHTML = `
+                            <img src="${avatar}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; font-size: 13.5px; color: #0f172a;">${reg.full_name}</div>
+                                <div style="font-size: 11px; color: #64748b;">${reg.email}</div>
+                            </div>
+                            <div style="font-size: 10px; color: #94a3b8; text-align: right;">
+                                RSVP Date<br><strong>${reg.created_at_str}</strong>
+                            </div>
+                        `;
+                        list.appendChild(item);
+                    });
+                } else {
+                    list.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 14px; padding: 20px;">No registrations yet for this event.</div>';
+                }
+            })
+            .catch(err => {
+                list.innerHTML = '<div style="text-align: center; color: #ef4444; font-size: 14px; padding: 20px;">Failed to load registrations.</div>';
+                console.error(err);
+            });
+    }
+
+    function closeRegistrations() {
+        const modal = document.getElementById("regsModal");
+        modal.style.opacity = "0";
+        modal.firstElementChild.style.transform = "scale(0.95)";
+        setTimeout(() => {
+            modal.style.display = "none";
+        }, 250);
+    }
+    
+    // Close modal on background click
+    document.getElementById("regsModal").addEventListener("click", (e) => {
+        if (e.target.id === "regsModal") {
+            closeRegistrations();
+        }
+    });
+</script>
 {% endblock %}

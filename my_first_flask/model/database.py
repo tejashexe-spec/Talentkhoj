@@ -266,6 +266,35 @@ class Database:
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
             cursor.execute("""
+                CREATE TABLE IF NOT EXISTS company_team (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    company_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    role VARCHAR(100) DEFAULT 'Member',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_company_user (company_id, user_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS interviews (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    company_id INT NOT NULL,
+                    candidate_id INT NOT NULL,
+                    job_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    interview_date DATETIME NOT NULL,
+                    location VARCHAR(255) NOT NULL,
+                    status ENUM('scheduled', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+                    FOREIGN KEY (candidate_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS reports (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     user_id INT NULL,
@@ -321,6 +350,17 @@ class Database:
                     FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (followed_id) REFERENCES users(id) ON DELETE CASCADE,
                     UNIQUE KEY unique_follow (follower_id, followed_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS application_notes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    application_id INT NOT NULL,
+                    author_id INT NOT NULL,
+                    note_text TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+                    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
     def _run_migrations(self):
@@ -437,7 +477,7 @@ class Database:
                     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
-        
+
         # Create saved_searches if it doesn't exist (migration)
         with self.__connection.cursor() as cursor:
             cursor.execute("""
@@ -501,6 +541,48 @@ class Database:
                 with self.__connection.cursor() as cursor:
                     cursor.execute(sql)
 
+        # Create company_team, interviews, application_notes migrations
+        with self.__connection.cursor() as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS company_team (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    company_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    role VARCHAR(100) DEFAULT 'Member',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    UNIQUE KEY unique_company_user (company_id, user_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS interviews (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    company_id INT NOT NULL,
+                    candidate_id INT NOT NULL,
+                    job_id INT NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    interview_date DATETIME NOT NULL,
+                    location VARCHAR(255) NOT NULL,
+                    status ENUM('scheduled', 'completed', 'cancelled') NOT NULL DEFAULT 'scheduled',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+                    FOREIGN KEY (candidate_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS application_notes (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    application_id INT NOT NULL,
+                    author_id INT NOT NULL,
+                    note_text TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
+                    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
 
 
     def get_connection(self):

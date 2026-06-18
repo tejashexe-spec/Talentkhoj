@@ -74,7 +74,7 @@
                 Dashboard
             </a>
 
-            {% if session.get('account_type') == 'company' %}
+            {% if session.get('account_type') == 'company' or has_company_access %}
 
             <!-- COMPANY SIDEBAR -->
             <a href="/dashboard/ats" class="sidebar-item {% if active == 'ats' %}active{% endif %}">
@@ -125,6 +125,22 @@
                     </svg>
                 </span>
                 Events
+            </a>
+            <a href="/dashboard/interviews" class="sidebar-item {% if active == 'interviews' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </span>
+                Interviews
+            </a>
+            <a href="/dashboard/team" class="sidebar-item {% if active == 'team' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </span>
+                Team Collaboration
             </a>
             <a href="/dashboard/badges" class="sidebar-item {% if active == 'badges' %}active{% endif %}">
                 <span class="sidebar-icon">
@@ -214,6 +230,14 @@
                     </svg>
                 </span>
                 Events
+            </a>
+            <a href="/dashboard/interviews" class="sidebar-item {% if active == 'interviews' %}active{% endif %}">
+                <span class="sidebar-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                </span>
+                Interviews
             </a>
             <a href="/dashboard/badges" class="sidebar-item {% if active == 'badges' %}active{% endif %}">
                 <span class="sidebar-icon">

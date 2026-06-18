@@ -51,9 +51,38 @@ db = Database()
 EmailService._db = db
 
 
+def check_company_access(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (user_id,))
+        if cursor.fetchone():
+            return True
+        cursor.execute("SELECT id FROM company_team WHERE user_id = %s", (user_id,))
+        if cursor.fetchone():
+            return True
+    return False
+
+def get_company_for_user(conn, user_id):
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (user_id,))
+        comp = cursor.fetchone()
+        if comp:
+            return comp
+        cursor.execute("""
+            SELECT c.id, c.company_name 
+            FROM companies c
+            JOIN company_team t ON c.id = t.company_id
+            WHERE t.user_id = %s
+        """, (user_id,))
+        return cursor.fetchone()
+
 @app.context_processor
 def inject_session():
-    return dict(session=session)
+    has_company_access = False
+    if session.get("user_id"):
+        has_company_access = check_company_access(session["user_id"])
+    return dict(session=session, has_company_access=has_company_access)
+
 def get_db():
     return db.get_connection()
 
@@ -1362,13 +1391,11 @@ def dashboard_ats():
 @app.route("/dashboard/ats/filter")
 @login_required
 def dashboard_ats_filter():
-    if session.get("account_type") != "company":
+    if session.get("account_type") != "company" and not check_company_access(session["user_id"]):
         return jsonify({"success": False, "message": "Unauthorized"}), 403
         
     conn = get_db()
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
-        company = cursor.fetchone()
+    company = get_company_for_user(conn, session["user_id"])
         
     if not company:
         return jsonify({"success": False, "message": "Company profile incomplete."})
@@ -1480,7 +1507,7 @@ def dashboard_ats_filter():
 @app.route("/dashboard/ats/update-status", methods=["POST"])
 @login_required
 def dashboard_ats_update_status():
-    if session.get("account_type") != "company":
+    if session.get("account_type") != "company" and not check_company_access(session["user_id"]):
         return jsonify({"success": False, "message": "Unauthorized access."}), 403
         
     data = request.get_json() or {}
@@ -1495,9 +1522,7 @@ def dashboard_ats_update_status():
         return jsonify({"success": False, "message": "Invalid status value."}), 400
         
     conn = get_db()
-    with conn.cursor() as cursor:
-        cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
-        company = cursor.fetchone()
+    company = get_company_for_user(conn, session["user_id"])
         
     if not company:
         return jsonify({"success": False, "message": "Complete your company profile first."}), 400
@@ -1899,12 +1924,12 @@ def dashboard_settings():
 def dashboard_badges():
     conn = get_db()
     account_type = session.get("account_type")
+    is_company = (account_type == "company" or check_company_access(session["user_id"]))
     
-    if account_type == "company":
+    if is_company:
         with conn.cursor() as cursor:
             # Get company details
-            cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
-            company = cursor.fetchone()
+            company = get_company_for_user(conn, session["user_id"])
             
             if not company:
                 flash("Only registered companies can view or issue badges.", "error")
@@ -2849,16 +2874,19 @@ def dashboard_resume_doctor_analyze():
 def dashboard_events():
     conn = get_db()
     account_type = session.get("account_type")
+    is_company = (account_type == "company" or check_company_access(session["user_id"]))
     
     with conn.cursor() as cursor:
-        if account_type == "company":
+        if is_company:
+            company = get_company_for_user(conn, session["user_id"])
+            company_id = company["id"] if company else 0
             cursor.execute(
                 "SELECT e.*, c.company_name, c.logo "
                 "FROM events e "
                 "JOIN companies c ON e.company_id = c.id "
-                "WHERE c.user_id = %s "
+                "WHERE e.company_id = %s "
                 "ORDER BY e.event_date ASC",
-                (session["user_id"],)
+                (company_id,)
             )
         else:
             cursor.execute(
@@ -2875,7 +2903,8 @@ def dashboard_events():
 @app.route("/dashboard/events/create", methods=["GET", "POST"])
 @login_required
 def dashboard_create_event():
-    if session.get("account_type") != "company":
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
         return redirect(url_for("dashboard_events"))
         
     error = None
@@ -2908,9 +2937,7 @@ def dashboard_create_event():
             try:
                 event_date = datetime.strptime(event_date_str, "%Y-%m-%dT%H:%M")
                 conn = get_db()
-                with conn.cursor() as cursor:
-                    cursor.execute("SELECT id FROM companies WHERE user_id = %s", (session["user_id"],))
-                    company = cursor.fetchone()
+                company = get_company_for_user(conn, session["user_id"])
                 
                 if not company:
                     error = "Company profile not found. Please register as a company first."
@@ -3034,7 +3061,8 @@ def dashboard_delete_event(event_id):
 @app.route("/dashboard/post-opportunity", methods=["GET", "POST"])
 @login_required
 def dashboard_post_opportunity():
-    if session.get("account_type") != "company":
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
         flash("Only company accounts can post opportunities.", "error")
         return redirect(url_for("dashboard"))
         
@@ -3096,9 +3124,7 @@ def dashboard_post_opportunity():
             return render_template("dashboard_post_opportunity.html")
             
         conn = get_db()
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (session["user_id"],))
-            company = cursor.fetchone()
+        company = get_company_for_user(conn, session["user_id"])
             
         if not company:
             flash("Please complete your company profile before posting an opportunity.", "error")
@@ -4598,6 +4624,346 @@ def mark_announcement_read():
     return jsonify({"success": True})
 
 
+# ─── TEAM COLLABORATION ───────────────────────────────────────────────────────
+
+@app.route("/dashboard/team")
+@login_required
+def dashboard_team():
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
+        flash("Only company accounts and their team members can access the Team dashboard.", "error")
+        return redirect(url_for("dashboard"))
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        flash("Please complete your company profile first.", "error")
+        return redirect(url_for("profile"))
+        
+    company_id = company["id"]
+    
+    with conn.cursor() as cursor:
+        # Fetch owner details
+        cursor.execute("""
+            SELECT u.id, u.full_name, u.email, u.avatar 
+            FROM users u
+            JOIN companies c ON u.id = c.user_id
+            WHERE c.id = %s
+        """, (company_id,))
+        owner = cursor.fetchone()
+        
+        # Fetch team members
+        cursor.execute("""
+            SELECT t.id as member_id, t.role, u.id as user_id, u.full_name, u.email, u.avatar
+            FROM company_team t
+            JOIN users u ON t.user_id = u.id
+            WHERE t.company_id = %s
+            ORDER BY t.created_at ASC
+        """, (company_id,))
+        team_members = cursor.fetchall()
+        
+    return render_template("dashboard_team.html", owner=owner, team_members=team_members, active="team")
+
+
+@app.route("/dashboard/team/add", methods=["POST"])
+@login_required
+def dashboard_team_add():
+    email = request.form.get("email", "").strip().lower()
+    role = request.form.get("role", "Member").strip()
+    
+    if not email:
+        flash("Collaborator email is required.", "error")
+        return redirect(url_for("dashboard_team"))
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        flash("Unauthorized company context.", "error")
+        return redirect(url_for("dashboard"))
+        
+    company_id = company["id"]
+    
+    with conn.cursor() as cursor:
+        # Check if user exists
+        cursor.execute("SELECT id, full_name, account_type FROM users WHERE email = %s", (email,))
+        target_user = cursor.fetchone()
+        
+        if not target_user:
+            flash(f"User with email '{email}' is not registered on Talent Khoj.", "error")
+            return redirect(url_for("dashboard_team"))
+            
+        if target_user["account_type"] != "individual":
+            flash("You can only add individual developer accounts as collaborators.", "error")
+            return redirect(url_for("dashboard_team"))
+            
+        # Check if already added
+        cursor.execute("SELECT id FROM company_team WHERE company_id = %s AND user_id = %s", (company_id, target_user["id"]))
+        if cursor.fetchone():
+            flash("This user is already a collaborator in your team.", "error")
+            return redirect(url_for("dashboard_team"))
+            
+        # Insert
+        cursor.execute("""
+            INSERT INTO company_team (company_id, user_id, role)
+            VALUES (%s, %s, %s)
+        """, (company_id, target_user["id"], role))
+        
+        # Notify user
+        create_notification(
+            target_user["id"],
+            "general",
+            "Team Invite",
+            f"You have been added as '{role}' to the recruitment team of '{company.get('company_name', 'Company')}'.",
+            "/dashboard"
+        )
+        
+    flash(f"Successfully added {target_user['full_name']} to team collaborators!", "success")
+    return redirect(url_for("dashboard_team"))
+
+
+@app.route("/dashboard/team/remove/<int:member_id>", methods=["POST"])
+@login_required
+def dashboard_team_remove(member_id):
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        flash("Unauthorized.", "error")
+        return redirect(url_for("dashboard"))
+        
+    company_id = company["id"]
+    
+    with conn.cursor() as cursor:
+        # Verify member belongs to this company
+        cursor.execute("SELECT user_id FROM company_team WHERE id = %s AND company_id = %s", (member_id, company_id))
+        member = cursor.fetchone()
+        
+        if member:
+            cursor.execute("DELETE FROM company_team WHERE id = %s", (member_id,))
+            flash("Collaborator removed successfully.", "success")
+            
+            # Notify user
+            create_notification(
+                member["user_id"],
+                "general",
+                "Team Access Revoked",
+                f"Your access to the recruitment team of '{company.get('company_name', 'Company')}' has been removed.",
+                "/dashboard"
+            )
+        else:
+            flash("Collaborator member not found.", "error")
+            
+    return redirect(url_for("dashboard_team"))
+
+
+# ─── INTERVIEWS / SCHEDULER ──────────────────────────────────────────────────
+
+@app.route("/dashboard/interviews")
+@login_required
+def dashboard_interviews():
+    conn = get_db()
+    user_id = session["user_id"]
+    account_type = session["account_type"]
+    
+    interviews = []
+    
+    with conn.cursor() as cursor:
+        if account_type == "company":
+            company = get_company_for_user(conn, user_id)
+            if company:
+                cursor.execute("""
+                    SELECT i.*, u.full_name as candidate_name, u.avatar as candidate_avatar, j.title as job_title
+                    FROM interviews i
+                    JOIN users u ON i.candidate_id = u.id
+                    JOIN jobs j ON i.job_id = j.id
+                    WHERE i.company_id = %s
+                    ORDER BY i.interview_date ASC
+                """, (company["id"],))
+                interviews = cursor.fetchall()
+        else:
+            cursor.execute("""
+                SELECT i.*, c.company_name, c.logo as company_logo, j.title as job_title
+                FROM interviews i
+                JOIN companies c ON i.company_id = c.id
+                JOIN jobs j ON i.job_id = j.id
+                WHERE i.candidate_id = %s
+                ORDER BY i.interview_date ASC
+            """, (user_id,))
+            interviews = cursor.fetchall()
+            
+    for iv in interviews:
+        if iv.get("interview_date"):
+            iv["interview_date_str"] = iv["interview_date"].strftime("%Y-%m-%d %I:%M %p")
+            
+    return render_template("dashboard_interviews.html", interviews=interviews, active="interviews")
+
+
+@app.route("/api/interviews/schedule", methods=["POST"])
+@login_required
+def schedule_interview():
+    candidate_id = request.form.get("candidate_id")
+    job_id = request.form.get("job_id")
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    date_str = request.form.get("interview_date")
+    location = request.form.get("location", "").strip()
+    
+    if not candidate_id or not job_id or not title or not date_str or not location:
+        return jsonify({"success": False, "error": "All fields are required."}), 400
+        
+    try:
+        interview_date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid date format."}), 400
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    company_id = company["id"]
+    
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO interviews (company_id, candidate_id, job_id, title, description, interview_date, location, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'scheduled')
+        """, (company_id, candidate_id, job_id, title, description or None, interview_date, location))
+        
+        # Fetch company name
+        cursor.execute("SELECT company_name FROM companies WHERE id = %s", (company_id,))
+        company_details = cursor.fetchone()
+        
+        # Notify candidate
+        create_notification(
+            candidate_id,
+            "general",
+            "Interview Scheduled",
+            f"'{company_details['company_name']}' has scheduled an interview: '{title}' on {interview_date.strftime('%Y-%m-%d %I:%M %p')}.",
+            "/dashboard/interviews"
+        )
+        
+    return jsonify({"success": True, "message": "Interview scheduled successfully!"})
+
+
+@app.route("/api/interviews/cancel/<int:interview_id>", methods=["POST"])
+@login_required
+def cancel_interview(interview_id):
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    company_id = company["id"]
+         
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, candidate_id, title FROM interviews WHERE id = %s AND company_id = %s", (interview_id, company_id))
+        interview = cursor.fetchone()
+        if not interview:
+            return jsonify({"success": False, "error": "Interview not found or unauthorized."}), 403
+            
+        cursor.execute("UPDATE interviews SET status = 'cancelled' WHERE id = %s", (interview_id,))
+        
+        # Fetch company name
+        cursor.execute("SELECT company_name FROM companies WHERE id = %s", (company_id,))
+        company_details = cursor.fetchone()
+        
+        # Notify candidate
+        create_notification(
+            interview["candidate_id"],
+            "general",
+            "Interview Cancelled",
+            f"Your interview '{interview['title']}' with '{company_details['company_name']}' has been cancelled.",
+            "/dashboard/interviews"
+        )
+        
+    return jsonify({"success": True, "message": "Interview cancelled successfully!"})
+
+
+@app.route("/api/interviews/complete/<int:interview_id>", methods=["POST"])
+@login_required
+def complete_interview(interview_id):
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    company_id = company["id"]
+         
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id FROM interviews WHERE id = %s AND company_id = %s", (interview_id, company_id))
+        if not cursor.fetchone():
+            return jsonify({"success": False, "error": "Interview not found or unauthorized."}), 403
+            
+        cursor.execute("UPDATE interviews SET status = 'completed' WHERE id = %s", (interview_id,))
+        
+    return jsonify({"success": True, "message": "Interview marked as completed."})
+
+
+# ─── TEAM NOTES ───────────────────────────────────────────────────────────────
+
+@app.route("/api/applications/notes/<int:application_id>", methods=["GET"])
+@login_required
+def api_get_notes(application_id):
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT n.id, n.note_text, n.created_at, u.full_name as author_name, u.avatar as author_avatar
+            FROM application_notes n
+            JOIN users u ON n.author_id = u.id
+            WHERE n.application_id = %s
+            ORDER BY n.created_at DESC
+        """, (application_id,))
+        notes = cursor.fetchall()
+        
+    for n in notes:
+        if n.get("created_at"):
+            n["created_at_str"] = n["created_at"].strftime("%Y-%m-%d %I:%M %p")
+            
+    return jsonify({"success": True, "notes": notes})
+
+
+@app.route("/api/applications/notes/add", methods=["POST"])
+@login_required
+def api_add_note():
+    application_id = request.form.get("application_id")
+    note_text = request.form.get("note_text", "").strip()
+    
+    if not application_id or not note_text:
+        return jsonify({"success": False, "error": "Missing application ID or note text."}), 400
+        
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        return jsonify({"success": False, "error": "Unauthorized"}), 403
+        
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            INSERT INTO application_notes (application_id, author_id, note_text)
+            VALUES (%s, %s, %s)
+        """, (application_id, session["user_id"], note_text))
+        
+    return jsonify({"success": True, "message": "Note added successfully!"})
+
+
+@app.route("/api/applications/notes/delete/<int:note_id>", methods=["DELETE", "POST"])
+@login_required
+def api_delete_note(note_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT author_id FROM application_notes WHERE id = %s", (note_id,))
+        note = cursor.fetchone()
+        if not note:
+            return jsonify({"success": False, "error": "Note not found."}), 404
+            
+        if note["author_id"] != session["user_id"]:
+            return jsonify({"success": False, "error": "You can only delete your own notes."}), 403
+            
+        cursor.execute("DELETE FROM application_notes WHERE id = %s", (note_id,))
+        
+    return jsonify({"success": True, "message": "Note deleted."})
 
 
 if __name__ == "__main__":

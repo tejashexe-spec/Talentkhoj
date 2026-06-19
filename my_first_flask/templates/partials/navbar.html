@@ -1,13 +1,27 @@
 <!-- NAVBAR -->
 <nav class="navbar">
-    <a class="nav-logo" href="/">Talent Khoj</a>
+    {% if session.get('user_id') %}
+    <button class="sidebar-toggle-btn" onclick="toggleSidebar(event)" aria-label="Toggle Sidebar">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+    </button>
+    {% endif %}
+    <a class="nav-logo" href="/" style="display: flex; align-items: center; gap: 10px;">
+        <img src="{{ url_for('static', filename='favicon.png') }}" alt="Talent Khoj Logo" style="height: 32px; width: 32px; object-fit: contain;">
+        <span>Talent Khoj</span>
+    </a>
 
     <ul class="nav-links">
+        {% if session.get('user_id') %}
         <li><a href="/" class="{% if request.path == '/' %}active{% endif %}">Home</a></li>
+        {% endif %}
         <li><a href="/dashboard/search?type=internship" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'internship' %}active{% endif %}">Internships</a></li>
         <li><a href="/dashboard/search?type=job" class="{% if request.path == '/dashboard/search' and request.args.get('type') == 'job' %}active{% endif %}">Jobs</a></li>
+        {% if session.get('user_id') %}
         <li><a href="/dashboard/events" class="{% if request.path == '/dashboard/events' %}active{% endif %}">Events</a></li>
         <li><a href="/feed" class="{% if request.path == '/feed' %}active{% endif %}">Community</a></li>
+        {% endif %}
     </ul>
 
     <div style="display: flex; align-items: center; gap: 16px;">
@@ -76,6 +90,15 @@
 </nav>
 
 <script>
+    function toggleSidebar(e) {
+        if (e) e.stopPropagation();
+        document.body.classList.toggle('sidebar-closed');
+        var isClosed = document.body.classList.contains('sidebar-closed');
+        try {
+            localStorage.setItem('talentkhoj-sidebar', isClosed ? 'closed' : 'open');
+        } catch(err) {}
+    }
+
     function toggleDropdown(e) {
         e.stopPropagation();
         const pd = document.getElementById('profileDropdown');
@@ -192,8 +215,8 @@
             setInterval(updateHeaderNotificationBell, 10000); // Check every 10 seconds
         {% endif %}
 
-        // Only apply scroll hide/show to non-homepage pages
-        if (window.location.pathname !== '/') {
+        // Apply scroll hide/show to non-homepage pages OR any page rendering a sidebar (logged-in candidates/employers)
+        if (window.location.pathname !== '/' || document.querySelector('.sidebar')) {
             const navbar = document.querySelector('.navbar');
             const sidebar = document.querySelector('.sidebar');
             if (navbar) {
@@ -209,7 +232,7 @@
                             width: calc(98% - 260px) !important;
                             margin: 0 !important;
                             z-index: 100000 !important;
-                            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
                         }
                         .navbar.navbar-hidden {
                             transform: translateY(-130%) !important;
@@ -226,7 +249,7 @@
                             width: 96% !important;
                             margin: 0 auto !important;
                             z-index: 100000 !important;
-                            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
                         }
                         .navbar.navbar-hidden {
                             transform: translateY(-130%) !important;

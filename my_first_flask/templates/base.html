@@ -6,6 +6,9 @@
     <title>{% block title %}Talent Khoj{% endblock %}</title>
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="/static/css/style.css">
+    {% if session.get('user_id') %}
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    {% endif %}
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <!-- Anti-FOUC: apply saved theme before first paint -->
@@ -18,22 +21,47 @@
         })();
     </script>
 </head>
-<body>
+<body class="no-transition {% if session.get('user_id') %}dashboard-body{% endif %}">
+<script>
+    (function () {
+        try {
+            var s = localStorage.getItem('talentkhoj-sidebar');
+            if (s === 'closed' && {{ 'true' if session.get('user_id') else 'false' }}) {
+                document.body.classList.add('sidebar-closed');
+            }
+        } catch (e) {}
+    })();
+    window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            document.body.classList.remove('no-transition');
+        }, 50);
+    });
+</script>
 {% include "partials/navbar.html" %}
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        <ul class="flash-list">
-            {% for category, message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-{% endwith %}
+{% if session.get('user_id') %}
+<div class="dashboard-layout">
+    {% include "partials/sidebar.html" %}
+    <div class="dashboard-content">
+{% endif %}
 
-<main>
-    {% block content %}{% endblock %}
-</main>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flash-list">
+                    {% for category, message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+{% if session.get('user_id') %}
+    </div>
+</div>
+{% endif %}
 
 <!-- FOOTER -->
 <footer class="footer">

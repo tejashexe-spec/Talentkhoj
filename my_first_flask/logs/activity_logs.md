@@ -34,3 +34,8 @@
 | 2026-06-18 21:30:54 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 10) applied to job ID 14 |
 | 2026-06-18 21:30:58 | **ADD BOOKMARK** | Candidate Prasiddha Gautam bookmarked job ID 14 |
 | 2026-06-18 21:32:48 | **VERIFY EMAIL** | Successfully sent email to gautamprasiddha@gmail.com (Subject: 'Verify Your Email - Talent Khoj') |
+| 2026-06-19 20:41:31 | **SAVE SEARCH** | Candidate Prasiddha Gautam saved a new search with filters: query=Python, type=job, location=Kathmandu, experience=Entry, email_alerts=1 |
+| 2026-06-19 22:10:18 | **EMAIL SENT** | Successfully sent email to gautamprasiddha@gmail.com (Subject: 'RSVP Confirmed: Resume Building & Interview Prep Masterclass') |
+| 2026-06-19 22:10:23 | **EMAIL SENT** | Successfully sent email to gautamprasiddha@gmail.com (Subject: 'RSVP Confirmed: Talent Khoj Virtual Networking & Career Fair 2026') |
+| 2026-06-19 22:10:24 | **EMAIL SENT** | Successfully sent email to gautamprasiddha@gmail.com (Subject: 'RSVP Confirmed: dsdsa') |
+| 2026-06-19 22:25:39 | **REMOVE BOOKMARK** | Candidate Prasiddha Gautam removed bookmark from job ID 14 |

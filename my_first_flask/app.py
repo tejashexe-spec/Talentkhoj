@@ -5118,6 +5118,7 @@ def dashboard_interviews():
     account_type = session["account_type"]
     
     interviews = []
+    candidates = []
     
     with conn.cursor() as cursor:
         if account_type == "company":
@@ -5132,6 +5133,17 @@ def dashboard_interviews():
                     ORDER BY i.interview_date ASC
                 """, (company["id"],))
                 interviews = cursor.fetchall()
+                
+                # Fetch candidate applicants who applied to company's jobs and are not rejected
+                cursor.execute("""
+                    SELECT DISTINCT u.id as candidate_id, u.full_name as candidate_name, j.id as job_id, j.title as job_title
+                    FROM applications a
+                    JOIN jobs j ON a.job_id = j.id
+                    JOIN users u ON a.user_id = u.id
+                    WHERE j.company_id = %s AND a.status != 'rejected'
+                    ORDER BY u.full_name ASC
+                """, (company["id"],))
+                candidates = cursor.fetchall()
         else:
             cursor.execute("""
                 SELECT i.*, c.company_name, c.logo as company_logo, j.title as job_title
@@ -5147,7 +5159,7 @@ def dashboard_interviews():
         if iv.get("interview_date"):
             iv["interview_date_str"] = iv["interview_date"].strftime("%Y-%m-%d %I:%M %p")
             
-    return render_template("dashboard_interviews.html", interviews=interviews, active="interviews")
+    return render_template("dashboard_interviews.html", interviews=interviews, candidates=candidates, active="interviews")
 
 
 @app.route("/api/interviews/schedule", methods=["POST"])

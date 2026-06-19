@@ -822,7 +822,7 @@
                         <div class="compact-header">
                             <div class="compact-logo">
                                 {% if opp.logo %}
-                                    <img src="{{ opp.logo }}" alt="logo">
+                                    <img src="{{ opp.logo }}" alt="logo" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ opp.company_name|urlencode }}&background=2456ff&color=fff&size=128';">
                                 {% else %}
                                     {{ opp.company_name[:2]|upper }}
                                 {% endif %}
@@ -1118,7 +1118,7 @@
         // Company Logo
         const logoDiv = document.getElementById('detLogo');
         if (opp.logo) {
-            logoDiv.innerHTML = `<img src="${opp.logo}" alt="Logo">`;
+            logoDiv.innerHTML = `<img src="${opp.logo}" alt="Logo" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(opp.company_name) + '&background=2456ff&color=fff&size=128';">`;
         } else {
             logoDiv.innerHTML = opp.company_name.substring(0,2).toUpperCase();
         }

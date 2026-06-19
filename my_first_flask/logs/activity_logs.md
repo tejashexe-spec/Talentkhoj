@@ -31,3 +31,6 @@
 | 2026-06-18 21:01:03 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 1) posted a new internship: 'Test QA Intern with Questions' at Kathmandu (Onsite) |
 | 2026-06-18 21:02:22 | **ADD BOOKMARK** | Candidate Prasiddha Gautam bookmarked job ID 8 |
 | 2026-06-18 21:02:22 | **REMOVE BOOKMARK** | Candidate Prasiddha Gautam removed bookmark from job ID 8 |
+| 2026-06-18 21:30:54 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 10) applied to job ID 14 |
+| 2026-06-18 21:30:58 | **ADD BOOKMARK** | Candidate Prasiddha Gautam bookmarked job ID 14 |
+| 2026-06-18 21:32:48 | **VERIFY EMAIL** | Successfully sent email to gautamprasiddha@gmail.com (Subject: 'Verify Your Email - Talent Khoj') |

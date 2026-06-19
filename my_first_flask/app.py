@@ -110,7 +110,51 @@ def admin_required(f):
 
 @app.route("/")
 def home():
-    return render_template("home.html")
+    conn = get_db()
+    open_jobs = 0
+    hiring_companies = 0
+    events_workshops = 0
+    active_professionals = 0
+    recent_jobs = []
+    
+    try:
+        with conn.cursor() as cursor:
+            # Count open jobs & internships
+            cursor.execute("SELECT COUNT(*) as cnt FROM jobs")
+            open_jobs = cursor.fetchone()["cnt"]
+
+            # Count hiring companies
+            cursor.execute("SELECT COUNT(*) as cnt FROM companies")
+            hiring_companies = cursor.fetchone()["cnt"]
+
+            # Count events & workshops
+            cursor.execute("SELECT COUNT(*) as cnt FROM events")
+            events_workshops = cursor.fetchone()["cnt"]
+
+            # Count active professionals
+            cursor.execute("SELECT COUNT(*) as cnt FROM users WHERE account_type = 'individual'")
+            active_professionals = cursor.fetchone()["cnt"]
+
+            # Fetch recent jobs (featured opportunities) with company info
+            cursor.execute("""
+                SELECT j.*, c.company_name, c.logo 
+                FROM jobs j 
+                JOIN companies c ON j.company_id = c.id 
+                ORDER BY j.created_at DESC 
+                LIMIT 3
+            """)
+            recent_jobs = cursor.fetchall()
+    except Exception as e:
+        print(f"Error querying homepage stats: {e}")
+        
+    return render_template(
+        "home.html", 
+        open_jobs=open_jobs, 
+        hiring_companies=hiring_companies, 
+        events_workshops=events_workshops, 
+        active_professionals=active_professionals,
+        recent_jobs=recent_jobs
+    )
 
 
 @app.route("/feed", methods=["GET"])

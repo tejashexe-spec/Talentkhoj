@@ -925,6 +925,359 @@
         padding-left: 12px;
         margin-top: 4px;
     }
+
+    /* ── GROUPS STYLING ── */
+    .group-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+    .group-card:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+        transform: translateY(-2px);
+    }
+    .group-cover {
+        height: 100px;
+        width: 100%;
+        object-fit: cover;
+        background: linear-gradient(135deg, var(--brand) 0%, #4f46e5 100%);
+    }
+    .group-content {
+        padding: 16px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .group-tag {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--brand);
+        background: var(--brand-tint-2);
+        padding: 3px 8px;
+        border-radius: 6px;
+        width: fit-content;
+    }
+    .group-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+        line-height: 1.4;
+    }
+    .group-desc {
+        font-size: 12.5px;
+        color: var(--text-2);
+        line-height: 1.5;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .group-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: auto;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+    }
+    .group-members {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+    .group-btn {
+        background: var(--brand-tint-2);
+        color: var(--brand);
+        border: none;
+        border-radius: 16px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .group-btn:hover {
+        background: var(--brand);
+        color: white;
+    }
+    .group-btn.joined {
+        background: var(--success-soft);
+        color: var(--success);
+    }
+    .group-btn.joined:hover {
+        background: var(--danger-soft);
+        color: var(--danger);
+    }
+
+    /* ── DISCUSSIONS STYLING ── */
+    .discussion-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        transition: all 0.2s;
+    }
+    .discussion-card:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+    }
+    .discussion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .discussion-author {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .discussion-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid var(--border);
+    }
+    .discussion-author-name {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--text);
+    }
+    .discussion-author-title {
+        font-size: 11px;
+        color: var(--text-muted);
+    }
+    .discussion-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+        line-height: 1.4;
+    }
+    .discussion-desc {
+        font-size: 13.5px;
+        color: var(--text-2);
+        line-height: 1.5;
+        margin: 0;
+    }
+    .discussion-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+    }
+    .discussion-stats {
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--text-muted);
+        font-weight: 600;
+    }
+    .discussion-action-btn {
+        background: none;
+        border: none;
+        color: var(--brand);
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        transition: all 0.2s;
+    }
+    .discussion-action-btn:hover {
+        background: var(--brand-tint-2);
+    }
+    
+    /* Collapsible Thread Answers */
+    .discussion-answers-container {
+        margin-top: 4px;
+        border-top: 1px dashed var(--border);
+        padding-top: 16px;
+        display: none;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .discussion-answer-item {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    .discussion-answer-body {
+        flex: 1;
+        background: var(--surface-3);
+        border-radius: 0 12px 12px 12px;
+        padding: 10px 14px;
+    }
+    .discussion-answer-author {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text);
+    }
+    .discussion-answer-text {
+        font-size: 12.5px;
+        color: var(--text-2);
+        line-height: 1.5;
+        margin-top: 2px;
+    }
+    .discussion-answer-date {
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+    .answer-form {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    .answer-input {
+        flex: 1;
+        background: var(--surface-2);
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        padding: 8px 14px;
+        font-size: 13px;
+        color: var(--text);
+        outline: none;
+    }
+    .answer-input:focus {
+        border-color: var(--brand);
+    }
+    .btn-answer-submit {
+        background: var(--brand);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 8px 16px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .btn-answer-submit:hover {
+        background: var(--brand-strong);
+    }
+
+    /* ── LEADERBOARD STYLING ── */
+    .contributor-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+    }
+    .contributor-item:hover {
+        background: var(--surface-2);
+        border-color: var(--border-strong);
+    }
+    .contributor-rank {
+        font-size: 15px;
+        font-weight: 800;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    .contributor-rank.rank-1 { background: #fef08a; color: #854d0e; }
+    .contributor-rank.rank-2 { background: #e2e8f0; color: #475569; }
+    .contributor-rank.rank-3 { background: #fed7aa; color: #9a3412; }
+    .contributor-rank.rank-other { color: var(--text-muted); }
+    
+    .contributor-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid var(--border);
+    }
+    .contributor-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .contributor-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+    }
+    .contributor-title {
+        font-size: 11.5px;
+        color: var(--text-muted);
+        margin: 2px 0 0 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .contributor-score-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+        margin-right: 12px;
+    }
+    .contributor-points {
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--brand);
+    }
+    .contributor-level {
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 1px 6px;
+        border-radius: 4px;
+        background: var(--surface-3);
+        color: var(--text-2);
+        letter-spacing: 0.3px;
+    }
+    .contributor-level.level-platinum { background: #e0f2fe; color: #0369a1; }
+    .contributor-level.level-gold { background: #fef3c7; color: #b45309; }
+    .contributor-level.level-silver { background: #f1f5f9; color: #475569; }
+    .contributor-level.level-bronze { background: #ffedd5; color: #c2410c; }
+
+    .contributor-follow-btn {
+        background: var(--brand-tint-2);
+        color: var(--brand);
+        border: none;
+        border-radius: 20px;
+        padding: 6px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .contributor-follow-btn:hover {
+        background: var(--brand);
+        color: white;
+    }
+    .contributor-follow-btn.following {
+        background: var(--success-soft);
+        color: var(--success);
+    }
 </style>
 
 <div class="feed-container">
@@ -937,19 +1290,19 @@
                     <span style="font-size: 16px; font-weight: 800; color: var(--text);">Community</span>
                 </div>
                 <div class="community-menu">
-                    <a href="/feed" class="community-menu-item active">
+                    <a href="#" class="community-menu-item active" data-tab="feed" onclick="switchCommunityTab(event, 'feed')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         <span>Feed</span>
                     </a>
-                    <a href="#" class="community-menu-item" onclick="alert('Groups feature is coming soon!')">
+                    <a href="#" class="community-menu-item" data-tab="groups" onclick="switchCommunityTab(event, 'groups')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                         <span>Groups</span>
                     </a>
-                    <a href="#" class="community-menu-item" onclick="alert('Discussions forum is coming soon!')">
+                    <a href="#" class="community-menu-item" data-tab="discussions" onclick="switchCommunityTab(event, 'discussions')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                         <span>Discussions</span>
                     </a>
-                    <a href="#" class="community-menu-item" onclick="alert('Leaderboard coming soon!')">
+                    <a href="#" class="community-menu-item" data-tab="contributors" onclick="switchCommunityTab(event, 'contributors')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>
                         <span>Top Contributors</span>
                     </a>
@@ -998,86 +1351,223 @@
 
         <!-- ── MIDDLE COLUMN (FEED) ── -->
         <main class="feed-middle-col" style="display: flex; flex-direction: column; gap: 4px;">
-            {% if user_profile %}
-            <!-- Start a Post Card -->
-            <div class="post-creator-trigger-card">
-                <div class="post-creator-top">
-                    {% if user_profile.avatar %}
-                        <img src="{{ user_profile.avatar }}" class="post-creator-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=44&rounded=true&background=2456ff&color=fff';">
-                    {% else %}
-                        <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=44&rounded=true&background=2456ff&color=fff" class="post-creator-avatar" alt="avatar">
-                    {% endif %}
-                    <button class="post-creator-bar" onclick="openPostModal()">Share an update, ask a question, or post a job...</button>
-                </div>
-                <div class="post-creator-options">
-                    <button class="creator-option-btn" onclick="openPostModalWithPhoto()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2456ff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                        <span>Media</span>
-                    </button>
-                    <button class="creator-option-btn" onclick="openPostModal()">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                        <span>Event</span>
-                    </button>
-                    <button class="btn-submit-post-direct" onclick="openPostModal()">Post</button>
-                </div>
-            </div>
- 
-            <!-- Create Post Modal Dialog -->
-            <div id="create-post-modal" class="post-modal" onclick="handleOutsideClick(event)">
-                <div class="post-modal-content">
-                    <div class="post-modal-header">
-                        <h2>Create a post</h2>
-                        <button class="post-modal-close" onclick="closePostModal()">&times;</button>
+            <div id="feed-tab-view" class="community-tab-view active-tab-view" style="display: flex; flex-direction: column; gap: 4px;">
+                {% if user_profile %}
+                <!-- Start a Post Card -->
+                <div class="post-creator-trigger-card">
+                    <div class="post-creator-top">
+                        {% if user_profile.avatar %}
+                            <img src="{{ user_profile.avatar }}" class="post-creator-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ user_profile.full_name|urlencode }}&size=44&rounded=true&background=2456ff&color=fff';">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=44&rounded=true&background=2456ff&color=fff" class="post-creator-avatar" alt="avatar">
+                        {% endif %}
+                        <button class="post-creator-bar" onclick="openPostModal()">Share an update, ask a question, or post a job...</button>
                     </div>
-                    <form id="create-post-form" enctype="multipart/form-data">
-                        <div class="post-modal-user">
-                            {% if user_profile.avatar %}
-                                <img src="{{ user_profile.avatar }}" class="post-modal-user-avatar" alt="avatar">
-                            {% else %}
-                                <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=48&rounded=true&background=2456ff&color=fff" class="post-modal-user-avatar" alt="avatar">
-                            {% endif %}
-                            <div class="post-modal-user-info">
-                                <span class="post-modal-user-name">{{ user_profile.full_name }}</span>
-                                <div class="post-modal-visibility">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                                    <span>Anyone</span>
+                    <div class="post-creator-options">
+                        <button class="creator-option-btn" onclick="openPostModalWithPhoto()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2456ff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            <span>Media</span>
+                        </button>
+                        <button class="creator-option-btn" onclick="openPostModal()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span>Event</span>
+                        </button>
+                        <button class="btn-submit-post-direct" onclick="openPostModal()">Post</button>
+                    </div>
+                </div>
+     
+                <!-- Create Post Modal Dialog -->
+                <div id="create-post-modal" class="post-modal" onclick="handleOutsideClick(event)">
+                    <div class="post-modal-content">
+                        <div class="post-modal-header">
+                            <h2>Create a post</h2>
+                            <button class="post-modal-close" onclick="closePostModal()">&times;</button>
+                        </div>
+                        <form id="create-post-form" enctype="multipart/form-data">
+                            <div class="post-modal-user">
+                                {% if user_profile.avatar %}
+                                    <img src="{{ user_profile.avatar }}" class="post-modal-user-avatar" alt="avatar">
+                                {% else %}
+                                    <img src="https://ui-avatars.com/api/?name={{ user_profile.full_name }}&size=48&rounded=true&background=2456ff&color=fff" class="post-modal-user-avatar" alt="avatar">
+                                {% endif %}
+                                <div class="post-modal-user-info">
+                                    <span class="post-modal-user-name">{{ user_profile.full_name }}</span>
+                                    <div class="post-modal-visibility">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                                        <span>Anyone</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="post-modal-body">
-                            <textarea class="post-modal-textarea" name="content" id="post-modal-content-textarea" placeholder="What do you want to talk about?" required></textarea>
-                            
-                            <div class="image-preview-container" id="preview-container">
-                                <img src="" alt="preview" class="image-preview" id="image-preview">
-                                <button type="button" class="remove-preview-btn" onclick="removeImagePreview()">&times;</button>
+                            <div class="post-modal-body">
+                                <textarea class="post-modal-textarea" name="content" id="post-modal-content-textarea" placeholder="What do you want to talk about?" required></textarea>
+                                
+                                <div class="image-preview-container" id="preview-container">
+                                    <img src="" alt="preview" class="image-preview" id="image-preview">
+                                    <button type="button" class="remove-preview-btn" onclick="removeImagePreview()">&times;</button>
+                                </div>
+                            </div>
+                            <div class="post-modal-footer">
+                                <div class="post-modal-actions">
+                                    <div class="upload-btn-wrapper">
+                                        <button type="button" class="post-modal-action-btn">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                        </button>
+                                        <input type="file" name="image" id="post-image-input" accept="image/*" onchange="previewImage(this)">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn-submit-modal-post">Post</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Call to Sign In Card -->
+                <div class="post-creator-trigger-card" style="text-align: center; gap: 10px;">
+                    <h3 style="font-size: 15px; font-weight: 700; color: var(--navy); margin: 0;">Welcome to Community!</h3>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 4px;">Sign in to view your profile, post updates, and connect with other professionals.</p>
+                    <a href="/login" class="btn-submit-post-direct" style="text-decoration: none; display: inline-block; align-self: center;">Sign In</a>
+                </div>
+                {% endif %}
+
+                <!-- Feed Timeline -->
+                <div id="feed-timeline" style="display: flex; flex-direction: column; gap: 16px; margin-top: 10px;">
+                    <!-- Posts will be loaded here dynamically -->
+                </div>
+            </div>
+
+            <!-- Groups Tab View -->
+            <div id="groups-tab-view" class="community-tab-view" style="display: none; flex-direction: column; gap: 16px;">
+                <div class="widget-card" style="margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                        <h2 style="font-size: 18px; font-weight: 800; color: var(--text); margin: 0;">Tech Groups in Nepal</h2>
+                        {% if session.get('user_id') %}
+                        <button class="btn-submit-post-direct" onclick="openGroupModal()">Create Group</button>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-bottom: 4px; flex-wrap: wrap;">
+                        <input type="text" id="group-search-input" placeholder="Search groups by name..." oninput="filterGroups()" style="flex: 1; min-width: 200px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--surface-2); font-size: 13.5px; color: var(--text); outline: none;">
+                        <select id="group-category-select" onchange="filterGroups()" style="padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--surface-2); font-size: 13.5px; color: var(--text); outline: none; cursor: pointer;">
+                            <option value="All">All Categories</option>
+                            <option value="Development">Development</option>
+                            <option value="AI/ML">AI / Machine Learning</option>
+                            <option value="Design">Design</option>
+                            <option value="Career">Career & Mentorship</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="groups-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px;">
+                    <!-- Groups loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Discussions Tab View -->
+            <div id="discussions-tab-view" class="community-tab-view" style="display: none; flex-direction: column; gap: 16px;">
+                <div class="widget-card" style="margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                        <h2 style="font-size: 18px; font-weight: 800; color: var(--text); margin: 0;">Community Discussions</h2>
+                        {% if session.get('user_id') %}
+                        <button class="btn-submit-post-direct" onclick="openQuestionModal()">Ask a Question</button>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-bottom: 4px; flex-wrap: wrap;">
+                        <input type="text" id="discussion-search-input" placeholder="Search discussions..." oninput="filterDiscussions()" style="flex: 1; min-width: 200px; padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--surface-2); font-size: 13.5px; color: var(--text); outline: none;">
+                        <select id="discussion-category-select" onchange="filterDiscussions()" style="padding: 10px 16px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--surface-2); font-size: 13.5px; color: var(--text); outline: none; cursor: pointer;">
+                            <option value="All">All Topics</option>
+                            <option value="Development">Development</option>
+                            <option value="AI/ML">AI / Machine Learning</option>
+                            <option value="Design">Design</option>
+                            <option value="Career">Career & Internships</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="discussions-list" style="display: flex; flex-direction: column; gap: 16px;">
+                    <!-- Discussions loaded dynamically -->
+                </div>
+            </div>
+
+            <!-- Contributors Tab View -->
+            <div id="contributors-tab-view" class="community-tab-view" style="display: none; flex-direction: column; gap: 16px;">
+                <div class="widget-card">
+                    <h2 style="font-size: 18px; font-weight: 800; color: var(--text); margin: 0 0 6px 0;">Top Contributors</h2>
+                    <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 20px 0;">Meet the most active community members sharing guidance, answering questions, and helping others.</p>
+                    <div id="contributors-list-container" style="display: flex; flex-direction: column; gap: 14px;">
+                        <!-- Contributors loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Group Modal Dialog -->
+            <div id="create-group-modal" class="post-modal" onclick="handleOutsideGroupClick(event)">
+                <div class="post-modal-content">
+                    <div class="post-modal-header">
+                        <h2>Create a Group</h2>
+                        <button class="post-modal-close" onclick="closeGroupModal()">&times;</button>
+                    </div>
+                    <form id="create-group-form" onsubmit="submitCreateGroup(event)">
+                        <div class="post-modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 20px 24px;">
+                            <div>
+                                <label style="font-size: 12px; font-weight: 700; color: var(--text-2); display: block; margin-bottom: 6px;">Group Name</label>
+                                <input type="text" id="group-form-name" required placeholder="e.g., Nepal React Developers" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); font-size: 14px; outline: none;">
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; font-weight: 700; color: var(--text-2); display: block; margin-bottom: 6px;">Description</label>
+                                <textarea id="group-form-desc" required placeholder="Describe the purpose of this group..." style="width: 100%; min-height: 80px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); font-size: 14px; outline: none; resize: none; font-family: inherit;"></textarea>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; font-weight: 700; color: var(--text-2); display: block; margin-bottom: 6px;">Category</label>
+                                <select id="group-form-category" required style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); font-size: 14px; outline: none; cursor: pointer;">
+                                    <option value="Development">Development</option>
+                                    <option value="AI/ML">AI / Machine Learning</option>
+                                    <option value="Design">Design</option>
+                                    <option value="Career">Career & Mentorship</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; font-weight: 700; color: var(--text-2); display: block; margin-bottom: 6px;">Cover Photo Link (Optional)</label>
+                                <input type="url" id="group-form-image" placeholder="https://example.com/image.jpg" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); font-size: 14px; outline: none;">
                             </div>
                         </div>
                         <div class="post-modal-footer">
-                            <div class="post-modal-actions">
-                                <div class="upload-btn-wrapper">
-                                    <button type="button" class="post-modal-action-btn">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                                    </button>
-                                    <input type="file" name="image" id="post-image-input" accept="image/*" onchange="previewImage(this)">
-                                </div>
-                            </div>
-                            <button type="submit" class="btn-submit-modal-post">Post</button>
+                            <div></div>
+                            <button type="submit" class="btn-submit-modal-post">Create Group</button>
                         </div>
                     </form>
                 </div>
             </div>
-            {% else %}
-            <!-- Call to Sign In Card -->
-            <div class="post-creator-trigger-card" style="text-align: center; gap: 10px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--navy); margin: 0;">Welcome to Community!</h3>
-                <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 4px;">Sign in to view your profile, post updates, and connect with other professionals.</p>
-                <a href="/login" class="btn-submit-post-direct" style="text-decoration: none; display: inline-block; align-self: center;">Sign In</a>
-            </div>
-            {% endif %}
 
-            <!-- Feed Timeline -->
-            <div id="feed-timeline" style="display: flex; flex-direction: column; gap: 16px; margin-top: 10px;">
-                <!-- Posts will be loaded here dynamically -->
+            <!-- Ask Question Modal Dialog -->
+            <div id="ask-question-modal" class="post-modal" onclick="handleOutsideQuestionClick(event)">
+                <div class="post-modal-content">
+                    <div class="post-modal-header">
+                        <h2>Ask a Question</h2>
+                        <button class="post-modal-close" onclick="closeQuestionModal()">&times;</button>
+                    </div>
+                    <form id="ask-question-form" onsubmit="submitAskQuestion(event)">
+                        <div class="post-modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 20px 24px;">
+                            <div>
+                                <label style="font-size: 12px; font-weight: 700; color: var(--text-2); display: block; margin-bottom: 6px;">Question Title</label>
+                                <input type="text" id="question-form-title" required placeholder="e.g., What is the best way to handle auth in Next.js?" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); font-size: 14px; outline: none;">
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; font-weight: 700; color: var(--text-2); display: block; margin-bottom: 6px;">Description / Details</label>
+                                <textarea id="question-form-desc" required placeholder="Elaborate on your question or provide code snippets..." style="width: 100%; min-height: 100px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); font-size: 14px; outline: none; resize: none; font-family: inherit;"></textarea>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; font-weight: 700; color: var(--text-2); display: block; margin-bottom: 6px;">Topic / Category</label>
+                                <select id="question-form-category" required style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text); font-size: 14px; outline: none; cursor: pointer;">
+                                    <option value="Development">Development</option>
+                                    <option value="AI/ML">AI / Machine Learning</option>
+                                    <option value="Design">Design</option>
+                                    <option value="Career">Career & Internships</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="post-modal-footer">
+                            <div></div>
+                            <button type="submit" class="btn-submit-modal-post">Post Question</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </main>
 
@@ -1591,5 +2081,450 @@
             }
         });
     }
+
+    // ── COMMUNITY TABS STATE & LOGIC ──
+    const currentUserFullName = "{{ user_profile.full_name if user_profile else 'Guest User' }}";
+    const currentUserAvatar = "{{ user_profile.avatar if user_profile and user_profile.avatar else '' }}";
+
+    let groupsData = [
+       { id: 1, name: "Nepal Python Developers", description: "A community for Python and Django enthusiasts in Nepal to share knowledge, jobs, and best practices.", category: "Development", members: 1240, joined: false, image: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?q=80&w=300&auto=format&fit=crop" },
+       { id: 2, name: "AI/ML Researchers Nepal", description: "Discuss machine learning, deep learning, NLP, computer vision and share research papers and projects in Nepal.", category: "AI/ML", members: 890, joined: false, image: "https://images.unsplash.com/photo-1677442136019-21780efad99a?q=80&w=300&auto=format&fit=crop" },
+       { id: 3, name: "Women In Tech Nepal", description: "Empowering women in technology through mentorship, networking opportunities, and skill development workshops.", category: "Career", members: 650, joined: true, image: "https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=300&auto=format&fit=crop" },
+       { id: 4, name: "UI/UX Designers Kathmandu", description: "A group for user experience and user interface designers in Nepal to share portfolios, design trends, and feedback.", category: "Design", members: 420, joined: false, image: "https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?q=80&w=300&auto=format&fit=crop" }
+    ];
+
+    let discussionsData = [
+       {
+         id: 1,
+         title: "How to get started with Django/Flask in Nepal's tech market?",
+         description: "I am a college student and want to learn backend development. Is Django or Flask more popular for entry level jobs in Nepal? What are the key skills companies look for?",
+         category: "Career",
+         author: "Prasiddhi Gautam",
+         authorTitle: "CS Student at IOE",
+         avatar: "https://ui-avatars.com/api/?name=Prasiddhi+Gautam&background=2456ff&color=fff&size=40",
+         date: "2 hours ago",
+         views: 120,
+         answers: [
+           { author: "Sujan Shrestha", avatar: "https://ui-avatars.com/api/?name=Sujan+Shrestha&background=10b981&color=fff&size=32", text: "Django is definitely more popular in Nepal because many development shops build larger enterprise applications. Flask is great for learning concepts though!", date: "1 hour ago" },
+           { author: "Alina Karki", avatar: "https://ui-avatars.com/api/?name=Alina+Karki&background=f59e0b&color=fff&size=32", text: "I suggest starting with Flask to understand how routing and request-response works, then moving to Django for its out-of-the-box features like admin panel and ORM.", date: "30 mins ago" }
+         ]
+       },
+       {
+         id: 2,
+         title: "Is Tailwind CSS preferred over Vanilla CSS for modern web projects?",
+         description: "Our team is starting a new project. I prefer Vanilla CSS for design freedom, but everyone else wants Tailwind CSS for speed. What are your experiences with project maintenance?",
+         category: "Development",
+         author: "Rohan Adhikari",
+         authorTitle: "Frontend Lead at TechNest",
+         avatar: "https://ui-avatars.com/api/?name=Rohan+Adhikari&background=3b82f6&color=fff&size=40",
+         date: "1 day ago",
+         views: 340,
+         answers: [
+           { author: "Niranjan Giri", avatar: "https://ui-avatars.com/api/?name=Niranjan+Giri&background=ec4899&color=fff&size=32", text: "For fast scaling, Tailwind is a life saver. If you have unique designs, vanilla CSS or CSS modules is cleaner.", date: "18 hours ago" }
+         ]
+       }
+    ];
+
+    let contributorsData = [
+       { id: 1, rank: 1, name: "Prasiddhi Gautam", title: "Senior Python Developer & Tech Lead", points: 2450, badge: "Platinum", avatar: "https://ui-avatars.com/api/?name=Prasiddhi+Gautam&background=2456ff&color=fff&size=44", following: false },
+       { id: 2, rank: 2, name: "Dr. Samir Nepal", title: "AI/ML Specialist & Researcher", points: 2120, badge: "Gold", avatar: "https://ui-avatars.com/api/?name=Samir+Nepal&background=10b981&color=fff&size=44", following: true },
+       { id: 3, rank: 3, name: "Aarati Sharma", title: "UX Director at DesignStudio", points: 1980, badge: "Gold", avatar: "https://ui-avatars.com/api/?name=Aarati+Sharma&background=ec4899&color=fff&size=44", following: false },
+       { id: 4, rank: 4, name: "Sujan Shrestha", title: "Full Stack Engineer", points: 1540, badge: "Silver", avatar: "https://ui-avatars.com/api/?name=Sujan+Shrestha&background=eab308&color=fff&size=44", following: false },
+       { id: 5, rank: 5, name: "Alina Karki", title: "DevOps Engineer at CloudNepal", points: 1210, badge: "Bronze", avatar: "https://ui-avatars.com/api/?name=Alina+Karki&background=f59e0b&color=fff&size=44", following: false }
+    ];
+
+    function switchCommunityTab(e, tabName) {
+        if (e) e.preventDefault();
+        
+        // Update active class in menu items
+        document.querySelectorAll(".community-menu-item").forEach(item => {
+            if (item.getAttribute("data-tab") === tabName) {
+                item.classList.add("active");
+            } else {
+                item.classList.remove("active");
+            }
+        });
+        
+        // Toggle tab content visibility
+        document.querySelectorAll(".community-tab-view").forEach(view => {
+            if (view.id === `${tabName}-tab-view`) {
+                view.style.display = "flex";
+            } else {
+                view.style.display = "none";
+            }
+        });
+        
+        // Trigger specific renders
+        if (tabName === "groups") {
+            renderGroups();
+        } else if (tabName === "discussions") {
+            renderDiscussions();
+        } else if (tabName === "contributors") {
+            renderContributors();
+        }
+    }
+
+    function renderGroups() {
+        const grid = document.getElementById("groups-grid");
+        const searchQuery = document.getElementById("group-search-input").value.toLowerCase();
+        const categoryFilter = document.getElementById("group-category-select").value;
+        
+        grid.innerHTML = "";
+        
+        const filtered = groupsData.filter(g => {
+            const matchesSearch = g.name.toLowerCase().includes(searchQuery) || g.description.toLowerCase().includes(searchQuery);
+            const matchesCategory = categoryFilter === "All" || g.category === categoryFilter;
+            return matchesSearch && matchesCategory;
+        });
+        
+        if (filtered.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted); background: var(--surface); border-radius: 20px; border: 1px solid var(--border);">No groups found matching your criteria.</div>`;
+            return;
+        }
+        
+        filtered.forEach(g => {
+            const card = document.createElement("div");
+            card.className = "group-card";
+            
+            const btnText = g.joined ? "Joined" : "Join";
+            const btnClass = g.joined ? "group-btn joined" : "group-btn";
+            const coverImg = g.image || "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=300&auto=format&fit=crop";
+            
+            card.innerHTML = `
+                <img src="${coverImg}" class="group-cover" alt="Group Cover" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=300&auto=format&fit=crop';">
+                <div class="group-content">
+                    <span class="group-tag">${g.category}</span>
+                    <h3 class="group-name">${g.name}</h3>
+                    <p class="group-desc">${g.description}</p>
+                    <div class="group-meta">
+                        <span class="group-members">${g.members.toLocaleString()} members</span>
+                        <button class="${btnClass}" onclick="toggleGroupJoin(${g.id})">${btnText}</button>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function toggleGroupJoin(groupId) {
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        const group = groupsData.find(g => g.id === groupId);
+        if (group) {
+            if (group.joined) {
+                group.joined = false;
+                group.members--;
+            } else {
+                group.joined = true;
+                group.members++;
+            }
+            renderGroups();
+        }
+    }
+
+    function filterGroups() {
+        renderGroups();
+    }
+
+    function openGroupModal() {
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        document.getElementById("create-group-modal").classList.add("open");
+        document.getElementById("group-form-name").focus();
+    }
+    
+    function closeGroupModal() {
+        document.getElementById("create-group-modal").classList.remove("open");
+        document.getElementById("create-group-form").reset();
+    }
+    
+    function handleOutsideGroupClick(e) {
+        const modal = document.getElementById("create-group-modal");
+        if (e.target === modal) {
+            closeGroupModal();
+        }
+    }
+    
+    function submitCreateGroup(e) {
+        e.preventDefault();
+        const name = document.getElementById("group-form-name").value.trim();
+        const desc = document.getElementById("group-form-desc").value.trim();
+        const category = document.getElementById("group-form-category").value;
+        const imgUrl = document.getElementById("group-form-image").value.trim();
+        
+        const newGroup = {
+            id: groupsData.length + 1,
+            name: name,
+            description: desc,
+            category: category,
+            members: 1,
+            joined: true,
+            image: imgUrl || null
+        };
+        
+        groupsData.unshift(newGroup);
+        closeGroupModal();
+        renderGroups();
+    }
+
+    function renderDiscussions() {
+        const list = document.getElementById("discussions-list");
+        const searchQuery = document.getElementById("discussion-search-input").value.toLowerCase();
+        const categoryFilter = document.getElementById("discussion-category-select").value;
+        
+        list.innerHTML = "";
+        
+        const filtered = discussionsData.filter(d => {
+            const matchesSearch = d.title.toLowerCase().includes(searchQuery) || d.description.toLowerCase().includes(searchQuery);
+            const matchesCategory = categoryFilter === "All" || d.category === categoryFilter;
+            return matchesSearch && matchesCategory;
+        });
+        
+        if (filtered.length === 0) {
+            list.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text-muted); background: var(--surface); border-radius: 20px; border: 1px solid var(--border);">No discussions found matching your criteria.</div>`;
+            return;
+        }
+        
+        filtered.forEach(d => {
+            const card = document.createElement("div");
+            card.className = "discussion-card";
+            card.id = `discussion-${d.id}`;
+            
+            // Build answers list
+            let answersHtml = "";
+            d.answers.forEach(ans => {
+                answersHtml += `
+                    <div class="discussion-answer-item">
+                        <img src="${ans.avatar}" class="discussion-avatar" alt="Avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent('${ans.author}') + '&background=2456ff&color=fff&size=32';">
+                        <div class="discussion-answer-body">
+                            <div class="discussion-answer-author">${ans.author}</div>
+                            <div class="discussion-answer-text">${ans.text}</div>
+                            <div class="discussion-answer-date">${ans.date}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            card.innerHTML = `
+                <div class="discussion-header">
+                    <div class="discussion-author">
+                        <img src="${d.avatar}" class="discussion-avatar" alt="Avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent('${d.author}') + '&background=2456ff&color=fff&size=36';">
+                        <div>
+                            <div class="discussion-author-name">${d.author}</div>
+                            <div class="discussion-author-title">${d.authorTitle}</div>
+                        </div>
+                    </div>
+                    <span class="group-tag" style="background: var(--brand-tint-2); color: var(--brand); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px;">${d.category}</span>
+                </div>
+                <h3 class="discussion-title">${d.title}</h3>
+                <p class="discussion-desc">${d.description}</p>
+                
+                <div class="discussion-footer">
+                    <div class="discussion-stats">
+                        <span>👁️ ${d.views} views</span>
+                        <span>💬 <span class="ans-count">${d.answers.length}</span> answers</span>
+                        <span>⏰ ${d.date}</span>
+                    </div>
+                    <button class="discussion-action-btn" onclick="toggleAnswers(${d.id})">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        <span>Answers</span>
+                    </button>
+                </div>
+                
+                <div class="discussion-answers-container" id="answers-container-${d.id}">
+                    <div class="discussion-answers-list" id="answers-list-${d.id}" style="display: flex; flex-direction: column; gap: 12px;">
+                        ${answersHtml || '<div style="text-align: center; font-size: 13px; color: var(--text-muted); padding: 8px 0;">No answers yet. Be the first to help!</div>'}
+                    </div>
+                    <form class="answer-form" onsubmit="submitInlineAnswer(event, ${d.id})">
+                        <input type="text" class="answer-input" placeholder="Write your answer..." id="answer-input-${d.id}" required>
+                        <button type="submit" class="btn-answer-submit">Submit</button>
+                    </form>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    function toggleAnswers(discussionId) {
+        const container = document.getElementById(`answers-container-${discussionId}`);
+        if (container.style.display === "flex") {
+            container.style.display = "none";
+        } else {
+            container.style.display = "flex";
+        }
+    }
+
+    function filterDiscussions() {
+        renderDiscussions();
+    }
+
+    function submitInlineAnswer(e, discussionId) {
+        e.preventDefault();
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        const input = document.getElementById(`answer-input-${discussionId}`);
+        const text = input.value.trim();
+        if (!text) return;
+        
+        const discussion = discussionsData.find(d => d.id === discussionId);
+        if (discussion) {
+            const avatarPath = currentUserAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserFullName)}&background=2456ff&color=fff&size=32`;
+            discussion.answers.push({
+                author: currentUserFullName,
+                avatar: avatarPath,
+                text: text,
+                date: "Just now"
+            });
+            
+            input.value = "";
+            renderDiscussions();
+            // keep the answers container visible
+            document.getElementById(`answers-container-${discussionId}`).style.display = "flex";
+        }
+    }
+
+    function openQuestionModal() {
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        document.getElementById("ask-question-modal").classList.add("open");
+        document.getElementById("question-form-title").focus();
+    }
+    
+    function closeQuestionModal() {
+        document.getElementById("ask-question-modal").classList.remove("open");
+        document.getElementById("ask-question-form").reset();
+    }
+    
+    function handleOutsideQuestionClick(e) {
+        const modal = document.getElementById("ask-question-modal");
+        if (e.target === modal) {
+            closeQuestionModal();
+        }
+    }
+    
+    function submitAskQuestion(e) {
+        e.preventDefault();
+        const title = document.getElementById("question-form-title").value.trim();
+        const desc = document.getElementById("question-form-desc").value.trim();
+        const category = document.getElementById("question-form-category").value;
+        
+        const avatarPath = currentUserAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserFullName)}&background=2456ff&color=fff&size=40`;
+        const newQuestion = {
+            id: discussionsData.length + 1,
+            title: title,
+            description: desc,
+            category: category,
+            author: currentUserFullName,
+            authorTitle: "Community Member",
+            avatar: avatarPath,
+            date: "Just now",
+            views: 0,
+            answers: []
+        };
+        
+        discussionsData.unshift(newQuestion);
+        closeQuestionModal();
+        renderDiscussions();
+    }
+
+    function renderContributors() {
+        const container = document.getElementById("contributors-list-container");
+        container.innerHTML = "";
+        
+        contributorsData.forEach(c => {
+            const item = document.createElement("div");
+            item.className = "contributor-item";
+            
+            let rankClass = "rank-other";
+            if (c.rank === 1) rankClass = "rank-1";
+            else if (c.rank === 2) rankClass = "rank-2";
+            else if (c.rank === 3) rankClass = "rank-3";
+            
+            const followBtnText = c.following ? "Following" : "Follow";
+            const followBtnClass = c.following ? "contributor-follow-btn following" : "contributor-follow-btn";
+            
+            item.innerHTML = `
+                <div class="contributor-rank ${rankClass}">${c.rank}</div>
+                <img src="${c.avatar}" class="contributor-avatar" alt="Avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent('${c.name}') + '&background=2456ff&color=fff&size=44';">
+                <div class="contributor-info">
+                    <h3 class="contributor-name">${c.name}</h3>
+                    <p class="contributor-title">${c.title}</p>
+                </div>
+                <div class="contributor-score-badge">
+                    <span class="contributor-points">${c.points.toLocaleString()} pts</span>
+                    <span class="contributor-level level-${c.badge.toLowerCase()}">${c.badge}</span>
+                </div>
+                <button class="${followBtnClass}" onclick="toggleContributorFollow(${c.id})">${followBtnText}</button>
+            `;
+            container.appendChild(item);
+        });
+    }
+
+    function toggleContributorFollow(contributorId) {
+        if (!isLoggedIn) {
+            window.location.href = "/login";
+            return;
+        }
+        const contributor = contributorsData.find(c => c.id === contributorId);
+        if (contributor) {
+            contributor.following = !contributor.following;
+            renderContributors();
+        }
+    }
+    
+    // Handle close actions for other modals on click outside
+    function handleOutsideGroupClick(e) {
+        const modal = document.getElementById("create-group-modal");
+        if (e.target === modal) {
+            closeGroupModal();
+        }
+    }
+    function handleOutsideQuestionClick(e) {
+        const modal = document.getElementById("ask-question-modal");
+        if (e.target === modal) {
+            closeQuestionModal();
+        }
+    }
+    // Make sure click outside functions are globally registered
+    window.handleOutsideGroupClick = handleOutsideGroupClick;
+    window.handleOutsideQuestionClick = handleOutsideQuestionClick;
+    window.switchCommunityTab = switchCommunityTab;
+    window.toggleGroupJoin = toggleGroupJoin;
+    window.filterGroups = filterGroups;
+    window.openGroupModal = openGroupModal;
+    window.closeGroupModal = closeGroupModal;
+    window.submitCreateGroup = submitCreateGroup;
+    window.renderDiscussions = renderDiscussions;
+    window.toggleAnswers = toggleAnswers;
+    window.filterDiscussions = filterDiscussions;
+    window.submitInlineAnswer = submitInlineAnswer;
+    window.openQuestionModal = openQuestionModal;
+    window.closeQuestionModal = closeQuestionModal;
+    window.submitAskQuestion = submitAskQuestion;
+    window.renderContributors = renderContributors;
+    window.toggleContributorFollow = toggleContributorFollow;
+    
+    // Add infinite scroll override for non-feed tabs
+    const originalScrollListener = window.onscroll; 
+    window.addEventListener("scroll", () => {
+        const activeTab = document.querySelector(".community-menu-item.active");
+        if (activeTab && activeTab.getAttribute("data-tab") !== "feed") {
+            // Disable post infinite loading scroll events when not on feed tab
+            return;
+        }
+    });
+    
+    // Add dynamic search handlers for group and discussion pages on DOMContentLoaded
+    document.addEventListener("DOMContentLoaded", function() {
+        // Initial setup for other tab bindings if needed
+    });
 </script>
 {% endblock %}

@@ -18,12 +18,12 @@
             } catch (e) {}
         })();
     </script>
-    <body class="no-transition dashboard-body">
+    <body class="no-transition {% if session.get('user_id') %}dashboard-body{% endif %}">
 <script>
     (function () {
         try {
             var s = localStorage.getItem('talentkhoj-sidebar');
-            if (s === 'closed') {
+            if (s === 'closed' && {{ 'true' if session.get('user_id') else 'false' }}) {
                 document.body.classList.add('sidebar-closed');
             }
         } catch (e) {}
@@ -37,12 +37,16 @@
 
 {% include "partials/navbar.html" %}
 
+{% if session.get('user_id') %}
 <div class="dashboard-layout">
 
     <!-- SIDEBAR -->
     {% include "partials/sidebar.html" %}
 
     <div class="dashboard-content">
+{% else %}
+<div style="max-width: 1200px; margin: 40px auto; padding: 0 20px; min-height: 100vh;">
+{% endif %}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 <ul class="flash-list">
@@ -53,8 +57,6 @@
             {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
-    </div>
-
 </div>
 
 <!-- Floating Chat Widget -->

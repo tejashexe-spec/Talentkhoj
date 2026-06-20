@@ -2018,8 +2018,13 @@ def dashboard_search():
             cursor.execute("SELECT job_id FROM bookmarks WHERE user_id = %s", (session["user_id"],))
             bookmarked_job_ids = {row["job_id"] for row in cursor.fetchall()}
             
+            # Retrieve the candidate's profile records (including cv_path, bio, location, and skills) from the database
             cursor.execute("SELECT cv_path, bio, location, skills FROM users WHERE id = %s", (session["user_id"],))
             user_profile = cursor.fetchone()
+            
+            # Determine profile completeness. A candidate is marked ready to apply once they have
+            # set up an active CV (either created via CV Builder or uploaded directly as a pre-built file)
+            # which populates the cv_path column. Other details are optional.
             profile_complete = bool(
                 user_profile 
                 and user_profile.get("cv_path")
@@ -2069,9 +2074,13 @@ def dashboard_apply(job_id):
         
     conn = get_db()
     with conn.cursor() as cursor:
-        # Hard backend profile completeness validation check
+        # Hard backend profile completeness validation check.
+        # This prevents unauthorized submission requests bypassing frontend validation.
+        # It queries the user's cv_path to verify they have built or uploaded a CV.
         cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
         user_profile = cursor.fetchone()
+        
+        # If the candidate doesn't have an active CV configured, deny the job application request.
         if not user_profile or not user_profile.get("cv_path"):
             return jsonify({"success": False, "message": "Your profile is incomplete. You must upload or build a professional CV first before applying!"})
 
@@ -2308,22 +2317,25 @@ def dashboard_settings():
     return render_template("dashboard_settings.html")
 
 
+# Main endpoint for viewing and managing verification badges. Handles both GET and POST requests.
 @app.route("/dashboard/badges", methods=["GET", "POST"])
 @login_required
 def dashboard_badges():
     conn = get_db()
     account_type = session.get("account_type")
+    # Identify if the user logged in is a company account or has access permissions to one.
     is_company = (account_type == "company" or check_company_access(session["user_id"]))
     
     if is_company:
         with conn.cursor() as cursor:
-            # Get company details
+            # Query the database to retrieve details for the associated company account.
             company = get_company_for_user(conn, session["user_id"])
             
             if not company:
                 flash("Only registered companies can view or issue badges.", "error")
                 return redirect(url_for("dashboard"))
                 
+            # If the company is submitting the form (POST), process a new badge issue.
             if request.method == "POST":
                 candidate_email = request.form.get("candidate_email", "").strip().lower()
                 badge_type = request.form.get("badge_type", "employment")
@@ -2332,12 +2344,12 @@ def dashboard_badges():
                 end_date = request.form.get("end_date") or None
                 description = request.form.get("description", "").strip()
                 
-                # Validation
+                # Check that all mandatory fields are present.
                 if not candidate_email or not title or not start_date:
                     flash("Please fill in all required fields.", "error")
                     return redirect(url_for("dashboard_badges"))
                     
-                # Find candidate
+                # Search for the candidate in the database by their unique email.
                 cursor.execute("SELECT id, full_name FROM users WHERE email = %s AND account_type = 'individual'", (candidate_email,))
                 candidate = cursor.fetchone()
                 
@@ -2345,13 +2357,13 @@ def dashboard_badges():
                     flash(f"Candidate with email '{candidate_email}' was not found or is a company account.", "error")
                     return redirect(url_for("dashboard_badges"))
                     
-                # Insert badge
+                # Insert the verification badge as 'pending' awaiting candidate approval.
                 cursor.execute("""
                     INSERT INTO user_badges (user_id, company_id, title, badge_type, description, start_date, end_date, status)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, 'pending')
                 """, (candidate["id"], company["id"], title, badge_type, description or None, start_date, end_date))
                 
-                # Trigger notification to candidate
+                # Create a system notification telling the candidate a badge has been issued to them.
                 create_notification(
                     candidate["id"],
                     "badge",
@@ -2363,7 +2375,7 @@ def dashboard_badges():
                 flash(f"Verification badge successfully issued to {candidate['full_name']}!", "success")
                 return redirect(url_for("dashboard_badges"))
             
-            # Fetch issued badges
+            # Query a list of all active (accepted) badges issued by the company.
             cursor.execute("""
                 SELECT b.*, u.full_name as candidate_name, u.email as candidate_email
                 FROM user_badges b
@@ -2375,9 +2387,9 @@ def dashboard_badges():
             
             return render_template("dashboard_badges.html", issued_badges=issued_badges)
             
-    else: # Individual / Candidate
+    else: # Individual / Candidate Role
         with conn.cursor() as cursor:
-            # Fetch pending badges
+            # Fetch verification badge requests issued to this candidate that are still pending.
             cursor.execute("""
                 SELECT b.*, c.company_name, c.logo as company_logo
                 FROM user_badges b
@@ -2387,7 +2399,8 @@ def dashboard_badges():
             """, (session["user_id"],))
             pending_badges = cursor.fetchall()
             
-            # Fetch active (accepted) badges
+            # Fetch active (accepted) badges that the candidate has approved.
+            # Both visible and hidden badges are fetched so the candidate can manage their visibility.
             cursor.execute("""
                 SELECT b.*, c.company_name, c.logo as company_logo
                 FROM user_badges b
@@ -2400,19 +2413,22 @@ def dashboard_badges():
             return render_template("dashboard_badges.html", pending_badges=pending_badges, active_badges=active_badges)
 
 
+# Endpoint allowing candidates to accept an issued pending badge.
 @app.route("/dashboard/badges/accept/<int:badge_id>", methods=["POST"])
 @login_required
 def accept_badge(badge_id):
     conn = get_db()
     user_id = session["user_id"]
     with conn.cursor() as cursor:
+        # Check if the targeted pending badge actually exists and belongs to this user.
         cursor.execute("SELECT id FROM user_badges WHERE id = %s AND user_id = %s AND status = 'pending'", (badge_id, user_id))
         badge = cursor.fetchone()
         
         if badge:
+            # Update the badge status to 'accepted' so it can be displayed.
             cursor.execute("UPDATE user_badges SET status = 'accepted' WHERE id = %s", (badge_id,))
             
-            # Fetch company user ID
+            # Fetch the company details to notify the issuing employer that their badge was accepted.
             cursor.execute("""
                 SELECT b.title, c.user_id as company_user_id, u.full_name as candidate_name
                 FROM user_badges b
@@ -2436,6 +2452,7 @@ def accept_badge(badge_id):
     return redirect(url_for("dashboard_badges"))
 
 
+# Endpoint allowing candidates to reject an issued pending badge.
 @app.route("/dashboard/badges/reject/<int:badge_id>", methods=["POST"])
 @login_required
 def reject_badge(badge_id):
@@ -2472,25 +2489,37 @@ def reject_badge(badge_id):
     return redirect(url_for("dashboard_badges"))
 
 
+# Route allowing candidates to toggle whether an accepted verification badge is shown publicly or hidden.
 @app.route("/dashboard/badges/toggle-visibility/<int:badge_id>", methods=["POST"])
 @login_required
 def toggle_badge_visibility(badge_id):
+    # Restrict management access to candidates (individual accounts) only
     if session.get("account_type") != "individual":
         flash("Only candidates can manage their badge visibility.", "error")
         return redirect(url_for("dashboard_badges"))
+    
     conn = get_db()
     user_id = session["user_id"]
     with conn.cursor() as cursor:
+        # Verify the badge belongs to the logged-in candidate and has been accepted
         cursor.execute("SELECT is_visible FROM user_badges WHERE id = %s AND user_id = %s AND status = 'accepted'", (badge_id, user_id))
         badge = cursor.fetchone()
+        
         if badge:
+            # Toggle visibility state (0 = hidden, 1 = visible)
             new_visibility = 0 if badge["is_visible"] else 1
+            # Update the is_visible flag for the badge in the database
             cursor.execute("UPDATE user_badges SET is_visible = %s WHERE id = %s", (new_visibility, badge_id))
             conn.commit()
+            
+            # Flash a success message confirming the new state to the user
             status_str = "hidden from" if not new_visibility else "shown on"
             flash(f"Badge visibility updated. It is now {status_str} your public profile.", "success")
         else:
+            # Flash an error if the badge doesn't exist, isn't owned by the user, or is pending
             flash("Badge not found or not accepted yet.", "error")
+            
+    # Redirect user back to the badges dashboard interface
     return redirect(url_for("dashboard_badges"))
 
 

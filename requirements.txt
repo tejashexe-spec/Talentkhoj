@@ -7,3 +7,5 @@ authlib==1.7.2
 joserfc==1.6.7
 Flask-Mail==0.9.1
 pypdf==5.1.0
+
+# End of requirements

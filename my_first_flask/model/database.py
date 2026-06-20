@@ -1,10 +1,12 @@
 import pymysql
+import threading
 from datetime import datetime, timedelta
 from my_first_flask import config
 
 
 class Database:
     def __init__(self):
+        self._local = threading.local()
         try:
             # Create database if it doesn't exist
             bootstrap = pymysql.connect(
@@ -636,24 +638,33 @@ class Database:
 
 
     def get_connection(self):
-        if not self.__connection:
+        # Check if the current thread already has an active MySQL connection initialized.
+        # Since Flask runs in a multithreaded environment, using thread-local storage (self._local)
+        # ensures each thread/request maintains its own connection, avoiding packet sequence collisions.
+        if not hasattr(self._local, "connection") or not self._local.connection:
             try:
-                self.__connection = pymysql.connect(
+                # Establish a fresh MySQL database connection using credentials from config.py
+                self._local.connection = pymysql.connect(
                     host=config.MYSQL_HOST,
                     user=config.MYSQL_USER,
                     password=config.MYSQL_PASSWORD,
                     database=config.MYSQL_DATABASE,
-                    cursorclass=pymysql.cursors.DictCursor,
-                    autocommit=True,
+                    cursorclass=pymysql.cursors.DictCursor,  # Return query results as dictionaries
+                    autocommit=True,                         # Automatically commit transactions
                 )
             except Exception as e:
+                # Print connection error details to server logs and set connection reference to None
                 print("Failed to establish database connection:", e)
+                self._local.connection = None
         else:
             try:
-                self.__connection.ping(reconnect=True)
+                # Ping the existing database connection to check if it's still alive.
+                # If it has disconnected, reconnect=True automatically attempts a reconnect.
+                self._local.connection.ping(reconnect=True)
             except Exception:
                 try:
-                    self.__connection = pymysql.connect(
+                    # If pinging fails, manually attempt to reconnect and establish a fresh connection socket.
+                    self._local.connection = pymysql.connect(
                         host=config.MYSQL_HOST,
                         user=config.MYSQL_USER,
                         password=config.MYSQL_PASSWORD,
@@ -662,9 +673,11 @@ class Database:
                         autocommit=True,
                     )
                 except Exception as e:
+                    # Log failure to reconnect and reset connection state to None
                     print("Failed to reconnect to database:", e)
-                    self.__connection = None
-        return self.__connection
+                    self._local.connection = None
+        # Return the thread-specific active MySQL connection object
+        return self._local.connection
 
     def _seed_mock_reviews(self):
         """Seed mock reviews if the reviews table is empty."""

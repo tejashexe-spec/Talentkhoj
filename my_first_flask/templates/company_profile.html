@@ -6,28 +6,42 @@
 <div class="profile-wrapper">
 
     <!-- Header -->
-    <div class="profile-header">
-        {% if company.logo %}
-            <img src="{{ company.logo }}" alt="{{ company.company_name }}" style="border-radius:12px;">
-        {% else %}
-            <img src="https://ui-avatars.com/api/?name={{ company.company_name }}&size=90&rounded=true&background=05154b&color=fff" alt="{{ company.company_name }}" style="border-radius:12px;">
-        {% endif %}
-        <div>
-            <h2>
-                {{ company.company_name }}
+    <div class="profile-card-header" style="background: linear-gradient(135deg, #05154b 0%, #0b2575 100%); color: white; padding: 32px; border-radius: 20px; box-shadow: 0 10px 30px rgba(5, 21, 75, 0.05); display: flex; align-items: center; gap: 28px; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap;">
+        <div style="position: relative;">
+            {% if company.logo %}
+                <img src="{{ company.logo }}" alt="{{ company.company_name }}" style="width: 100px; height: 100px; border-radius: 12px; object-fit: cover; border: 4px solid rgba(255,255,255,0.2); box-shadow: 0 8px 16px rgba(0,0,0,0.15);" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ company.company_name|urlencode }}&size=100&rounded=true&background=2456ff&color=fff';">
+            {% else %}
+                <img src="https://ui-avatars.com/api/?name={{ company.company_name }}&size=100&rounded=true&background=2456ff&color=fff" alt="{{ company.company_name }}" style="width: 100px; height: 100px; border-radius: 12px; border: 4px solid rgba(255,255,255,0.2); box-shadow: 0 8px 16px rgba(0,0,0,0.15);">
+            {% endif %}
+        </div>
+        <div style="flex: 1; min-width: 250px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px;">
+                <h2 style="margin: 0; font-size: 26px; font-weight: 800; color: white; letter-spacing: -0.5px;">{{ company.company_name }}</h2>
                 {% if review_count > 0 %}
-                    <span style="font-size: 15px; font-weight: bold; color: #fbbf24; background: #fffbeb; border: 1.5px solid #fef3c7; padding: 2px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle;">★ {{ avg_rating }}</span>
+                    <span style="font-size: 13.5px; font-weight: 700; color: #fbbf24; background: rgba(251, 191, 36, 0.12); padding: 4px 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(251, 191, 36, 0.2);">★ {{ avg_rating }}</span>
                 {% endif %}
-            </h2>
-            {% if company.industry %}
-                <p style="color:#2456ff; font-size:13px; font-weight:600;">{{ company.industry }}</p>
-            {% endif %}
-            {% if company.address %}
-                <p style="color:#666; font-size:13px;">{{ company.address }}</p>
-            {% endif %}
-            {% if company.website %}
-                <p><a href="{{ company.website }}" target="_blank" style="color:#2456ff; font-size:13px;">{{ company.website }}</a></p>
-            {% endif %}
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px;">
+                {% if company.industry %}
+                    <span style="color: #b8c4e6; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #94a3b8;"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        {{ company.industry }}
+                    </span>
+                {% endif %}
+                {% if company.address %}
+                    <span style="color: #b8c4e6; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #94a3b8;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        {{ company.address }}
+                    </span>
+                {% endif %}
+                {% if company.website %}
+                    <span style="font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #94a3b8;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                        <a href="{{ company.website }}" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 600;">{{ company.website }}</a>
+                    </span>
+                {% endif %}
+            </div>
         </div>
     </div>
 
@@ -103,7 +117,7 @@
                         <div class="review-meta">
                             <div class="reviewer-info">
                                 {% if review.reviewer_avatar %}
-                                    <img src="{{ review.reviewer_avatar }}" alt="{{ review.reviewer_name }}">
+                                    <img src="{{ review.reviewer_avatar }}" alt="{{ review.reviewer_name }}" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ review.reviewer_name|urlencode }}&size=32&rounded=true&background=2456ff&color=fff';">
                                 {% else %}
                                     <img src="https://ui-avatars.com/api/?name={{ review.reviewer_name }}&size=32&rounded=true&background=2456ff&color=fff" alt="{{ review.reviewer_name }}">
                                 {% endif %}
@@ -133,15 +147,17 @@
                 <h4 style="margin-top:0;">Leave a Review</h4>
                 <form action="/reviews/submit" method="POST">
                     <input type="hidden" name="reviewee_id" value="{{ company.user_id }}">
-                    <div class="rating-select-wrapper">
-                        <label for="rating" style="font-size: 14px; font-weight: 600; color: #334155;">Rating:</label>
-                        <select name="rating" id="rating" class="rating-select" required>
-                            <option value="5">★★★★★ (5/5)</option>
-                            <option value="4">★★★★☆ (4/5)</option>
-                            <option value="3">★★★☆☆ (3/5)</option>
-                            <option value="2">★★☆☆☆ (2/5)</option>
-                            <option value="1">★☆☆☆☆ (1/5)</option>
-                        </select>
+                    <div class="rating-select-wrapper" style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        <span style="font-size: 14.5px; font-weight: 600; color: #334155;">Rating:</span>
+                        <div class="star-rating-input" style="display: flex; gap: 6px; font-size: 26px; cursor: pointer; color: #cbd5e1;">
+                            <span data-value="1" onclick="setRating(1)" onmouseover="hoverStars(1)" onmouseout="resetStars()" style="transition: color 0.15s ease;">★</span>
+                            <span data-value="2" onclick="setRating(2)" onmouseover="hoverStars(2)" onmouseout="resetStars()" style="transition: color 0.15s ease;">★</span>
+                            <span data-value="3" onclick="setRating(3)" onmouseover="hoverStars(3)" onmouseout="resetStars()" style="transition: color 0.15s ease;">★</span>
+                            <span data-value="4" onclick="setRating(4)" onmouseover="hoverStars(4)" onmouseout="resetStars()" style="transition: color 0.15s ease;">★</span>
+                            <span data-value="5" onclick="setRating(5)" onmouseover="hoverStars(5)" onmouseout="resetStars()" style="transition: color 0.15s ease;">★</span>
+                        </div>
+                        <input type="hidden" name="rating" id="selectedRating" value="5" required>
+                        <span id="ratingText" style="font-size: 13.5px; font-weight: 700; color: #fbbf24; margin-left: 8px;">(5/5 Stars)</span>
                     </div>
                     <div class="form-group" style="margin-bottom: 16px;">
                         <label for="comment" style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 6px;">Comment:</label>
@@ -161,4 +177,42 @@
     {% endif %}
 
 </div>
+
+<script>
+    // Interactive Star Rating Controls
+    let currentSelectedRating = 5;
+    
+    function setRating(val) {
+        currentSelectedRating = val;
+        document.getElementById('selectedRating').value = val;
+        document.getElementById('ratingText').innerText = `(${val}/5 Stars)`;
+        updateStarColors(val);
+    }
+    
+    function hoverStars(val) {
+        updateStarColors(val);
+    }
+    
+    function resetStars() {
+        updateStarColors(currentSelectedRating);
+    }
+    
+    function updateStarColors(val) {
+        const stars = document.querySelectorAll('.star-rating-input span');
+        stars.forEach((star, index) => {
+            if (index < val) {
+                star.style.color = '#fbbf24'; // Active star color
+            } else {
+                star.style.color = '#cbd5e1'; // Inactive star color
+            }
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const selectedRatingEl = document.getElementById('selectedRating');
+        if (selectedRatingEl) {
+            updateStarColors(parseInt(selectedRatingEl.value));
+        }
+    });
+</script>
 {% endblock %}

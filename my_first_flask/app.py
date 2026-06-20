@@ -57,7 +57,7 @@ def check_company_access(user_id):
         cursor.execute("SELECT id FROM companies WHERE user_id = %s", (user_id,))
         if cursor.fetchone():
             return True
-        cursor.execute("SELECT id FROM company_team WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT id FROM company_team WHERE user_id = %s AND status = 'accepted'", (user_id,))
         if cursor.fetchone():
             return True
     return False
@@ -72,7 +72,7 @@ def get_company_for_user(conn, user_id):
             SELECT c.id, c.company_name 
             FROM companies c
             JOIN company_team t ON c.id = t.company_id
-            WHERE t.user_id = %s
+            WHERE t.user_id = %s AND t.status = 'accepted'
         """, (user_id,))
         return cursor.fetchone()
 
@@ -243,12 +243,198 @@ def get_feed():
         if not trending_tags:
             trending_tags = ["#TechNepal", "#Hiring", "#FrontendDev", "#Internships", "#AIWorkshop"]
 
+        # Query community groups
+        cursor.execute("""
+            SELECT g.*, 
+                   EXISTS(SELECT 1 FROM community_group_members WHERE group_id = g.id AND user_id = %s) AS joined,
+                   (SELECT COUNT(*) FROM community_group_members WHERE group_id = g.id) AS members
+            FROM community_groups g
+            ORDER BY g.name ASC
+        """, (user_id,))
+        db_groups = cursor.fetchall()
+        
+        # Query community discussions
+        cursor.execute("""
+            SELECT d.*, u.full_name as author, u.avatar, u.bio as authorTitle
+            FROM community_discussions d
+            JOIN users u ON d.author_id = u.id
+            ORDER BY d.created_at DESC
+        """)
+        db_discussions = cursor.fetchall()
+        for d in db_discussions:
+            cursor.execute("""
+                SELECT a.*, u.full_name as author, u.avatar
+                FROM community_discussion_answers a
+                JOIN users u ON a.author_id = u.id
+                WHERE a.discussion_id = %s
+                ORDER BY a.created_at ASC
+            """, (d["id"],))
+            answers = cursor.fetchall()
+            for ans in answers:
+                if ans.get("created_at"):
+                    ans["date"] = ans["created_at"].strftime("%Y-%m-%d %H:%M")
+            d["answers"] = answers
+            if d.get("created_at"):
+                d["date"] = d["created_at"].strftime("%Y-%m-%d %H:%M")
+                
+        # Query top contributors
+        cursor.execute("""
+            SELECT u.id, u.full_name as name, u.avatar, u.bio as title,
+                   (COALESCE((SELECT COUNT(*) FROM posts WHERE user_id = u.id), 0) * 10 +
+                    COALESCE((SELECT COUNT(*) FROM comments WHERE user_id = u.id), 0) * 5 +
+                    COALESCE((SELECT COUNT(*) FROM follows WHERE follower_id = u.id), 0) * 2) AS points,
+                   EXISTS(SELECT 1 FROM follows WHERE follower_id = %s AND followed_id = u.id) AS following
+            FROM users u
+            WHERE u.is_banned = 0 AND u.account_type = 'individual'
+            ORDER BY points DESC, u.created_at ASC
+            LIMIT 5
+        """, (user_id,))
+        db_contributors = cursor.fetchall()
+        
+        for i, c in enumerate(db_contributors):
+            c["rank"] = i + 1
+            if i == 0:
+                c["badge"] = "Platinum"
+            elif i in (1, 2):
+                c["badge"] = "Gold"
+            elif i == 3:
+                c["badge"] = "Silver"
+            else:
+                c["badge"] = "Bronze"
+
+        import json
+        groups_json = json.dumps(db_groups, default=str)
+        discussions_json = json.dumps(db_discussions, default=str)
+        contributors_json = json.dumps(db_contributors, default=str)
+
     return render_template("feed.html", 
                            user_profile=user_profile, 
                            suggested_connects=suggested_connects, 
                            companies_to_follow=companies_to_follow,
                            upcoming_events=upcoming_events,
-                           trending_tags=trending_tags)
+                           trending_tags=trending_tags,
+                           groups_json=groups_json,
+                           discussions_json=discussions_json,
+                           contributors_json=contributors_json)
+
+
+@app.route("/api/groups/create", methods=["POST"])
+@login_required
+def create_community_group():
+    name = request.form.get("name", "").strip()
+    description = request.form.get("description", "").strip()
+    category = request.form.get("category", "Development").strip()
+    image = request.form.get("image", "").strip() or None
+
+    if not name or not description:
+        return jsonify({"success": False, "error": "Name and description are required."}), 400
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO community_groups (name, description, category, image)
+                VALUES (%s, %s, %s, %s)
+            """, (name, description, category, image))
+            new_id = cursor.lastrowid
+            
+            cursor.execute("""
+                INSERT INTO community_group_members (group_id, user_id)
+                VALUES (%s, %s)
+            """, (new_id, session["user_id"]))
+            
+        return jsonify({"success": True, "group_id": new_id})
+    except Exception as e:
+        print(f"Error creating community group: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/groups/toggle-join", methods=["POST"])
+@login_required
+def toggle_group_join():
+    data = request.get_json() or {}
+    group_id = data.get("group_id")
+    if not group_id:
+        return jsonify({"success": False, "error": "Missing group_id"}), 400
+
+    user_id = session["user_id"]
+    conn = get_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM community_group_members WHERE group_id = %s AND user_id = %s", (group_id, user_id))
+            is_member = cursor.fetchone()
+            if is_member:
+                cursor.execute("DELETE FROM community_group_members WHERE group_id = %s AND user_id = %s", (group_id, user_id))
+                action = "left"
+            else:
+                cursor.execute("INSERT INTO community_group_members (group_id, user_id) VALUES (%s, %s)", (group_id, user_id))
+                action = "joined"
+                
+            cursor.execute("SELECT COUNT(*) as cnt FROM community_group_members WHERE group_id = %s", (group_id,))
+            member_count = cursor.fetchone()["cnt"]
+
+        return jsonify({"success": True, "action": action, "members": member_count})
+    except Exception as e:
+        print(f"Error toggling group membership: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/discussions/create", methods=["POST"])
+@login_required
+def create_community_discussion():
+    title = request.form.get("title", "").strip()
+    description = request.form.get("description", "").strip()
+    category = request.form.get("category", "Development").strip()
+
+    if not title or not description:
+        return jsonify({"success": False, "error": "Title and description are required."}), 400
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO community_discussions (title, description, category, author_id)
+                VALUES (%s, %s, %s, %s)
+            """, (title, description, category, session["user_id"]))
+            new_id = cursor.lastrowid
+        return jsonify({"success": True, "discussion_id": new_id})
+    except Exception as e:
+        print(f"Error creating community discussion: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/discussions/answer", methods=["POST"])
+@login_required
+def answer_community_discussion():
+    data = request.get_json() or {}
+    discussion_id = data.get("discussion_id")
+    answer_text = data.get("answer_text", "").strip()
+
+    if not discussion_id or not answer_text:
+        return jsonify({"success": False, "error": "Missing fields"}), 400
+
+    conn = get_db()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO community_discussion_answers (discussion_id, author_id, answer_text)
+                VALUES (%s, %s, %s)
+            """, (discussion_id, session["user_id"], answer_text))
+            new_id = cursor.lastrowid
+            
+            cursor.execute("SELECT full_name, avatar FROM users WHERE id = %s", (session["user_id"],))
+            user = cursor.fetchone()
+            
+        return jsonify({
+            "success": True, 
+            "answer_id": new_id, 
+            "author": user["full_name"], 
+            "avatar": user["avatar"] or f"https://ui-avatars.com/api/?name={user['full_name']}&background=2456ff&color=fff",
+            "date": "Just now"
+        })
+    except Exception as e:
+        print(f"Error answering community discussion: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 def allowed_file(filename):
@@ -678,6 +864,8 @@ def logout():
 def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
+    if session.get("account_type") == "company":
+        return redirect(url_for("edit_company_profile"))
 
     name_message = None
     password_message = None
@@ -972,12 +1160,53 @@ def user_profile(user_id):
             SELECT b.*, c.company_name, c.logo as company_logo
             FROM user_badges b
             JOIN companies c ON b.company_id = c.id
-            WHERE b.user_id = %s AND b.status = 'accepted'
+            WHERE b.user_id = %s AND b.status = 'accepted' AND b.is_visible = 1
             ORDER BY b.end_date DESC, b.awarded_at DESC
         """, (user_id,))
         accepted_badges = cursor.fetchall()
+
+        # Fetch followers and following counts
+        cursor.execute("SELECT COUNT(*) as count FROM follows WHERE followed_id = %s", (user_id,))
+        followers_count = cursor.fetchone()["count"]
         
-    return render_template("user_profile.html", user=user, reviews=reviews, avg_rating=avg_rating, review_count=review_count, accepted_badges=accepted_badges)
+        cursor.execute("SELECT COUNT(*) as count FROM follows WHERE follower_id = %s", (user_id,))
+        following_count = cursor.fetchone()["count"]
+        
+        # Check if the current user is following this user
+        is_following = False
+        curr_user_id = session.get("user_id", 0)
+        if curr_user_id:
+            cursor.execute("SELECT 1 FROM follows WHERE follower_id = %s AND followed_id = %s", (curr_user_id, user_id))
+            is_following = cursor.fetchone() is not None
+
+        # Fetch posts created by this user
+        cursor.execute("""
+            SELECT p.id, p.content, p.image_path, p.created_at,
+                   COUNT(DISTINCT r.id) AS like_count,
+                   COUNT(DISTINCT c.id) AS comment_count,
+                   EXISTS(SELECT 1 FROM reactions WHERE post_id = p.id AND user_id = %s) AS has_liked
+            FROM posts p
+            LEFT JOIN reactions r ON p.id = r.post_id AND r.reaction_type = 'like'
+            LEFT JOIN comments c ON p.id = c.post_id
+            WHERE p.user_id = %s
+            GROUP BY p.id
+            ORDER BY p.created_at DESC
+        """, (curr_user_id, user_id))
+        user_posts = cursor.fetchall()
+        for post in user_posts:
+            if post.get("created_at"):
+                post["created_at"] = post["created_at"].strftime("%Y-%m-%d %H:%M")
+        
+    return render_template("user_profile.html", 
+                           user=user, 
+                           reviews=reviews, 
+                           avg_rating=avg_rating, 
+                           review_count=review_count, 
+                           accepted_badges=accepted_badges,
+                           followers_count=followers_count,
+                           following_count=following_count,
+                           is_following=is_following,
+                           user_posts=user_posts)
 
 
 @app.route("/user/follow/<int:target_id>", methods=["POST"])
@@ -1010,6 +1239,36 @@ def toggle_follow(target_id):
                 return jsonify({"success": False, "message": "User to follow does not exist."})
                 
     return jsonify({"success": True, "following": is_following, "message": message})
+
+
+@app.route("/api/user/<int:user_id>/followers", methods=["GET"])
+def get_user_followers(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT u.id, u.full_name, u.avatar, u.account_type, u.bio, u.location
+            FROM follows f
+            JOIN users u ON f.follower_id = u.id
+            WHERE f.followed_id = %s
+            ORDER BY f.created_at DESC
+        """, (user_id,))
+        followers = cursor.fetchall()
+    return jsonify({"success": True, "users": followers})
+
+
+@app.route("/api/user/<int:user_id>/following", methods=["GET"])
+def get_user_following(user_id):
+    conn = get_db()
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT u.id, u.full_name, u.avatar, u.account_type, u.bio, u.location
+            FROM follows f
+            JOIN users u ON f.followed_id = u.id
+            WHERE f.follower_id = %s
+            ORDER BY f.created_at DESC
+        """, (user_id,))
+        following = cursor.fetchall()
+    return jsonify({"success": True, "users": following})
 
 
 @app.route("/company/<int:user_id>")
@@ -1084,6 +1343,18 @@ def edit_company_profile():
         
         if not company_name:
             flash("Company name is required.", "error")
+            return redirect(url_for("edit_company_profile"))
+        if not address:
+            flash("Address is required.", "error")
+            return redirect(url_for("edit_company_profile"))
+        if not pan_number:
+            flash("PAN Number is required.", "error")
+            return redirect(url_for("edit_company_profile"))
+        if not industry:
+            flash("Industry is required.", "error")
+            return redirect(url_for("edit_company_profile"))
+        if not description:
+            flash("Company Description is required.", "error")
             return redirect(url_for("edit_company_profile"))
             
         logo_url = company["logo"]
@@ -1232,12 +1503,12 @@ def dashboard():
             company = cursor.fetchone()
             
             if company:
-                # Fetch posted jobs
                 cursor.execute("""
-                    SELECT id, title, opportunity_type, location, salary, created_at 
-                    FROM jobs 
-                    WHERE company_id = %s 
-                    ORDER BY created_at DESC
+                    SELECT j.id, j.title, j.opportunity_type, j.location, j.salary, j.created_at, c.logo, c.company_name
+                    FROM jobs j
+                    JOIN companies c ON j.company_id = c.id
+                    WHERE j.company_id = %s 
+                    ORDER BY j.created_at DESC
                 """, (company["id"],))
                 opportunities = cursor.fetchall()
                 stats["posted_count"] = len(opportunities)
@@ -1747,9 +2018,12 @@ def dashboard_search():
             cursor.execute("SELECT job_id FROM bookmarks WHERE user_id = %s", (session["user_id"],))
             bookmarked_job_ids = {row["job_id"] for row in cursor.fetchall()}
             
-            cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
+            cursor.execute("SELECT cv_path, bio, location, skills FROM users WHERE id = %s", (session["user_id"],))
             user_profile = cursor.fetchone()
-            profile_complete = bool(user_profile and user_profile.get("cv_path"))
+            profile_complete = bool(
+                user_profile 
+                and user_profile.get("cv_path")
+            )
 
     # Also parse skills_required and questions for each job
     import json
@@ -1799,7 +2073,7 @@ def dashboard_apply(job_id):
         cursor.execute("SELECT cv_path FROM users WHERE id = %s", (session["user_id"],))
         user_profile = cursor.fetchone()
         if not user_profile or not user_profile.get("cv_path"):
-            return jsonify({"success": False, "message": "Your profile is incomplete. You must build a professional CV first before applying!"})
+            return jsonify({"success": False, "message": "Your profile is incomplete. You must upload or build a professional CV first before applying!"})
 
         # Verify job exists
         cursor.execute("SELECT id FROM jobs WHERE id = %s", (job_id,))
@@ -2195,6 +2469,28 @@ def reject_badge(badge_id):
         else:
             flash("Unable to reject badge.", "error")
             
+    return redirect(url_for("dashboard_badges"))
+
+
+@app.route("/dashboard/badges/toggle-visibility/<int:badge_id>", methods=["POST"])
+@login_required
+def toggle_badge_visibility(badge_id):
+    if session.get("account_type") != "individual":
+        flash("Only candidates can manage their badge visibility.", "error")
+        return redirect(url_for("dashboard_badges"))
+    conn = get_db()
+    user_id = session["user_id"]
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT is_visible FROM user_badges WHERE id = %s AND user_id = %s AND status = 'accepted'", (badge_id, user_id))
+        badge = cursor.fetchone()
+        if badge:
+            new_visibility = 0 if badge["is_visible"] else 1
+            cursor.execute("UPDATE user_badges SET is_visible = %s WHERE id = %s", (new_visibility, badge_id))
+            conn.commit()
+            status_str = "hidden from" if not new_visibility else "shown on"
+            flash(f"Badge visibility updated. It is now {status_str} your public profile.", "success")
+        else:
+            flash("Badge not found or not accepted yet.", "error")
     return redirect(url_for("dashboard_badges"))
 
 
@@ -3447,6 +3743,7 @@ def dashboard_post_opportunity():
         skills_required = request.form.get("skills_required", "").strip()
         apply_link = request.form.get("apply_link", "").strip()
         description = request.form.get("description", "").strip()
+        sector = request.form.get("sector", "").strip()
         
         # Serialize optional screening questions to JSON
         import json
@@ -3483,8 +3780,8 @@ def dashboard_post_opportunity():
         try:
             with conn.cursor() as cursor:
                 cursor.execute("""
-                    INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link, questions)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO jobs (company_id, title, opportunity_type, location, salary, experience_level, skills_required, description, apply_link, questions, sector)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     company["id"],
                     title,
@@ -3495,7 +3792,8 @@ def dashboard_post_opportunity():
                     skills_required or None,
                     description,
                     apply_link or None,
-                    questions_json
+                    questions_json,
+                    sector or None
                 ))
                 job_id = cursor.lastrowid
                 if not job_id:
@@ -3633,7 +3931,227 @@ def dashboard_post_opportunity():
         flash("Opportunity successfully published!", "success")
         return redirect(url_for("dashboard"))
         
-    return render_template("dashboard_post_opportunity.html")
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    return render_template("dashboard_post_opportunity.html", company=company)
+
+
+@app.route("/dashboard/jobs/edit/<int:job_id>", methods=["GET", "POST"])
+@login_required
+def dashboard_edit_job(job_id):
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
+        flash("Only company accounts can manage opportunities.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        flash("Please complete your company profile first.", "error")
+        return redirect(url_for("profile"))
+
+    company_id = company["id"]
+
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM jobs WHERE id = %s AND company_id = %s", (job_id, company_id))
+        job = cursor.fetchone()
+
+    if not job:
+        flash("Opportunity not found or unauthorized.", "error")
+        return redirect(url_for("dashboard"))
+
+    import json
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        opportunity_type = request.form.get("opportunity_type", "job").strip()
+        
+        city = request.form.get("city", "").strip()
+        location_type = request.form.get("location", "Onsite").strip()
+        location = f"{city} ({location_type})" if city else location_type
+        
+        min_salary = request.form.get("min_salary", "").strip()
+        max_salary = request.form.get("max_salary", "").strip()
+        salary_cycle = request.form.get("salary_cycle", "Monthly").strip()
+        
+        salary = f"Rs. {min_salary}"
+        if max_salary:
+            salary += f" - Rs. {max_salary}"
+        salary += f" {salary_cycle}"
+        
+        min_exp = request.form.get("min_experience", "").strip()
+        max_exp = request.form.get("max_experience", "").strip()
+        
+        if min_exp:
+            experience_level = f"{min_exp}"
+            if max_exp:
+                experience_level += f" - {max_exp}"
+            experience_level += " Years"
+        else:
+            experience_level = request.form.get("experience_level", "Entry").strip()
+            
+        skills_required = request.form.get("skills_required", "").strip()
+        apply_link = request.form.get("apply_link", "").strip()
+        description = request.form.get("description", "").strip()
+        sector = request.form.get("sector", "").strip()
+        
+        # Serialize optional screening questions to JSON
+        questions_list = [q.strip() for q in request.form.getlist("questions[]") if q.strip()]
+        questions_json = json.dumps(questions_list) if questions_list else None
+        
+        if not title or not description:
+            flash("Opportunity title and detailed description are required.", "error")
+            return redirect(url_for("dashboard_edit_job", job_id=job_id))
+            
+        if opportunity_type not in ["job", "internship"]:
+            flash("Invalid opportunity type selection.", "error")
+            return redirect(url_for("dashboard_edit_job", job_id=job_id))
+            
+        if not city:
+            flash("City location is required.", "error")
+            return redirect(url_for("dashboard_edit_job", job_id=job_id))
+            
+        if not min_salary:
+            flash("Minimum salary compensation is required.", "error")
+            return redirect(url_for("dashboard_edit_job", job_id=job_id))
+            
+        if opportunity_type == "job" and not min_exp:
+            flash("Minimum experience requirement is required for Job posts.", "error")
+            return redirect(url_for("dashboard_edit_job", job_id=job_id))
+            
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE jobs 
+                    SET title = %s, opportunity_type = %s, location = %s, salary = %s, experience_level = %s, 
+                        skills_required = %s, description = %s, apply_link = %s, questions = %s, sector = %s
+                    WHERE id = %s AND company_id = %s
+                """, (
+                    title,
+                    opportunity_type,
+                    location,
+                    salary,
+                    experience_level,
+                    skills_required or None,
+                    description,
+                    apply_link or None,
+                    questions_json,
+                    sector or None,
+                    job_id,
+                    company_id
+                ))
+                
+                # Update FAQs: delete old ones, insert new ones
+                cursor.execute("DELETE FROM job_faqs WHERE job_id = %s", (job_id,))
+                faq_qs = request.form.getlist("faq_questions[]")
+                faq_as = request.form.getlist("faq_answers[]")
+                for i in range(min(len(faq_qs), len(faq_as))):
+                    fq = faq_qs[i].strip() if faq_qs[i] else ""
+                    fa = faq_as[i].strip() if faq_as[i] else ""
+                    if fq and fa:
+                        cursor.execute(
+                            "INSERT INTO job_faqs (job_id, question, answer) VALUES (%s, %s, %s)",
+                            (job_id, fq, fa)
+                        )
+            flash("Opportunity updated successfully!", "success")
+            return redirect(url_for("dashboard"))
+        except Exception as e:
+            print(f"Error updating job: {e}")
+            flash("An error occurred while updating the opportunity.", "error")
+            return redirect(url_for("dashboard_edit_job", job_id=job_id))
+
+    # GET REQUEST
+    screening_questions = []
+    if job["questions"]:
+        try:
+            screening_questions = json.loads(job["questions"])
+        except Exception:
+            pass
+
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT * FROM job_faqs WHERE job_id = %s", (job_id,))
+        faqs = cursor.fetchall()
+
+    city = ""
+    location_type = "Onsite"
+    loc_str = job["location"] or ""
+    if "(" in loc_str and ")" in loc_str:
+        try:
+            city, location_type = loc_str.split("(", 1)
+            city = city.strip()
+            location_type = location_type.replace(")", "").strip()
+        except Exception:
+            city = loc_str
+    else:
+        city = loc_str
+
+    min_salary = ""
+    max_salary = ""
+    salary_cycle = "Monthly"
+    sal_str = job["salary"] or ""
+    sal_str = sal_str.replace("Rs.", "").strip()
+    for cycle in ["Monthly", "Hourly", "Yearly"]:
+        if cycle in sal_str:
+            salary_cycle = cycle
+            sal_str = sal_str.replace(cycle, "").strip()
+            break
+    if "-" in sal_str:
+        try:
+            parts = sal_str.split("-")
+            min_salary = parts[0].strip()
+            max_salary = parts[1].strip()
+        except Exception:
+            min_salary = sal_str
+    else:
+        min_salary = sal_str
+
+    min_experience = ""
+    max_experience = ""
+    exp_str = job["experience_level"] or ""
+    if "Years" in exp_str:
+        exp_str = exp_str.replace("Years", "").strip()
+        if "-" in exp_str:
+            try:
+                parts = exp_str.split("-")
+                min_experience = parts[0].strip()
+                max_experience = parts[1].strip()
+            except Exception:
+                min_experience = exp_str
+        else:
+            min_experience = exp_str
+
+    parsed_data = {
+        "city": city,
+        "location_type": location_type,
+        "min_salary": min_salary,
+        "max_salary": max_salary,
+        "salary_cycle": salary_cycle,
+        "min_experience": min_experience,
+        "max_experience": max_experience
+    }
+
+    return render_template("dashboard_edit_opportunity.html", job=job, screening_questions=screening_questions, faqs=faqs, parsed_data=parsed_data)
+
+
+@app.route("/dashboard/jobs/delete/<int:job_id>", methods=["POST"])
+@login_required
+def dashboard_delete_job(job_id):
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
+        flash("Only company accounts can delete opportunities.", "error")
+        return redirect(url_for("dashboard"))
+
+    conn = get_db()
+    company = get_company_for_user(conn, session["user_id"])
+    if not company:
+        flash("Company profile not found.", "error")
+        return redirect(url_for("dashboard"))
+
+    company_id = company["id"]
+    with conn.cursor() as cursor:
+        cursor.execute("DELETE FROM jobs WHERE id = %s AND company_id = %s", (job_id, company_id))
+
+    flash("Opportunity deleted successfully!", "success")
+    return redirect(url_for("dashboard"))
 
 
 
@@ -3807,13 +4325,26 @@ def dashboard_inbox():
         if conv.get("last_message_time"):
             conv["last_message_time"] = conv["last_message_time"].strftime("%Y-%m-%d %H:%M")
 
-    return render_template("dashboard_inbox.html", conversations=conversations, active="inbox")
+    # Fetch followed and following profiles
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT DISTINCT u.id, u.full_name, u.avatar, u.account_type
+            FROM users u
+            JOIN follows f ON (f.follower_id = %s AND f.followed_id = u.id) 
+                           OR (f.followed_id = %s AND f.follower_id = u.id)
+            WHERE u.id != %s
+            ORDER BY u.full_name ASC
+        """, (user_id, user_id, user_id))
+        contacts = cursor.fetchall()
+
+    return render_template("dashboard_inbox.html", conversations=conversations, contacts=contacts, active="inbox")
 
 
 @app.route("/dashboard/headhunt", methods=["GET"])
 @login_required
 def dashboard_headhunt():
-    if session.get("account_type") != "company":
+    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    if not is_company:
         flash("Access denied. The headhunting directory is only accessible by recruiters.", "error")
         return redirect(url_for("dashboard"))
 
@@ -4982,40 +5513,56 @@ def mark_announcement_read():
 @app.route("/dashboard/team")
 @login_required
 def dashboard_team():
-    is_company = (session.get("account_type") == "company" or check_company_access(session["user_id"]))
+    conn = get_db()
+    user_id = session["user_id"]
+    
+    # Check if this user has any pending invites
+    with conn.cursor() as cursor:
+        cursor.execute("""
+            SELECT t.id, t.role, c.company_name, t.company_id 
+            FROM company_team t 
+            JOIN companies c ON t.company_id = c.id 
+            WHERE t.user_id = %s AND t.status = 'pending'
+        """, (user_id,))
+        pending_invites = cursor.fetchall()
+        
+    is_company = (session.get("account_type") == "company" or check_company_access(user_id) or len(pending_invites) > 0)
     if not is_company:
         flash("Only company accounts and their team members can access the Team dashboard.", "error")
         return redirect(url_for("dashboard"))
         
-    conn = get_db()
-    company = get_company_for_user(conn, session["user_id"])
-    if not company:
-        flash("Please complete your company profile first.", "error")
-        return redirect(url_for("profile"))
-        
-    company_id = company["id"]
+    company = get_company_for_user(conn, user_id)
     
-    with conn.cursor() as cursor:
-        # Fetch owner details
-        cursor.execute("""
-            SELECT u.id, u.full_name, u.email, u.avatar 
-            FROM users u
-            JOIN companies c ON u.id = c.user_id
-            WHERE c.id = %s
-        """, (company_id,))
-        owner = cursor.fetchone()
-        
-        # Fetch team members
-        cursor.execute("""
-            SELECT t.id as member_id, t.role, u.id as user_id, u.full_name, u.email, u.avatar
-            FROM company_team t
-            JOIN users u ON t.user_id = u.id
-            WHERE t.company_id = %s
-            ORDER BY t.created_at ASC
-        """, (company_id,))
-        team_members = cursor.fetchall()
-        
-    return render_template("dashboard_team.html", owner=owner, team_members=team_members, active="team")
+    owner = None
+    team_members = []
+    
+    if company:
+        company_id = company["id"]
+        with conn.cursor() as cursor:
+            # Fetch owner details
+            cursor.execute("""
+                SELECT u.id, u.full_name, u.email, u.avatar 
+                FROM users u
+                JOIN companies c ON u.id = c.user_id
+                WHERE c.id = %s
+            """, (company_id,))
+            owner = cursor.fetchone()
+            
+            # Fetch team members (both accepted and pending) so host company can manage them
+            cursor.execute("""
+                SELECT t.id as member_id, t.role, t.status, u.id as user_id, u.full_name, u.email, u.avatar
+                FROM company_team t
+                JOIN users u ON t.user_id = u.id
+                WHERE t.company_id = %s
+                ORDER BY t.created_at ASC
+            """, (company_id,))
+            team_members = cursor.fetchall()
+    
+    return render_template("dashboard_team.html", 
+                           owner=owner, 
+                           team_members=team_members, 
+                           pending_invites=pending_invites, 
+                           active="team")
 
 
 @app.route("/dashboard/team/add", methods=["POST"])
@@ -5029,10 +5576,14 @@ def dashboard_team_add():
         return redirect(url_for("dashboard_team"))
         
     conn = get_db()
-    company = get_company_for_user(conn, session["user_id"])
+    # Enforce only the host company owner can add team members
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
     if not company:
-        flash("Unauthorized company context.", "error")
-        return redirect(url_for("dashboard"))
+        flash("Only the host company owner can manage team collaborators.", "error")
+        return redirect(url_for("dashboard_team"))
         
     company_id = company["id"]
     
@@ -5052,13 +5603,13 @@ def dashboard_team_add():
         # Check if already added
         cursor.execute("SELECT id FROM company_team WHERE company_id = %s AND user_id = %s", (company_id, target_user["id"]))
         if cursor.fetchone():
-            flash("This user is already a collaborator in your team.", "error")
+            flash("This user is already a collaborator or has a pending invite in your team.", "error")
             return redirect(url_for("dashboard_team"))
             
-        # Insert
+        # Insert as pending invitation
         cursor.execute("""
-            INSERT INTO company_team (company_id, user_id, role)
-            VALUES (%s, %s, %s)
+            INSERT INTO company_team (company_id, user_id, role, status)
+            VALUES (%s, %s, %s, 'pending')
         """, (company_id, target_user["id"], role))
         
         # Notify user
@@ -5066,40 +5617,136 @@ def dashboard_team_add():
             target_user["id"],
             "general",
             "Team Invite",
-            f"You have been added as '{role}' to the recruitment team of '{company.get('company_name', 'Company')}'.",
-            "/dashboard"
+            f"You have been invited to join the recruitment team of '{company['company_name']}' as '{role}'. Please visit the Team dashboard to accept.",
+            "/dashboard/team"
         )
         
-    flash(f"Successfully added {target_user['full_name']} to team collaborators!", "success")
+    flash(f"Successfully sent a team invitation to {target_user['full_name']}!", "success")
     return redirect(url_for("dashboard_team"))
+
+
+@app.route("/dashboard/team/accept/<int:invite_id>", methods=["POST"])
+@login_required
+def dashboard_team_accept(invite_id):
+    conn = get_db()
+    user_id = session["user_id"]
+    
+    with conn.cursor() as cursor:
+        # Verify the pending invite exists for this user
+        cursor.execute("SELECT * FROM company_team WHERE id = %s AND user_id = %s AND status = 'pending'", (invite_id, user_id))
+        invite = cursor.fetchone()
+        
+        if not invite:
+            flash("Invitation not found or already processed.", "error")
+            return redirect(url_for("dashboard"))
+            
+        # Accept invite
+        cursor.execute("UPDATE company_team SET status = 'accepted' WHERE id = %s", (invite_id,))
+        
+        # Turn user's account_type to 'company' so they have corporate features
+        cursor.execute("UPDATE users SET account_type = 'company' WHERE id = %s", (user_id,))
+        session["account_type"] = "company"
+        
+        # Fetch company name
+        cursor.execute("SELECT company_name, user_id FROM companies WHERE id = %s", (invite["company_id"],))
+        company = cursor.fetchone()
+        
+        # Notify host company owner
+        if company:
+            cursor.execute("SELECT full_name FROM users WHERE id = %s", (user_id,))
+            candidate = cursor.fetchone()
+            create_notification(
+                company["user_id"],
+                "general",
+                "Invite Accepted",
+                f"{candidate['full_name']} has accepted your invitation to join as '{invite['role']}'.",
+                "/dashboard/team"
+            )
+            
+    flash("Invitation accepted! Welcome to the team.", "success")
+    return redirect(url_for("dashboard_team"))
+
+
+@app.route("/dashboard/team/deny/<int:invite_id>", methods=["POST"])
+@login_required
+def dashboard_team_deny(invite_id):
+    conn = get_db()
+    user_id = session["user_id"]
+    
+    with conn.cursor() as cursor:
+        # Verify the pending invite exists for this user
+        cursor.execute("SELECT * FROM company_team WHERE id = %s AND user_id = %s AND status = 'pending'", (invite_id, user_id))
+        invite = cursor.fetchone()
+        
+        if not invite:
+            flash("Invitation not found or already processed.", "error")
+            return redirect(url_for("dashboard"))
+            
+        # Delete the team invitation
+        cursor.execute("DELETE FROM company_team WHERE id = %s", (invite_id,))
+        
+        # Notify host company owner
+        cursor.execute("SELECT company_name, user_id FROM companies WHERE id = %s", (invite["company_id"],))
+        company = cursor.fetchone()
+        if company:
+            cursor.execute("SELECT full_name FROM users WHERE id = %s", (user_id,))
+            candidate = cursor.fetchone()
+            create_notification(
+                company["user_id"],
+                "general",
+                "Invite Declined",
+                f"{candidate['full_name']} has declined your team invitation.",
+                "/dashboard/team"
+            )
+            
+    flash("Invitation declined.", "success")
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/dashboard/team/remove/<int:member_id>", methods=["POST"])
 @login_required
 def dashboard_team_remove(member_id):
     conn = get_db()
-    company = get_company_for_user(conn, session["user_id"])
+    # Enforce only the host company owner can remove team members
+    with conn.cursor() as cursor:
+        cursor.execute("SELECT id, company_name FROM companies WHERE user_id = %s", (session["user_id"],))
+        company = cursor.fetchone()
+        
     if not company:
-        flash("Unauthorized.", "error")
-        return redirect(url_for("dashboard"))
+        flash("Only the host company owner can manage team collaborators.", "error")
+        return redirect(url_for("dashboard_team"))
         
     company_id = company["id"]
     
     with conn.cursor() as cursor:
         # Verify member belongs to this company
-        cursor.execute("SELECT user_id FROM company_team WHERE id = %s AND company_id = %s", (member_id, company_id))
+        cursor.execute("SELECT user_id, status FROM company_team WHERE id = %s AND company_id = %s", (member_id, company_id))
         member = cursor.fetchone()
         
         if member:
+            target_user_id = member["user_id"]
+            
+            # Delete from team
             cursor.execute("DELETE FROM company_team WHERE id = %s", (member_id,))
+            
+            # Revert the user profile to 'individual' if not associated with any other business
+            cursor.execute("SELECT id FROM companies WHERE user_id = %s", (target_user_id,))
+            owns_company = cursor.fetchone() is not None
+            
+            cursor.execute("SELECT id FROM company_team WHERE user_id = %s AND status = 'accepted'", (target_user_id,))
+            in_other_team = cursor.fetchone() is not None
+            
+            if not owns_company and not in_other_team:
+                cursor.execute("UPDATE users SET account_type = 'individual' WHERE id = %s", (target_user_id,))
+                
             flash("Collaborator removed successfully.", "success")
             
             # Notify user
             create_notification(
-                member["user_id"],
+                target_user_id,
                 "general",
                 "Team Access Revoked",
-                f"Your access to the recruitment team of '{company.get('company_name', 'Company')}' has been removed.",
+                f"Your access to the recruitment team of '{company['company_name']}' has been removed.",
                 "/dashboard"
             )
         else:
@@ -5119,13 +5766,14 @@ def dashboard_interviews():
     
     interviews = []
     candidates = []
+    company_jobs = []
     
     with conn.cursor() as cursor:
         if account_type == "company":
             company = get_company_for_user(conn, user_id)
             if company:
                 cursor.execute("""
-                    SELECT i.*, u.full_name as candidate_name, u.avatar as candidate_avatar, j.title as job_title
+                    SELECT i.*, u.full_name as candidate_name, u.avatar as candidate_avatar, u.email as candidate_email, j.title as job_title
                     FROM interviews i
                     JOIN users u ON i.candidate_id = u.id
                     JOIN jobs j ON i.job_id = j.id
@@ -5144,6 +5792,10 @@ def dashboard_interviews():
                     ORDER BY u.full_name ASC
                 """, (company["id"],))
                 candidates = cursor.fetchall()
+                
+                # Fetch all company jobs for direct scheduling via email
+                cursor.execute("SELECT id, title FROM jobs WHERE company_id = %s ORDER BY title ASC", (company["id"],))
+                company_jobs = cursor.fetchall()
         else:
             cursor.execute("""
                 SELECT i.*, c.company_name, c.logo as company_logo, j.title as job_title
@@ -5159,26 +5811,22 @@ def dashboard_interviews():
         if iv.get("interview_date"):
             iv["interview_date_str"] = iv["interview_date"].strftime("%Y-%m-%d %I:%M %p")
             
-    return render_template("dashboard_interviews.html", interviews=interviews, candidates=candidates, active="interviews")
+    return render_template("dashboard_interviews.html", interviews=interviews, candidates=candidates, company_jobs=company_jobs, active="interviews")
 
 
 @app.route("/api/interviews/schedule", methods=["POST"])
 @login_required
 def schedule_interview():
     candidate_id = request.form.get("candidate_id")
+    email = request.form.get("email", "").strip()
     job_id = request.form.get("job_id")
     title = request.form.get("title", "").strip()
     description = request.form.get("description", "").strip()
     date_str = request.form.get("interview_date")
     location = request.form.get("location", "").strip()
     
-    if not candidate_id or not job_id or not title or not date_str or not location:
+    if not job_id or not title or not date_str or not location:
         return jsonify({"success": False, "error": "All fields are required."}), 400
-        
-    try:
-        interview_date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M")
-    except ValueError:
-        return jsonify({"success": False, "error": "Invalid date format."}), 400
         
     conn = get_db()
     company = get_company_for_user(conn, session["user_id"])
@@ -5186,6 +5834,21 @@ def schedule_interview():
         return jsonify({"success": False, "error": "Unauthorized"}), 403
         
     company_id = company["id"]
+
+    if email:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM users WHERE email = %s AND account_type = 'individual'", (email,))
+            candidate = cursor.fetchone()
+            if not candidate:
+                return jsonify({"success": False, "error": "Candidate with this email was not found. They must register an individual account first."}), 404
+            candidate_id = candidate["id"]
+    elif not candidate_id:
+        return jsonify({"success": False, "error": "Candidate selection or email is required."}), 400
+        
+    try:
+        interview_date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M")
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid date format."}), 400
     
     with conn.cursor() as cursor:
         cursor.execute("""

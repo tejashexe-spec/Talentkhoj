@@ -1,4 +1,10 @@
 <!-- NAVBAR -->
+<style>
+    #notificationDropdown.open {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+</style>
 <nav class="navbar">
     {% if session.get('user_id') %}
     <button class="sidebar-toggle-btn" onclick="toggleSidebar(event)" aria-label="Toggle Sidebar">
@@ -65,7 +71,7 @@
             <div class="profile-menu">
                 <button class="profile-trigger" onclick="toggleDropdown(event)">
                     {% if session.get('user_avatar') %}
-                        <img src="{{ session['user_avatar'] }}" alt="profile">
+                        <img src="{{ session['user_avatar'] }}" alt="profile" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ session['user_name']|urlencode }}&size=34&rounded=true&background=2456ff&color=fff';">
                     {% else %}
                         <img src="https://ui-avatars.com/api/?name={{ session['user_name'] }}&size=34&rounded=true&background=2456ff&color=fff" alt="profile">
                     {% endif %}
@@ -77,7 +83,11 @@
                         <a href="/admin/dashboard" style="font-weight: bold; color: #ef4444;">Admin Panel</a>
                     {% endif %}
                     <a href="/dashboard">Dashboard</a>
-                    <a href="/profile">My Profile</a>
+                    {% if session.get('account_type') == 'company' %}
+                        <a href="/company/edit">Company Profile</a>
+                    {% else %}
+                        <a href="/profile">My Profile</a>
+                    {% endif %}
                     <a href="/reset-password">Reset Password</a>
                     <a href="/verify-email">Verify Email</a>
                     <a href="/logout">Logout</a>
@@ -103,7 +113,10 @@
         e.stopPropagation();
         const pd = document.getElementById('profileDropdown');
         const nd = document.getElementById('notificationDropdown');
-        if (nd) nd.classList.remove('open');
+        if (nd) {
+            nd.classList.remove('open');
+            nd.style.display = 'none';
+        }
         if (pd) pd.classList.toggle('open');
     }
     
@@ -115,7 +128,11 @@
         if (nd) {
             nd.classList.toggle('open');
             if (nd.classList.contains('open')) {
+                nd.style.setProperty('display', 'flex', 'important');
+                nd.style.setProperty('flex-direction', 'column', 'important');
                 loadHeaderNotifications();
+            } else {
+                nd.style.display = 'none';
             }
         }
     }
@@ -124,7 +141,10 @@
         var pd = document.getElementById('profileDropdown');
         if (pd) pd.classList.remove('open');
         var nd = document.getElementById('notificationDropdown');
-        if (nd) nd.classList.remove('open');
+        if (nd) {
+            nd.classList.remove('open');
+            nd.style.display = 'none';
+        }
     });
 
     function updateHeaderNotificationBell() {

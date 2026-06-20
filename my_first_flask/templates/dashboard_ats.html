@@ -10,7 +10,7 @@
     ondragend="handleDragEnd(event)" onclick="openApplicantDetailsDirect({{ app.application_id }})">
     <div class="ats-card-header">
         {% if app.avatar %}
-        <img class="ats-card-avatar" src="{{ app.avatar }}" alt="avatar">
+        <img class="ats-card-avatar" src="{{ app.avatar }}" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ app.full_name|urlencode }}&size=36&rounded=true&background=2456ff&color=fff';">
         {% else %}
         <img class="ats-card-avatar"
             src="https://ui-avatars.com/api/?name={{ app.full_name }}&size=36&rounded=true&background=2456ff&color=fff"
@@ -100,7 +100,9 @@
 <!-- STATS METRICS BAR -->
 <div class="ats-stats-bar">
     <div class="stat-card total">
-        <div class="stat-icon">👥</div>
+        <div class="stat-icon" style="color: #64748b; background: rgba(100, 116, 139, 0.1);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
         <div class="stat-info">
             <span class="stat-value" id="stat-total">{{ counts.applied + counts.reviewed + counts.shortlisted +
                 counts.rejected }}</span>
@@ -523,7 +525,7 @@
         return `
             <div class="ats-card" id="app-card-${app.application_id}" draggable="true" ondragstart="handleDragStart(event)" ondragend="handleDragEnd(event)" onclick="openApplicantDetailsDirect(${app.application_id})">
                 <div class="ats-card-header">
-                    <img class="ats-card-avatar" src="${avatar}" alt="avatar">
+                    <img class="ats-card-avatar" src="${avatar}" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(app.full_name)}&size=36&rounded=true&background=2456ff&color=fff';">
                     <div class="ats-card-info">
                         <div class="ats-card-name">${app.full_name}</div>
                         <div class="ats-card-job">${app.job_title}</div>
@@ -755,7 +757,12 @@
         document.getElementById("modalJob").innerText = app.job_title;
 
         const avatar = app.avatar ? app.avatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(app.full_name)}&size=56&rounded=true&background=2456ff&color=fff`;
-        document.getElementById("modalAvatar").src = avatar;
+        const modalAvatar = document.getElementById("modalAvatar");
+        modalAvatar.onerror = function() {
+            this.onerror = null;
+            this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(app.full_name)}&size=56&rounded=true&background=2456ff&color=fff`;
+        };
+        modalAvatar.src = avatar;
 
         // Parse bio and skills
         let cvData = {};
@@ -935,7 +942,7 @@
                         const item = document.createElement("div");
                         item.style.cssText = "display: flex; gap: 8px; align-items: flex-start; background: #f8fafc; padding: 8px; border-radius: 6px; font-size: 12.5px; border: 1px solid #f1f5f9;";
                         item.innerHTML = `
-                            <img src="${avatar}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                            <img src="${avatar}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(note.author_name)}&size=24&rounded=true&background=2456ff&color=fff';">
                             <div style="flex: 1;">
                                 <div style="display: flex; justify-content: space-between; align-items: baseline;">
                                     <span style="font-weight: 700; color: #1e293b;">${note.author_name}</span>

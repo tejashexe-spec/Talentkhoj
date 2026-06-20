@@ -177,7 +177,7 @@
             <!-- Avatar Uploader Block -->
             <div class="profile-avatar-edit-container">
                 {% if profile.avatar %}
-                    <img src="{{ profile.avatar }}" alt="avatar" class="avatar-edit-preview" id="avatarPreviewImg">
+                    <img src="{{ profile.avatar }}" alt="avatar" class="avatar-edit-preview" id="avatarPreviewImg" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ (profile.full_name or session['user_name'])|urlencode }}&size=80&rounded=true&background=ef4444&color=fff';">
                 {% else %}
                     <img src="https://ui-avatars.com/api/?name={{ profile.full_name or session['user_name'] }}&size=80&rounded=true&background=ef4444&color=fff" alt="avatar" class="avatar-edit-preview" id="avatarPreviewImg">
                 {% endif %}

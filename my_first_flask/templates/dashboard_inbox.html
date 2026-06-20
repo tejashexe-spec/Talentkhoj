@@ -19,7 +19,7 @@
                 {% for conv in conversations %}
                     <div class="conversation-item" id="conv-{{ conv.other_user_id }}" onclick="loadConversation({{ conv.other_user_id }}, '{{ conv.other_user_name }}', '{{ conv.other_user_avatar or '' }}')">
                         {% if conv.other_user_avatar %}
-                            <img src="{{ conv.other_user_avatar }}" class="conv-avatar" alt="avatar">
+                            <img src="{{ conv.other_user_avatar }}" class="conv-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ conv.other_user_name|urlencode }}&size=44&rounded=true&background=2456ff&color=fff';">
                         {% else %}
                             <img src="https://ui-avatars.com/api/?name={{ conv.other_user_name }}&size=44&rounded=true&background=2456ff&color=fff" class="conv-avatar" alt="avatar">
                         {% endif %}
@@ -39,6 +39,33 @@
                 {% endfor %}
             {% else %}
                 <div class="no-conversations">No messages yet.</div>
+            {% endif %}
+        </div>
+        
+        <div class="inbox-search" style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px; margin-bottom: 8px;">
+            <span style="font-size: 13px; font-weight: 700; color: #475569; padding-left: 10px;">Contacts (Followers/Following)</span>
+        </div>
+        <div class="conversation-list" id="contactsList" style="max-height: 250px; overflow-y: auto;">
+            {% if contacts %}
+                {% for contact in contacts %}
+                    <div class="conversation-item" id="contact-{{ contact.id }}" onclick="loadOrCreateConversation({{ contact.id }}, '{{ contact.full_name }}', '{{ contact.avatar or '' }}')">
+                        {% if contact.avatar %}
+                            <img src="{{ contact.avatar }}" class="conv-avatar" alt="avatar" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ contact.full_name|urlencode }}&size=44&rounded=true&background=2456ff&color=fff';">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ contact.full_name }}&size=44&rounded=true&background=2456ff&color=fff" class="conv-avatar" alt="avatar">
+                        {% endif %}
+                        <div class="conv-info">
+                            <div class="conv-header">
+                                <span class="conv-name">{{ contact.full_name }}</span>
+                            </div>
+                            <div class="conv-body">
+                                <span class="conv-message" style="font-size: 11px; color: #2456ff; font-weight: 600;">Start Chat</span>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-conversations" style="font-size: 12px; padding: 10px; text-align: center; color: #64748b;">Follow other users to chat with them here.</div>
             {% endif %}
         </div>
     </div>
@@ -85,6 +112,37 @@
     let activeChatUserId = null;
     let pollInterval = null;
 
+    function loadOrCreateConversation(userId, userName, userAvatar) {
+        let mainConvItem = document.getElementById(`conv-${userId}`);
+        if (!mainConvItem) {
+            const list = document.getElementById('conversationList');
+            const noConvs = list.querySelector('.no-conversations');
+            if (noConvs) noConvs.remove();
+            
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            item.id = `conv-${userId}`;
+            item.setAttribute('onclick', `loadConversation(${userId}, '${userName.replace(/'/g, "\\'")}', '${userAvatar}')`);
+            
+            const avatarSrc = userAvatar ? userAvatar : `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&size=44&rounded=true&background=2456ff&color=fff`;
+            
+            item.innerHTML = `
+                <img src="${avatarSrc}" class="conv-avatar" alt="avatar">
+                <div class="conv-info">
+                    <div class="conv-header">
+                        <span class="conv-name">${userName}</span>
+                        <span class="conv-time">Just now</span>
+                    </div>
+                    <div class="conv-body">
+                        <span class="conv-message">No messages yet.</span>
+                    </div>
+                </div>
+            `;
+            list.insertBefore(item, list.firstChild);
+        }
+        loadConversation(userId, userName, userAvatar);
+    }
+
     function loadConversation(userId, userName, userAvatar) {
         activeChatUserId = userId;
         
@@ -93,6 +151,10 @@
         
         document.getElementById('activeChatName').textContent = userName;
         const avatarImg = document.getElementById('activeChatAvatar');
+        avatarImg.onerror = function() {
+            this.onerror = null;
+            this.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&size=40&rounded=true&background=2456ff&color=fff`;
+        };
         if (userAvatar) {
             avatarImg.src = userAvatar;
         } else {

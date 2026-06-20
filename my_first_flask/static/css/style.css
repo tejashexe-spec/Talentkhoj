@@ -1234,3 +1234,16 @@ body:not(.sidebar-closed) .sidebar-toggle-btn .bar:nth-child(3) {
     border: 1px dashed rgba(0, 0, 0, 0.08);
     color: var(--text-muted);
 }
+
+/* Notification dropdown layout fix */
+#notificationDropdown.open {
+    display: flex !important;
+    flex-direction: column !important;
+}
+#notificationDropdown {
+    display: none;
+}
+#notificationDropdown.open {
+    display: flex !important;
+}
+

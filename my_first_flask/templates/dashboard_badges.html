@@ -429,7 +429,7 @@
                                     <div class="badge-title" title="{{ badge.title }}">{{ badge.title }}</div>
                                     <div class="badge-issuer">
                                         {% if badge.company_logo %}
-                                            <img src="{{ badge.company_logo }}" alt="logo">
+                                            <img src="{{ badge.company_logo }}" alt="logo" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ badge.company_name|urlencode }}&background=2456ff&color=fff&size=32';">
                                         {% endif %}
                                         <span>{{ badge.company_name }}</span>
                                     </div>
@@ -485,7 +485,7 @@
                                     <div class="badge-title" title="{{ badge.title }}">{{ badge.title }}</div>
                                     <div class="badge-issuer">
                                         {% if badge.company_logo %}
-                                            <img src="{{ badge.company_logo }}" alt="logo">
+                                            <img src="{{ badge.company_logo }}" alt="logo" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ badge.company_name|urlencode }}&background=2456ff&color=fff&size=32';">
                                         {% endif %}
                                         <span>{{ badge.company_name }}</span>
                                     </div>
@@ -495,6 +495,26 @@
                             <div class="badge-meta">
                                 <span class="badge-type-tag {{ badge.badge_type }}">{{ badge.badge_type }}</span>
                                 <span>{{ badge.start_date.strftime('%b %Y') if badge.start_date else 'N/A' }} - {{ badge.end_date.strftime('%b %Y') if badge.end_date else 'Present' }}</span>
+                            </div>
+                            <div class="badge-actions" style="margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%;">
+                                <span style="font-size: 12.5px; color: #64748b; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                    {% if badge.is_visible %}
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                                        Visible on Profile
+                                    {% else %}
+                                        <span style="width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; display: inline-block;"></span>
+                                        Hidden
+                                    {% endif %}
+                                </span>
+                                <form action="/dashboard/badges/toggle-visibility/{{ badge.id }}" method="POST" style="margin: 0; display: inline-block;">
+                                    <button type="submit" class="btn-badge btn-badge-reject" style="margin: 0; padding: 6px 12px; font-size: 12px; border-radius: 6px; font-weight: 600; transition: all 0.2s; min-height: 0; line-height: 1;">
+                                        {% if badge.is_visible %}
+                                            Hide from Profile
+                                        {% else %}
+                                            Show on Profile
+                                        {% endif %}
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     {% endfor %}

@@ -64,7 +64,7 @@
                 <!-- Top Header -->
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                     {% if cand.avatar %}
-                        <img src="{{ cand.avatar }}" alt="{{ cand.full_name }}" style="width: 54px; height: 54px; border-radius: 50%; object-fit: cover; border: 2px solid #2456ff;">
+                        <img src="{{ cand.avatar }}" alt="{{ cand.full_name }}" style="width: 54px; height: 54px; border-radius: 50%; object-fit: cover; border: 2px solid #2456ff;" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name={{ cand.full_name|urlencode }}&size=54&rounded=true&background=2456ff&color=fff';">
                     {% else %}
                         <img src="https://ui-avatars.com/api/?name={{ cand.full_name }}&size=54&rounded=true&background=2456ff&color=fff" alt="{{ cand.full_name }}" style="width: 54px; height: 54px; border-radius: 50%;">
                     {% endif %}

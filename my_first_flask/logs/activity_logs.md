@@ -39,3 +39,7 @@
 | 2026-06-19 22:10:23 | **EMAIL SENT** | Successfully sent email to gautamprasiddha@gmail.com (Subject: 'RSVP Confirmed: Talent Khoj Virtual Networking & Career Fair 2026') |
 | 2026-06-19 22:10:24 | **EMAIL SENT** | Successfully sent email to gautamprasiddha@gmail.com (Subject: 'RSVP Confirmed: dsdsa') |
 | 2026-06-19 22:25:39 | **REMOVE BOOKMARK** | Candidate Prasiddha Gautam removed bookmark from job ID 14 |
+| 2026-06-20 06:50:11 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 10) moved to 'shortlisted' for job 'Test QA Intern with Questions' by Company (ID: 1) |
+| 2026-06-20 06:55:58 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 1) posted a new internship: 'Marketing Head Intern' at Hetauda (Onsite) |
+| 2026-06-20 06:56:26 | **POST OPPORTUNITY** | Company 'Prish Pvt. Ltd.' (ID: 1) posted a new job: 'Marketing Head Intern' at Hetauda (Onsite) |
+| 2026-06-20 07:42:55 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 10) applied to job ID 15 |

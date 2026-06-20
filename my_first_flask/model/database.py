@@ -32,6 +32,7 @@ class Database:
             self._run_migrations()
             self._seed_mock_events()
             self._seed_mock_saved_searches()
+            self._seed_community_data()
             print("Database connected successfully!")
 
         except pymysql.MySQLError as e:
@@ -109,6 +110,7 @@ class Database:
                     description TEXT NOT NULL,
                     apply_link VARCHAR(255) DEFAULT NULL,
                     questions TEXT DEFAULT NULL,
+                    sector VARCHAR(255) DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
@@ -361,6 +363,48 @@ class Database:
                     FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS community_groups (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL,
+                    category VARCHAR(100) NOT NULL,
+                    image VARCHAR(255) DEFAULT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS community_group_members (
+                    group_id INT NOT NULL,
+                    user_id INT NOT NULL,
+                    PRIMARY KEY (group_id, user_id),
+                    FOREIGN KEY (group_id) REFERENCES community_groups(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS community_discussions (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL,
+                    category VARCHAR(100) NOT NULL,
+                    author_id INT NOT NULL,
+                    views INT DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS community_discussion_answers (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    discussion_id INT NOT NULL,
+                    author_id INT NOT NULL,
+                    answer_text TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (discussion_id) REFERENCES community_discussions(id) ON DELETE CASCADE,
+                    FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
     def _run_migrations(self):
         """Add any missing columns to existing tables."""
         # Users table migrations
@@ -430,6 +474,9 @@ class Database:
         if "questions" not in existing_jobs:
             with self.__connection.cursor() as cursor:
                 cursor.execute("ALTER TABLE jobs ADD COLUMN questions TEXT DEFAULT NULL")
+        if "sector" not in existing_jobs:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE jobs ADD COLUMN sector VARCHAR(255) DEFAULT NULL")
 
         # Applications table migrations (answers column & status index)
         with self.__connection.cursor() as cursor:
@@ -678,4 +725,48 @@ class Database:
                         (%s, 'React', 'internship', 'Remote', 'All Levels', 0)
                     """, (user_id, user_id))
                     print("Mock saved searches seeded successfully!")
+
+    def _seed_community_data(self):
+        """Seed initial community groups and discussions if they are empty."""
+        with self.__connection.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) as cnt FROM community_groups")
+            if cursor.fetchone()["cnt"] == 0:
+                cursor.execute("""
+                    INSERT INTO community_groups (name, description, category, image)
+                    VALUES 
+                    ('Nepal Python Developers', 'A community for Python and Django enthusiasts in Nepal to share knowledge, jobs, and best practices.', 'Development', 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?q=80&w=300&auto=format&fit=crop'),
+                    ('AI/ML Researchers Nepal', 'Discuss machine learning, deep learning, NLP, computer vision and share research papers and projects in Nepal.', 'AI/ML', 'https://images.unsplash.com/photo-1677442136019-21780efad99a?q=80&w=300&auto=format&fit=crop'),
+                    ('Women In Tech Nepal', 'Empowering women in technology through mentorship, networking opportunities, and skill development workshops.', 'Career', 'https://images.unsplash.com/photo-1573164713988-8665fc963095?q=80&w=300&auto=format&fit=crop'),
+                    ('UI/UX Designers Kathmandu', 'A group for user experience and user interface designers in Nepal to share portfolios, design trends, and feedback.', 'Design', 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?q=80&w=300&auto=format&fit=crop')
+                """)
+                print("Community groups seeded successfully!")
+
+            cursor.execute("SELECT COUNT(*) as cnt FROM community_discussions")
+            if cursor.fetchone()["cnt"] == 0:
+                cursor.execute("SELECT id FROM users LIMIT 3")
+                users = cursor.fetchall()
+                if len(users) >= 2:
+                    author1 = users[0]["id"]
+                    author2 = users[1]["id"]
+                    
+                    cursor.execute("""
+                        INSERT INTO community_discussions (title, description, category, author_id, views)
+                        VALUES ('How to get started with Django/Flask in Nepals tech market?', 'I am a college student and want to learn backend development. Is Django or Flask more popular for entry level jobs in Nepal? What are the key skills companies look for?', 'Career', %s, 120)
+                    """, (author1,))
+                    disc1_id = cursor.lastrowid
+
+                    cursor.execute("""
+                        INSERT INTO community_discussions (title, description, category, author_id, views)
+                        VALUES ('Is Tailwind CSS preferred over Vanilla CSS for modern web projects?', 'Our team is starting a new project. I prefer Vanilla CSS for design freedom, but everyone else wants Tailwind CSS for speed. What are your experiences with project maintenance?', 'Development', %s, 340)
+                    """, (author2,))
+                    disc2_id = cursor.lastrowid
+                    
+                    cursor.execute("""
+                        INSERT INTO community_discussion_answers (discussion_id, author_id, answer_text)
+                        VALUES 
+                        (%s, %s, 'Django is definitely more popular in Nepal because many development shops build larger enterprise applications. Flask is great for learning concepts though!'),
+                        (%s, %s, 'I suggest starting with Flask to understand how routing and request-response works, then moving to Django for its out-of-the-box features like admin panel and ORM.'),
+                        (%s, %s, 'For fast scaling, Tailwind is a life saver. If you have unique designs, vanilla CSS or CSS modules is cleaner.')
+                    """, (disc1_id, author2, disc1_id, author1, disc2_id, author1))
+                    print("Community discussions and answers seeded successfully!")
 

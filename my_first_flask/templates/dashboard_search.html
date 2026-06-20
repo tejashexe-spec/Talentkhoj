@@ -722,7 +722,6 @@
 
 <div class="search-header-container">
     <h1>Search Opportunities</h1>
-    <p>Discover high-value positions, internships, and career programs tailored for you.</p>
 </div>
 
 <!-- FILTERS PANEL -->
@@ -1051,13 +1050,14 @@
         <div style="margin: 0 auto 20px; width: 64px; height: 64px; border-radius: 50%; background: #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center;">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
-        <h2 style="font-size: 20px; font-weight: 800; color: #05154b; margin-bottom: 10px;">CV & Resume Incomplete</h2>
+        <h2 style="font-size: 20px; font-weight: 800; color: #05154b; margin-bottom: 10px;">CV Required</h2>
         <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-            To apply for opportunities, you must build your professional profile using our CV builder first. Recruiters evaluate candidate resumes directly.
+            To apply for opportunities, you must upload or build your professional CV first.
         </p>
         <div style="display: flex; gap: 12px; justify-content: center;">
             <button type="button" class="btn-modal-cancel" onclick="closeIncompleteModal()">Dismiss</button>
-            <a href="/dashboard/cv" class="btn-apply-now" style="text-decoration: none; box-shadow: none;">Build CV Now</a>
+            <a href="/profile" class="btn-modal-cancel" style="text-decoration: none; color: #2456ff; border-color: #2456ff; display: inline-flex; align-items: center; justify-content: center;">Edit Profile</a>
+            <a href="/dashboard/cv" class="btn-apply-now" style="text-decoration: none; box-shadow: none; display: inline-flex; align-items: center; justify-content: center;">Build CV</a>
         </div>
     </div>
 </div>
@@ -1118,7 +1118,7 @@
         // Company Logo
         const logoDiv = document.getElementById('detLogo');
         if (opp.logo) {
-            logoDiv.innerHTML = `<img src="${opp.logo}" alt="Logo" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(opp.company_name) + '&background=2456ff&color=fff&size=128';">`;
+            logoDiv.innerHTML = `<img src="${opp.logo}" alt="Logo" onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(opp.company_name)}&background=2456ff&color=fff&size=128';">`;
         } else {
             logoDiv.innerHTML = opp.company_name.substring(0,2).toUpperCase();
         }

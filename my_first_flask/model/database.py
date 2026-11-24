@@ -240,6 +240,7 @@ class Database:
                     start_date DATE DEFAULT NULL,
                     end_date DATE DEFAULT NULL,
                     status ENUM('pending', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',
+                    is_visible TINYINT(1) NOT NULL DEFAULT 1,
                     awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -518,12 +519,26 @@ class Database:
                     start_date DATE DEFAULT NULL,
                     end_date DATE DEFAULT NULL,
                     status ENUM('pending', 'accepted', 'rejected') NOT NULL DEFAULT 'pending',
+                    is_visible TINYINT(1) NOT NULL DEFAULT 1,
                     awarded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             """)
+
+        # user_badges column migrations
+        with self.__connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT COLUMN_NAME FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = %s AND TABLE_NAME = 'user_badges'",
+                (config.MYSQL_DATABASE,)
+            )
+            existing_user_badges = {row["COLUMN_NAME"] for row in cursor.fetchall()}
+
+        if "is_visible" not in existing_user_badges:
+            with self.__connection.cursor() as cursor:
+                cursor.execute("ALTER TABLE user_badges ADD COLUMN is_visible TINYINT(1) NOT NULL DEFAULT 1")
 
         # Create saved_searches if it doesn't exist (migration)
         with self.__connection.cursor() as cursor:

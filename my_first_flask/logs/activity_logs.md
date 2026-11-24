@@ -21,6 +21,7 @@
 | 2026-06-03 21:18:11 | **APPLY OPPORTUNITY** | Candidate Prasiddha Gautam (ID: 8) applied to job ID 4 |
 | 2026-06-03 21:18:35 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'reviewed' for job 'UI/UX' by Company (ID: 1) |
 | 2026-06-03 21:18:37 | **ATS UPDATE** | Applicant 'Prasiddha Gautam' (ID: 8) moved to 'rejected' for job 'UI/UX' by Company (ID: 1) |
+| 2026-06-12 12:36:21 | **VERIFY EMAIL** | Successfully sent email to tejashexe@gmail.com (Subject: 'Verify Your Email - Talent Khoj') |
 | 2026-06-18 20:52:23 | **ADD BOOKMARK** | Candidate Prasiddha Gautam bookmarked job ID 7 |
 | 2026-06-18 20:52:24 | **REMOVE BOOKMARK** | Candidate Prasiddha Gautam removed bookmark from job ID 7 |
 | 2026-06-18 20:52:53 | **ADD BOOKMARK** | Candidate Prasiddha Gautam bookmarked job ID 1 |

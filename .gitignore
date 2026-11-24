@@ -18,6 +18,8 @@ sprint3_guide.pdf
 Sprint5_Testing_Report.pdf
 my_first_flask/flask_session/
 architecture.pdf
+*.zip
+.zip
 
 
 # End of file
